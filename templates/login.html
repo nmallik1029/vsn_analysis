@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login | VSN Analysis</title>
+<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --bg-primary:#0a0a0f;
+    --bg-card:#16161f;
+    --text-primary:#f0f0f0;
+    --text-secondary:#888899;
+    --accent-green:#00ff88;
+    --accent-red:#ff4466;
+    --border-color:#2a2a3a;
+}
+
+* { box-sizing: border-box; margin:0; padding:0; }
+
+body {
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--bg-primary);
+    color:var(--text-primary);
+    font-family:'Space Grotesk', sans-serif;
+}
+
+.card {
+    width:100%;
+    max-width:380px;
+    background:var(--bg-card);
+    border:1px solid var(--border-color);
+    padding:2rem;
+}
+
+h1 {
+    font-size:1.6rem;
+    margin-bottom:1.5rem;
+}
+
+input {
+    width:100%;
+    padding:0.75rem;
+    margin-bottom:0.75rem;
+    background:#0f0f15;
+    border:1px solid var(--border-color);
+    color:var(--text-primary);
+    font-family:'JetBrains Mono', monospace;
+}
+
+button {
+    width:100%;
+    padding:0.75rem;
+    margin-top:0.5rem;
+    background:var(--accent-green);
+    border:none;
+    font-weight:600;
+    cursor:pointer;
+}
+
+.error {
+    margin-top:0.75rem;
+    color:var(--accent-red);
+    font-size:0.85rem;
+}
+
+.footer {
+    margin-top:1.25rem;
+    text-align:center;
+    font-size:0.85rem;
+}
+
+.footer a {
+    color:var(--accent-green);
+    text-decoration:none;
+}
+</style>
+</head>
+
+<body>
+<div class="card">
+    <h1>Log in</h1>
+
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+
+    <button onclick="login()">Log in</button>
+
+    <div class="error" id="error"></div>
+
+    <div class="footer">
+        Don’t have an account?
+        <a href="/signup">Sign up</a>
+    </div>
+</div>
+
+<script>
+async function login() {
+    const email = emailInput.value;
+    const password = passwordInput.value;
+
+    const res = await fetch('/api/login', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+        error.innerText = data.error || 'Login failed';
+        return;
+    }
+
+    localStorage.setItem('vsn_logged_in','true');
+    localStorage.setItem('vsn_user_email',email);
+
+    const next = sessionStorage.getItem('next') || '/index';
+    window.location.href = next;
+}
+
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+</script>
+</body>
+</html>

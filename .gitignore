@@ -1,0 +1,11 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Flask local data
+instance/
+.env
+
+# OS junk
+.DS_Store
+Thumbs.db

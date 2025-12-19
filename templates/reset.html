@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reset Password | VSN Analysis</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<h2>Set a new password</h2>
+
+<form id="resetPasswordForm">
+  <input type="password" id="newPassword" placeholder="New password" required minlength="6">
+  <button type="submit">Update Password</button>
+</form>
+
+<p id="message"></p>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://wtxxnhjknjwmlsqxdovv.supabase.co";
+  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+
+  const supabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+  document.getElementById("resetPasswordForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const password = document.getElementById("newPassword").value;
+    const message = document.getElementById("message");
+
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+      message.textContent = error.message;
+    } else {
+      message.textContent = "Password updated. Redirecting...";
+      setTimeout(() => {
+        window.location.href = "/auth";
+      }, 1500);
+    }
+  });
+</script>
+
+</body>
+</html>

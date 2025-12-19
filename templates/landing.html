@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VSN Analysis</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #16161f;
+            --text-primary: #f0f0f0;
+            --text-secondary: #888899;
+            --accent-green: #00ff88;
+            --accent-red: #ff4466;
+            --accent-blue: #4488ff;
+            --accent-yellow: #ffcc00;
+            --border-color: #2a2a3a;
+            --glow-green: rgba(0, 255, 136, 0.15);
+            --glow-red: rgba(255, 68, 102, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(68, 136, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(68, 136, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 4rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand img {
+            width: 40px;
+            height: 40px;
+        }
+
+        .logo-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            color: var(--accent-green);
+        }
+
+
+        .nav-links, #authLinks {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-signin {
+            padding: 0.35rem 0.6rem;
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            border-radius: 4px;
+            font-weight: 600;
+            display: inline-center;
+            align-items: center;
+        }
+
+        .nav-signin:hover {
+            background: #00dd77;
+        }
+
+        /* Ticker Tape */
+        .ticker-tape {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            overflow: hidden;
+            padding: 0.75rem 0;
+            transition: opacity 0.3s ease, max-height 0.3s ease;
+            max-height: 50px;
+        }
+
+        .ticker-tape.hidden {
+            opacity: 0;
+            max-height: 0;
+            padding: 0;
+            border: none;
+        }
+
+        .ticker-content {
+            overflow: hidden;
+        }
+
+        .ticker-track {
+            display: flex;
+            gap: 3rem;
+            animation: scroll 40s linear infinite;
+            width: max-content;
+        }
+
+        @keyframes scroll {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        .ticker-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .ticker-item:hover {
+            opacity: 0.7;
+        }
+
+        .ticker-symbol {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+
+        .ticker-price {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .ticker-price.up {
+            color: var(--accent-green);
+        }
+
+        .ticker-price.down {
+            color: var(--accent-red);
+        }
+
+        .ticker-change {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        .ticker-change.up {
+            background: var(--glow-green);
+            color: var(--accent-green);
+        }
+
+        .ticker-change.down {
+            background: var(--glow-red);
+            color: var(--accent-red);
+        }
+
+        .ticker-loading {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            padding: 0 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 6rem 2rem 4rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: var(--glow-green);
+            color: var(--accent-green);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 3rem;
+            line-height: 1.6;
+        }
+
+        /* Search Box */
+        .hero-search {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .hero-input {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            width: 300px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .hero-input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .hero-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .hero-btn {
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .hero-btn:hover {
+            background: #00dd77;
+            transform: translateY(-2px);
+        }
+
+        .quick-picks {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .quick-picks-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .quick-pick {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .quick-pick:hover {
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 6rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .features-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .features-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .features-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            transition: all 0.2s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-4px);
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* How It Works */
+        .how-it-works {
+            padding: 6rem 2rem;
+            background: var(--bg-secondary);
+        }
+
+        .how-it-works-inner {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .how-it-works h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 4rem;
+        }
+
+        .steps {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .step:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -1.5rem;
+            top: 2rem;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: var(--bg-primary);
+            border: 2px solid var(--accent-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+
+        .step h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .step p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Sample Analysis */
+        .sample-section {
+            padding: 6rem 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .sample-section h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .sample-section > p {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+        }
+
+        .sample-stocks {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .sample-stock {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .sample-stock:hover {
+            border-color: var(--accent-green);
+            transform: translateY(-2px);
+        }
+
+        .sample-stock-ticker {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .sample-stock-name {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .sample-stock-score {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .score-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .score-dot.high { background: var(--accent-green); }
+        .score-dot.medium { background: var(--accent-yellow); }
+        .score-dot.low { background: var(--accent-red); }
+
+        .sample-stock-score span {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* CTA Section */
+        .cta {
+            padding: 6rem 2rem;
+            text-align: center;
+            background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        }
+
+        .cta h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .cta p {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .cta-btn {
+            display: inline-block;
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            padding: 1rem 3rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .cta-btn:hover {
+            background: #00dd77;
+            transform: translateY(-2px);
+        }
+
+        /* Footer */
+        footer {
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        footer p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .sample-stocks {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem 2rem;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero-search {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .hero-input {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .steps {
+                flex-direction: column;
+            }
+
+            .step:not(:last-child)::after {
+                content: '↓';
+                position: static;
+                display: block;
+                margin-top: 1rem;
+            }
+
+            .sample-stocks {
+                grid-template-columns: 1fr;
+            }
+        }
+
+
+        .ticker-input-wrapper {
+            position: relative;
+            width: 300px;
+        }
+
+        .ticker-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-top: none;
+            display: none;
+            z-index: 50;
+        }
+
+        .ticker-suggestions.show {
+            display: block;
+        }
+
+        .ticker-suggestion {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-primary);
+        }
+
+        .ticker-suggestion:hover {
+            background: var(--bg-card);
+        }
+
+
+        
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    
+    <div class="container">
+        <nav>
+            <div class = "brand">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="VSN Logo" style = "width: 40px; height: 75px;">
+                <div class="logo-text">VSN ANALYSIS</div>
+            </div>
+
+            <div class="nav-links" id="navLinks">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How It Works</a>
+
+                <span id="authLinks">
+                    <a href="/auth" class="nav-signin">Sign In</a>
+                </span>
+
+                <span id="userMenu" style="display:none; position:relative;">
+                    <span id="userTrigger"
+                            style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer;"
+                            onclick="toggleUserMenu(event)">
+                        <span id="userAvatar"
+                            style="width:28px;height:28px;border-radius:50%;
+                                    background:#00ff88;color:#0a0a0f;
+                                    display:flex;align-items:center;justify-content:center;
+                                    font-weight:700;font-size:0.9rem;">
+                        </span>
+                        <span id="userEmail" style="font-size:0.85rem;"></span>
+                    </span>
+
+                    <!-- Dropdown -->
+                    <div id="userDropdown"
+                        style="display:none;position:absolute;right:0;top:130%;
+                                background:#16161f;border:1px solid #2a2a3a;
+                                min-width:140px;z-index:1000;">
+                        <button onclick="logout()"
+                                style="width:100%;padding:0.6rem;
+                                    background:none;border:none;
+                                    color:#ff4466;cursor:pointer;text-align:left;">
+                        Log out
+                        </button>
+                    </div>
+                </span>
+            </div>
+        </nav>
+
+
+
+
+        <!-- Rolling Ticker Tape -->
+        <div class="ticker-tape" id="tickerTape">
+            <div class="ticker-content">
+                <div class="ticker-track" id="tickerTrack">
+                    <span class="ticker-loading">Loading market data...</span>
+                </div>
+            </div>
+        </div>
+
+        <section class="hero">
+            <h1>Make Smarter Investment Decisions</h1>
+            <p>Accurate information on stocks across the world. See stock prices, Wall Street consensus, news, and more.</p>
+            
+            <form class="hero-search" onsubmit="analyzeStock(); return false;" autocomplete="off">
+                <div class="ticker-input-wrapper">
+                    <input
+                    type="search"
+                    id="tickerInput"
+                    name="ticker-search"
+                    class="hero-input"
+                    placeholder="Enter ticker symbol..."
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    maxlength="5"
+                    inputmode="latin"
+                    oninput="handleTickerInput(event)"
+                    onkeydown="blockInvalidKeys(event)"
+                    >
+                    <div id="tickerSuggestions" class="ticker-suggestions"></div>
+                </div>
+
+                <button type="submit" class="hero-btn">Analyze Stock</button>
+            </form>
+
+
+
+            <div class="quick-picks">
+                <span class="quick-picks-label">Try:</span>
+                <a href="/index?ticker=AAPL" class="quick-pick">AAPL</a>
+                <a href="/index?ticker=MSFT" class="quick-pick">MSFT</a>
+                <a href="/index?ticker=GOOGL" class="quick-pick">GOOGL</a>
+                <a href="/index?ticker=NVDA" class="quick-pick">NVDA</a>
+                <a href="/index?ticker=TSLA" class="quick-pick">TSLA</a>
+            </div>
+        </section>
+
+        <section class="features" id="features">
+            <div class="features-header">
+                <h2>Everything You Need</h2>
+                <p>Comprehensive tools for informed investment decisions</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>Buy Consideration Score</h3>
+                    <p>Our proprietary 0-100 scoring system analyzes valuation, profitability, growth, financial health, and technical factors.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Wall Street Ratings</h3>
+                    <p>See what professional analysts think with consensus ratings, price targets, and upside potential calculations.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Key Metrics</h3>
+                    <p>P/E ratio, profit margins, revenue growth, debt levels, and more. All the fundamentals at a glance.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Latest News</h3>
+                    <p>Stay informed with the most recent news and articles about your stocks from trusted sources.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Detailed Breakdowns</h3>
+                    <p>Hover over any score component to see exactly how it's calculated and what's driving the numbers.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Real-Time Data</h3>
+                    <p>Powered by Yahoo Finance API for up-to-date prices, metrics, and market information.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="how-it-works" id="how-it-works">
+            <div class="how-it-works-inner">
+                <h2>How It Works</h2>
+                
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <h3>Enter a Ticker</h3>
+                        <p>Type any stock symbol like AAPL, MSFT, or TSLA</p>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <h3>We Fetch the Data</h3>
+                        <p>Real-time data from Yahoo Finance is analyzed</p>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <h3>Get Your Score</h3>
+                        <p>See the buy consideration score and full breakdown</p>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <h3>Make a Decision</h3>
+                        <p>Use insights to inform your investment choices</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="sample-section">
+            <h2>Popular Stocks</h2>
+            <p>Click to see full analysis</p>
+
+            <div class="sample-stocks">
+                <a href="/index?ticker=AAPL" class="sample-stock">
+                    <div class="sample-stock-ticker">AAPL</div>
+                    <div class="sample-stock-name">Apple Inc.</div>
+                    <div class="sample-stock-score">
+                        <span class="score-dot high"></span>
+                        <span>Click to analyze</span>
+                    </div>
+                </a>
+
+                <a href="/index?ticker=MSFT" class="sample-stock">
+                    <div class="sample-stock-ticker">MSFT</div>
+                    <div class="sample-stock-name">Microsoft Corp.</div>
+                    <div class="sample-stock-score">
+                        <span class="score-dot high"></span>
+                        <span>Click to analyze</span>
+                    </div>
+                </a>
+
+                <a href="/index?ticker=GOOGL" class="sample-stock">
+                    <div class="sample-stock-ticker">GOOGL</div>
+                    <div class="sample-stock-name">Alphabet Inc.</div>
+                    <div class="sample-stock-score">
+                        <span class="score-dot high"></span>
+                        <span>Click to analyze</span>
+                    </div>
+                </a>
+
+                <a href="/index?ticker=AMZN" class="sample-stock">
+                    <div class="sample-stock-ticker">AMZN</div>
+                    <div class="sample-stock-name">Amazon.com Inc.</div>
+                    <div class="sample-stock-score">
+                        <span class="score-dot medium"></span>
+                        <span>Click to analyze</span>
+                    </div>
+                </a>
+
+                <a href="/index?ticker=NVDA" class="sample-stock">
+                    <div class="sample-stock-ticker">NVDA</div>
+                    <div class="sample-stock-name">NVIDIA Corp.</div>
+                    <div class="sample-stock-score">
+                        <span class="score-dot high"></span>
+                        <span>Click to analyze</span>
+                    </div>
+                </a>
+
+                <a href="/index?ticker=TSLA" class="sample-stock">
+                    <div class="sample-stock-ticker">TSLA</div>
+                    <div class="sample-stock-name">Tesla Inc.</div>
+                    <div class="sample-stock-score">
+                        <span class="score-dot medium"></span>
+                        <span>Click to analyze</span>
+                    </div>
+                </a>
+
+                <a href="/index?ticker=META" class="sample-stock">
+                    <div class="sample-stock-ticker">META</div>
+                    <div class="sample-stock-name">Meta Platforms</div>
+                    <div class="sample-stock-score">
+                        <span class="score-dot high"></span>
+                        <span>Click to analyze</span>
+                    </div>
+                </a>
+
+                <a href="/index?ticker=JPM" class="sample-stock">
+                    <div class="sample-stock-ticker">JPM</div>
+                    <div class="sample-stock-name">JPMorgan Chase</div>
+                    <div class="sample-stock-score">
+                        <span class="score-dot high"></span>
+                        <span>Click to analyze</span>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <footer>
+            <h4>DISCLAIMER</h4>
+            <p>&nbsp</p>
+            <p>This analysis is for informational purposes only and should not be considered financial advice. Always conduct your own research before making investment decisions.</p>
+        </footer>
+    </div>
+
+    <script>
+        function analyzeStock() {
+            const input = document.getElementById('tickerInput');
+            const ticker = input.value;
+
+            // Final validation only on submit
+            if (!/^[A-Z]{1,5}$/.test(ticker)) {
+                alert('Please enter a valid ticker (A–Z, max 5 characters).');
+                return;
+            }
+
+            // Preserve intent for auth flow
+            sessionStorage.setItem('next', `/index?ticker=${ticker}`);
+            window.location.href = `/index?ticker=${ticker}`;
+        }
+
+
+        document.getElementById('tickerInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                analyzeStock();
+            }
+        });
+
+        // Hide ticker tape on scroll
+        const tickerTape = document.getElementById('tickerTape');
+        let lastScrollY = 0;
+
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 50) {
+                tickerTape.classList.add('hidden');
+            } else {
+                tickerTape.classList.remove('hidden');
+            }
+            lastScrollY = window.scrollY;
+        });
+
+        // Fetch real ticker data
+        async function loadTickerData() {
+            const tickerTrack = document.getElementById('tickerTrack');
+            
+            try {
+                const response = await fetch('/api/ticker-tape');
+                const data = await response.json();
+                
+                if (data.success && data.stocks && data.stocks.length > 0) {
+                    // Build ticker HTML
+                    let tickerHTML = '';
+                    
+                    // Create items for each stock
+                    data.stocks.forEach(stock => {
+                        const direction = stock.change >= 0 ? 'up' : 'down';
+                        const changeStr = stock.change >= 0 ? `+${stock.change.toFixed(2)}%` : `${stock.change.toFixed(2)}%`;
+                        
+                        tickerHTML += `
+                            <a href="/index?ticker=${stock.symbol}" class="ticker-item">
+                                <span class="ticker-symbol">${stock.symbol}</span>
+                                <span class="ticker-price ${direction}">$${stock.price.toFixed(2)}</span>
+                                <span class="ticker-change ${direction}">${changeStr}</span>
+                            </a>
+                        `;
+                    });
+                    
+                    // Duplicate for seamless loop
+                    tickerHTML += tickerHTML;
+                    
+                    tickerTrack.innerHTML = tickerHTML;
+                } else {
+                    tickerTrack.innerHTML = '<span class="ticker-loading">Market data unavailable</span>';
+                }
+            } catch (err) {
+                console.error('Failed to load ticker data:', err);
+                tickerTrack.innerHTML = '<span class="ticker-loading">Market data unavailable</span>';
+            }
+        }
+
+        // Load ticker data on page load
+        loadTickerData();
+
+        // Check if user is logged in by calling Flask API
+        async function checkAuthState() {
+            try {
+                const response = await fetch('/api/auth/user');
+                const data = await response.json();
+                
+                const authLinks = document.getElementById('authLinks');
+                const userMenu = document.getElementById('userMenu');
+                const userEmail = document.getElementById('userEmail');
+                const userAvatar = document.getElementById('userAvatar');
+                
+                if (data.authenticated && data.user) {
+                    // User is logged in
+                    authLinks.style.display = 'none';
+                    userMenu.style.display = 'inline-flex';
+                    userEmail.innerText = data.user.email;
+                    userAvatar.innerText = data.user.email[0].toUpperCase();
+                } else {
+                    // User is not logged in
+                    authLinks.style.display = 'inline-flex';
+                    userMenu.style.display = 'none';
+                }
+            } catch (e) {
+                console.error('Auth check failed:', e);
+                // Show sign in button on error
+                document.getElementById('authLinks').style.display = 'inline-flex';
+                document.getElementById('userMenu').style.display = 'none';
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        function toggleUserMenu(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('userDropdown');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Close dropdown when clicking anywhere else
+        window.addEventListener('click', () => {
+            const menu = document.getElementById('userDropdown');
+            if (menu) menu.style.display = 'none';
+        });
+
+        const TICKER_REGEX = /^[A-Z]{1,5}$/;
+
+        function handleTickerInput(e) {
+            let value = e.target.value;
+
+            // Force uppercase
+            value = value.toUpperCase();
+
+            // Remove non A–Z characters
+            value = value.replace(/[^A-Z]/g, '');
+
+            // Enforce max length
+            if (value.length > 5) {
+                value = value.slice(0, 5);
+            }
+
+            e.target.value = value;
+
+            renderSuggestions(value);
+
+            const button = document.querySelector('.hero-btn');
+            button.disabled = value.length === 0;
+            button.style.opacity = value.length === 0 ? '0.6' : '1';
+        }
+
+
+        function blockInvalidKeys(e) {
+            // Allow control keys
+            const allowedKeys = [
+                'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight',
+                'Tab', 'Enter'
+            ];
+
+            if (allowedKeys.includes(e.key)) return;
+
+            // Block anything that's not a letter
+            if (!/^[a-zA-Z]$/.test(e.key)) {
+                e.preventDefault();
+            }
+        }
+
+        let lastQuery = '';
+
+        let suggestionAbort;
+
+        async function renderSuggestions(prefix) {
+            const box = document.getElementById('tickerSuggestions');
+            box.innerHTML = '';
+
+            if (!prefix) {
+                box.classList.remove('show');
+                return;
+            }
+
+            // cancel previous request
+            if (suggestionAbort) suggestionAbort.abort();
+            suggestionAbort = new AbortController();
+
+            try {
+                const res = await fetch(
+                    `/api/search-tickers?q=${encodeURIComponent(prefix)}`,
+                    { signal: suggestionAbort.signal }
+                );
+                const matches = await res.json();
+
+                if (!matches.length) {
+                    box.classList.remove('show');
+                    return;
+                }
+
+                for (const t of matches) {
+                    const item = document.createElement('div');
+                    item.className = 'ticker-suggestion';
+                    item.textContent = t;
+                    item.onclick = () => {
+                        tickerInput.value = t;
+                        box.classList.remove('show');
+                        tickerInput.focus();
+                    };
+                    box.appendChild(item);
+                }
+
+                box.classList.add('show');
+            } catch (e) {
+                if (e.name !== 'AbortError') console.error(e);
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            const box = document.getElementById('tickerSuggestions');
+            const input = document.getElementById('tickerInput');
+
+            if (!box.contains(e.target) && e.target !== input) {
+                box.classList.remove('show');
+            }
+        });
+
+        // Check auth state on page load
+        checkAuthState();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Analyzer | Buy Consideration Score</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --border-color: #2a2a3a;
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --accent-green: #00ff88;
+            --accent-red: #ff4466;
+            --accent-blue: #4488ff;
+            --accent-yellow: #ffcc00;
+            --glow-green: rgba(0, 255, 136, 0.15);
+            --glow-red: rgba(255, 68, 102, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated grid background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(68, 136, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(68, 136, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Top Navigation */
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .top-nav .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            color: var(--accent-green);
+            text-decoration: none;
+        }
+
+        .top-nav .logo:hover {
+            opacity: 0.8;
+        }
+
+        .nav-right {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+        }
+
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--accent-green);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            animation: flicker 3s infinite;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: -2px;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Search Section */
+        .search-section {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .search-input {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            width: 300px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 30px rgba(68, 136, 255, 0.2);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-secondary);
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .search-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            padding: 1rem 2rem;
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .search-btn:hover {
+            box-shadow: 0 0 40px var(--glow-green);
+            transform: translateY(-2px);
+        }
+
+        .search-btn:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Loading State */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 4rem;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Results Section */
+        .results {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Stock Header */
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .stock-info h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stock-name {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .stock-sector {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-blue);
+            letter-spacing: 1px;
+        }
+
+        .price-display {
+            text-align: right;
+        }
+
+        .current-price {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3rem;
+            font-weight: 700;
+        }
+
+        .price-change {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            padding: 0.25rem 0.75rem;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+
+        .price-change.positive {
+            background: var(--glow-green);
+            color: var(--accent-green);
+        }
+
+        .price-change.negative {
+            background: var(--glow-red);
+            color: var(--accent-red);
+        }
+
+        /* Score Card */
+        .score-section-wrapper {
+            margin-bottom: 2rem;
+        }
+
+        .score-section {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .score-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .score-card h3 {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .score-card-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3rem;
+        }
+
+        .score-card-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .score-explanation {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .score-circle {
+            width: 200px;
+            height: 200px;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .score-circle svg {
+            transform: rotate(-90deg);
+        }
+
+        .score-circle-bg {
+            fill: none;
+            stroke: var(--border-color);
+            stroke-width: 8;
+        }
+
+        .score-circle-fill {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease;
+        }
+
+        .score-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 4rem;
+            font-weight: 700;
+        }
+
+        .recommendation {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            padding: 0.75rem 1.5rem;
+            display: inline-block;
+        }
+
+        .recommendation.strong-consider {
+            background: var(--glow-green);
+            color: var(--accent-green);
+        }
+
+        .recommendation.consider {
+            background: rgba(0, 200, 100, 0.15);
+            color: #00c864;
+        }
+
+        .recommendation.neutral {
+            background: rgba(255, 204, 0, 0.15);
+            color: var(--accent-yellow);
+        }
+
+        .recommendation.caution {
+            background: rgba(255, 150, 50, 0.15);
+            color: #ff9632;
+        }
+
+        .recommendation.avoid {
+            background: var(--glow-red);
+            color: var(--accent-red);
+        }
+
+        /* Component Scores */
+        .component-scores {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+        }
+
+        .component-scores h3 {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        /* Analyst Ratings Section */
+        .analyst-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .analyst-section h3 {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+        }
+
+        .analyst-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .analyst-rating-main {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .analyst-consensus {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .analyst-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .analyst-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .analyst-value.strong-buy { color: var(--accent-green); }
+        .analyst-value.buy { color: #00c864; }
+        .analyst-value.hold { color: var(--accent-yellow); }
+        .analyst-value.sell { color: #ff9632; }
+        .analyst-value.strong-sell { color: var(--accent-red); }
+
+        .analyst-scale {
+            margin: 1rem 0;
+        }
+
+        .scale-bar {
+            height: 12px;
+            background: linear-gradient(90deg, 
+                var(--accent-green) 0%, 
+                #00c864 25%, 
+                var(--accent-yellow) 50%, 
+                #ff9632 75%, 
+                var(--accent-red) 100%);
+            position: relative;
+            border-radius: 6px;
+        }
+
+        .scale-marker {
+            position: absolute;
+            top: -8px;
+            width: 6px;
+            height: 28px;
+            background: var(--text-primary);
+            border-radius: 3px;
+            transform: translateX(-50%);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            transition: left 0.5s ease;
+        }
+
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.75rem;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .analyst-count {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .analyst-targets {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .target-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .target-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .target-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .target-value.upside { color: var(--accent-green); }
+        .target-value.downside { color: var(--accent-red); }
+
+        .analyst-source {
+            display: inline-block;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--accent-blue);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .analyst-source:hover {
+            color: var(--text-primary);
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .analyst-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .score-bar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            margin-bottom: 0.5rem;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .score-bar:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .score-bar-main {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            gap: 1rem;
+            cursor: pointer;
+        }
+
+        .score-bar-label {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            min-width: 140px;
+        }
+
+        .score-bar-track {
+            flex: 1;
+            height: 8px;
+            background: var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            transition: width 0.8s ease;
+        }
+
+        .score-bar-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            min-width: 55px;
+            text-align: right;
+        }
+
+        .score-bar-weight {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            min-width: 35px;
+            text-align: right;
+        }
+
+        .score-bar-details {
+            max-height: 0;
+            overflow: hidden;
+            background: rgba(0,0,0,0.2);
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            padding: 0 1rem;
+        }
+
+        .score-bar:hover .score-bar-details {
+            max-height: 300px;
+            padding: 1rem;
+        }
+
+        .score-bar-details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-secondary);
+            border-left: 3px solid var(--border-color);
+        }
+
+        .detail-item.positive {
+            border-left-color: var(--accent-green);
+        }
+
+        .detail-item.negative {
+            border-left-color: var(--accent-red);
+        }
+
+        .detail-item.neutral {
+            border-left-color: var(--text-secondary);
+        }
+
+        .detail-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .detail-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .detail-points {
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        .detail-points.positive { color: var(--accent-green); }
+        .detail-points.negative { color: var(--accent-red); }
+        .detail-points.neutral { color: var(--text-secondary); }
+
+        .score-bar-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 0.75rem;
+            margin-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.8rem;
+        }
+
+        .score-bar-summary span:first-child {
+            color: var(--text-secondary);
+        }
+
+        .score-bar-summary span:last-child {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        @media (max-width: 600px) {
+            .score-bar-details-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .score-bar-label {
+                min-width: 100px;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* Range Indicator */
+        .range-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .range-section h3 {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+        }
+
+        .range-track {
+            height: 12px;
+            background: linear-gradient(90deg, var(--accent-red) 0%, var(--accent-yellow) 50%, var(--accent-green) 100%);
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .range-marker {
+            position: absolute;
+            top: -8px;
+            width: 4px;
+            height: 28px;
+            background: var(--text-primary);
+            transform: translateX(-50%);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+        }
+
+        .range-low { color: var(--accent-red); }
+        .range-high { color: var(--accent-green); }
+
+        /* Articles Section */
+        .articles-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .articles-section h3 {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+        }
+
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+        }
+
+        .article-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 1.25rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .article-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+
+        .article-source {
+            font-size: 0.7rem;
+            color: var(--accent-blue);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .article-title {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            line-height: 1.4;
+            margin-bottom: 0.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .article-date {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: auto;
+        }
+
+        .articles-more {
+            display: inline-block;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--accent-blue);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .articles-more:hover {
+            color: var(--text-primary);
+            text-decoration: underline;
+        }
+
+        .articles-loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .no-articles {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .articles-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Disclaimer */
+        footer {
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        footer p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Error State */
+        .error {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+            background: var(--glow-red);
+            border: 1px solid var(--accent-red);
+            margin-bottom: 2rem;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .error h3 {
+            color: var(--accent-red);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .score-section {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .search-section {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .search-btn {
+                width: 100%;
+            }
+
+            .stock-header {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .price-display {
+                text-align: left;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .score-card-content {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .score-card-details {
+                align-items: center;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    
+    <div class="container">
+        <nav class="top-nav">
+            <div class="brand">
+                <img src="{{ url_for('static', filename='logo.png') }}"
+                    style = "width: 40px; height: 75px;"
+                    alt="VSN Logo"
+                    class="logo-img">
+
+                <div class="logo-text">VSN ANALYSIS</div>
+            </div>
+
+            <div class="nav-right">
+                <a href="/" class="nav-link">← Back to Home</a>
+            </div>
+        </nav>
+
+        <div class="error" id="errorSection">
+            <h3>Error</h3>
+            <p id="errorMessage">Could not fetch data for this ticker.</p>
+        </div>
+
+        <div class="loading" id="loadingSection">
+            <div class="spinner"></div>
+            <p>Fetching market data...</p>
+        </div>
+
+        <div class="results" id="resultsSection">
+            <!-- Stock Header -->
+            <div class="stock-header">
+                <div class="stock-info">
+                    <h2 id="tickerSymbol">AAPL</h2>
+                    <p class="stock-name" id="companyName">Apple Inc.</p>
+                    <p class="stock-sector" id="stockSector">Technology • Consumer Electronics</p>
+                </div>
+                <div class="price-display">
+                    <div class="current-price" id="currentPrice">$0.00</div>
+                    <div class="price-change positive" id="priceChange">+0.00%</div>
+                </div>
+            </div>
+
+            <!-- Score Section -->
+            <div class="score-section-wrapper">
+                <!-- Total Score Card at Top -->
+                <div class="score-card">
+                    <h3>Buy Consideration Score</h3>
+                    <div class="score-card-content">
+                        <div class="score-circle">
+                            <svg width="200" height="200" viewBox="0 0 200 200">
+                                <circle class="score-circle-bg" cx="100" cy="100" r="90"></circle>
+                                <circle class="score-circle-fill" id="scoreCircle" cx="100" cy="100" r="90" 
+                                    stroke-dasharray="565.48" stroke-dashoffset="565.48"></circle>
+                            </svg>
+                            <div class="score-value" id="scoreValue">0</div>
+                        </div>
+                        <div class="score-card-details">
+                            <div class="recommendation" id="recommendation">NEUTRAL</div>
+                            <p class="score-explanation">Weighted average of 5 fundamental factors</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Component Scores Below -->
+                <div class="component-scores">
+                    <h3>Score Breakdown</h3>
+                    <div id="componentBars">
+                        <!-- Generated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analyst Ratings Section -->
+            <div class="analyst-section" id="analystSection">
+                <h3>Wall Street Analyst Ratings</h3>
+                <div class="analyst-content">
+                    <div class="analyst-rating-main">
+                        <div class="analyst-consensus">
+                            <span class="analyst-label">Consensus</span>
+                            <span class="analyst-value" id="analystConsensus">-</span>
+                        </div>
+                        <div class="analyst-scale">
+                            <div class="scale-bar">
+                                <div class="scale-marker" id="analystMarker"></div>
+                            </div>
+                            <div class="scale-labels">
+                                <span>Strong Buy</span>
+                                <span>Buy</span>
+                                <span>Hold</span>
+                                <span>Sell</span>
+                                <span>Strong Sell</span>
+                            </div>
+                        </div>
+                        <div class="analyst-count" id="analystCount">Based on 0 analysts</div>
+                    </div>
+                    <div class="analyst-targets">
+                        <div class="target-item">
+                            <span class="target-label">Price Target</span>
+                            <span class="target-value" id="targetPrice">-</span>
+                        </div>
+                        <div class="target-item">
+                            <span class="target-label">Target Range</span>
+                            <span class="target-value" id="targetRange">-</span>
+                        </div>
+                        <div class="target-item">
+                            <span class="target-label">Upside/Downside</span>
+                            <span class="target-value" id="targetUpside">-</span>
+                        </div>
+                    </div>
+                </div>
+                <a class="analyst-source" id="analystLink" href="#" target="_blank">
+                    View on Yahoo Finance →
+                </a>
+            </div>
+
+            <!-- Metrics Grid -->
+            <div class="metrics-grid" id="metricsGrid">
+                <!-- Generated by JS -->
+            </div>
+
+            <!-- 52-Week Range -->
+            <div class="range-section">
+                <h3>52-Week Price Range</h3>
+                <div class="range-track">
+                    <div class="range-marker" id="rangeMarker" style="left: 50%"></div>
+                </div>
+                <div class="range-labels">
+                    <span class="range-low" id="rangeLow">$0.00</span>
+                    <span id="rangeCurrent">Current: $0.00</span>
+                    <span class="range-high" id="rangeHigh">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Related Articles Section -->
+            <div class="articles-section" id="articlesSection">
+                <h3>Related News & Articles</h3>
+                <div class="articles-grid" id="articlesGrid">
+                    <!-- Generated by JS -->
+                </div>
+                <a class="articles-more" id="articlesMoreLink" href="#" target="_blank">
+                    View more on Yahoo Finance →
+                </a>
+            </div>
+
+            <footer>
+                <!-- Disclaimer -->
+                <h4>DISCLAIMER</h4>
+                <p>&nbsp</p>
+                <p>This analysis is for informational purposes only and should not be considered financial advice. Always conduct your own research before making investment decisions.</p>
+                </footer>
+        </div>
+    </div>
+
+    <script>
+        // Scoring logic (ported from Python)
+        function calculateScore(metrics) {
+            const scores = {};
+            const weights = {};
+
+            // 1. Valuation Score (25% weight)
+            let valuationScore = 50;
+            weights.valuation = 25;
+
+            const pe = metrics.pe_ratio;
+            if (pe !== null && pe > 0) {
+                if (pe < 15) valuationScore += 30;
+                else if (pe < 20) valuationScore += 15;
+                else if (pe < 30) valuationScore += 0;
+                else if (pe < 50) valuationScore -= 15;
+                else valuationScore -= 30;
+            }
+
+            const peg = metrics.peg_ratio;
+            if (peg !== null && peg > 0) {
+                if (peg < 1) valuationScore += 20;
+                else if (peg < 2) valuationScore += 10;
+                else valuationScore -= 10;
+            }
+
+            scores.valuation = Math.max(0, Math.min(100, valuationScore));
+
+            // 2. Profitability Score (20% weight)
+            let profitScore = 50;
+            weights.profitability = 20;
+
+            const roe = metrics.return_on_equity;
+            if (roe !== null) {
+                if (roe > 0.20) profitScore += 25;
+                else if (roe > 0.15) profitScore += 15;
+                else if (roe > 0.10) profitScore += 5;
+                else if (roe > 0) profitScore -= 5;
+                else profitScore -= 20;
+            }
+
+            const margin = metrics.profit_margin;
+            if (margin !== null) {
+                if (margin > 0.20) profitScore += 25;
+                else if (margin > 0.10) profitScore += 15;
+                else if (margin > 0) profitScore += 5;
+                else profitScore -= 20;
+            }
+
+            scores.profitability = Math.max(0, Math.min(100, profitScore));
+
+            // 3. Growth Score (20% weight)
+            let growthScore = 50;
+            weights.growth = 20;
+
+            const revGrowth = metrics.revenue_growth;
+            if (revGrowth !== null) {
+                if (revGrowth > 0.25) growthScore += 25;
+                else if (revGrowth > 0.10) growthScore += 15;
+                else if (revGrowth > 0) growthScore += 5;
+                else growthScore -= 15;
+            }
+
+            const earnGrowth = metrics.earnings_growth;
+            if (earnGrowth !== null) {
+                if (earnGrowth > 0.25) growthScore += 25;
+                else if (earnGrowth > 0.10) growthScore += 15;
+                else if (earnGrowth > 0) growthScore += 5;
+                else growthScore -= 15;
+            }
+
+            scores.growth = Math.max(0, Math.min(100, growthScore));
+
+            // 4. Financial Health Score (20% weight)
+            let healthScore = 50;
+            weights.financial_health = 20;
+
+            const de = metrics.debt_to_equity;
+            if (de !== null) {
+                if (de < 30) healthScore += 25;
+                else if (de < 50) healthScore += 15;
+                else if (de < 100) healthScore += 0;
+                else if (de < 200) healthScore -= 15;
+                else healthScore -= 25;
+            }
+
+            const cr = metrics.current_ratio;
+            if (cr !== null) {
+                if (cr > 2) healthScore += 20;
+                else if (cr > 1.5) healthScore += 10;
+                else if (cr > 1) healthScore += 0;
+                else healthScore -= 20;
+            }
+
+            scores.financial_health = Math.max(0, Math.min(100, healthScore));
+
+            // 5. Technical/Momentum Score (15% weight)
+            let techScore = 50;
+            weights.technical = 15;
+
+            const distHigh = metrics.distance_from_52w_high;
+            if (distHigh !== null) {
+                if (distHigh > -10) techScore += 15;
+                else if (distHigh > -20) techScore += 5;
+                else if (distHigh > -30) techScore -= 5;
+                else techScore -= 15;
+            }
+
+            const volatility = metrics.volatility;
+            if (volatility !== null) {
+                if (volatility < 20) techScore += 15;
+                else if (volatility < 30) techScore += 5;
+                else if (volatility < 50) techScore -= 5;
+                else techScore -= 15;
+            }
+
+            const beta = metrics.beta;
+            if (beta !== null) {
+                if (beta >= 0.8 && beta <= 1.2) techScore += 10;
+                else if (beta >= 0.5 && beta <= 1.5) techScore += 5;
+                else techScore -= 5;
+            }
+
+            scores.technical = Math.max(0, Math.min(100, techScore));
+
+            // Calculate weighted total
+            let totalScore = 0;
+            for (const k in scores) {
+                totalScore += scores[k] * weights[k] / 100;
+            }
+
+            // Determine recommendation
+            let recommendation;
+            if (totalScore >= 75) recommendation = "STRONG CONSIDER";
+            else if (totalScore >= 60) recommendation = "CONSIDER";
+            else if (totalScore >= 45) recommendation = "NEUTRAL";
+            else if (totalScore >= 30) recommendation = "CAUTION";
+            else recommendation = "AVOID";
+
+            return {
+                total_score: Math.round(totalScore * 10) / 10,
+                recommendation: recommendation,
+                component_scores: scores,
+                weights: weights
+            };
+        }
+
+        // Format values
+        function formatValue(val, fmt = '') {
+            if (val === null || val === undefined) return 'N/A';
+            if (fmt === 'pct') return (val * 100).toFixed(1) + '%';
+            if (fmt === 'ratio') return val.toFixed(2);
+            if (fmt === 'price') return '$' + val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            if (fmt === 'cap') {
+                if (val >= 1e12) return '$' + (val / 1e12).toFixed(1) + 'T';
+                if (val >= 1e9) return '$' + (val / 1e9).toFixed(1) + 'B';
+                if (val >= 1e6) return '$' + (val / 1e6).toFixed(1) + 'M';
+                return '$' + val.toLocaleString();
+            }
+            return String(val);
+        }
+
+        // Get score color
+        function getScoreColor(score) {
+            if (score >= 60) return '#00ff88';
+            if (score >= 40) return '#ffcc00';
+            return '#ff4466';
+        }
+
+        // Update UI with results
+        function displayResults(metrics, scoreData) {
+            // Stock header
+            document.getElementById('tickerSymbol').textContent = metrics.ticker;
+            document.getElementById('companyName').textContent = metrics.name || metrics.ticker;
+            document.getElementById('stockSector').textContent = `${metrics.sector || 'N/A'} • ${metrics.industry || 'N/A'}`;
+            document.getElementById('currentPrice').textContent = formatValue(metrics.current_price, 'price');
+
+            // Daily price change
+            const dayChange = metrics.day_change || 0;
+            const dayChangePercent = metrics.day_change_percent || 0;
+            const priceChangeEl = document.getElementById('priceChange');
+            priceChangeEl.textContent = (dayChange >= 0 ? '+' : '') + '$' + dayChange.toFixed(2) + ' (' + (dayChangePercent >= 0 ? '+' : '') + dayChangePercent.toFixed(2) + '%)';
+            priceChangeEl.className = 'price-change ' + (dayChange >= 0 ? 'positive' : 'negative');
+
+            // Score circle
+            const score = scoreData.total_score;
+            const scoreCircle = document.getElementById('scoreCircle');
+            const circumference = 565.48;
+            const offset = circumference - (score / 100) * circumference;
+            scoreCircle.style.stroke = getScoreColor(score);
+            scoreCircle.style.strokeDashoffset = offset;
+
+            document.getElementById('scoreValue').textContent = Math.round(score);
+            document.getElementById('scoreValue').style.color = getScoreColor(score);
+
+            // Recommendation
+            const recEl = document.getElementById('recommendation');
+            recEl.textContent = scoreData.recommendation;
+            recEl.className = 'recommendation ' + scoreData.recommendation.toLowerCase().replace(' ', '-');
+
+            // Component bars with flip cards showing detailed point breakdown
+            const componentBars = document.getElementById('componentBars');
+            componentBars.innerHTML = '';
+            
+            // Define detailed scoring breakdown for each category
+            // This mirrors the Python scoring.py logic exactly
+            function getValuationBreakdown(metrics) {
+                let items = [];
+                let baseScore = 50;
+                let totalPoints = 0;
+                
+                const pe = metrics.pe_ratio;
+                let pePoints = 0;
+                let peReason = '';
+                if (pe !== null && pe !== undefined && pe > 0) {
+                    if (pe < 15) { pePoints = 30; peReason = 'Excellent (< 15)'; }
+                    else if (pe < 20) { pePoints = 15; peReason = 'Good (15-20)'; }
+                    else if (pe < 30) { pePoints = 0; peReason = 'Fair (20-30)'; }
+                    else if (pe < 50) { pePoints = -15; peReason = 'High (30-50)'; }
+                    else { pePoints = -30; peReason = 'Very High (> 50)'; }
+                    totalPoints += pePoints;
+                    items.push({ label: `P/E Ratio: ${pe.toFixed(1)}`, points: pePoints, reason: peReason });
+                } else {
+                    items.push({ label: 'P/E Ratio: N/A', points: 0, reason: 'No impact (data unavailable)' });
+                }
+                
+                const peg = metrics.dividend_yield;
+                let pegPoints = 0;
+                let pegReason = '';
+                if (peg !== null && peg !== undefined && peg > 0) {
+                    if (peg > 0.04) { pegPoints = 20; pegReason = 'High yield (> 4%)'; }
+                    else if (peg > 0.02) { pegPoints = 10; pegReason = 'Moderate (2-4%)'; }
+                    else { pegPoints = 5; pegReason = 'Low yield (< 2%)'; }
+                    totalPoints += pegPoints;
+                    items.push({ label: `Dividend Yield: ${(peg * 100).toFixed(2)}%`, points: pegPoints, reason: pegReason });
+                } else {
+                    items.push({ label: 'Dividend Yield: N/A', points: 0, reason: 'No dividend' });
+                }
+                
+                return { items, baseScore, totalPoints, finalScore: Math.max(0, Math.min(100, baseScore + totalPoints)) };
+            }
+            
+            function getProfitabilityBreakdown(metrics) {
+                let items = [];
+                let baseScore = 50;
+                let totalPoints = 0;
+                
+                const roe = metrics.return_on_equity;
+                let roePoints = 0;
+                let roeReason = '';
+                if (roe !== null && roe !== undefined) {
+                    if (roe > 0.20) { roePoints = 25; roeReason = 'Excellent (> 20%)'; }
+                    else if (roe > 0.15) { roePoints = 15; roeReason = 'Good (15-20%)'; }
+                    else if (roe > 0.10) { roePoints = 5; roeReason = 'Fair (10-15%)'; }
+                    else if (roe > 0) { roePoints = -5; roeReason = 'Low (0-10%)'; }
+                    else { roePoints = -20; roeReason = 'Negative'; }
+                    totalPoints += roePoints;
+                    items.push({ label: `ROE: ${(roe * 100).toFixed(1)}%`, points: roePoints, reason: roeReason });
+                } else {
+                    items.push({ label: 'ROE: N/A', points: 0, reason: 'No impact (data unavailable)' });
+                }
+                
+                const margin = metrics.profit_margin;
+                let marginPoints = 0;
+                let marginReason = '';
+                if (margin !== null && margin !== undefined) {
+                    if (margin > 0.20) { marginPoints = 25; marginReason = 'Excellent (> 20%)'; }
+                    else if (margin > 0.10) { marginPoints = 15; marginReason = 'Good (10-20%)'; }
+                    else if (margin > 0) { marginPoints = 5; marginReason = 'Low (0-10%)'; }
+                    else { marginPoints = -20; marginReason = 'Negative'; }
+                    totalPoints += marginPoints;
+                    items.push({ label: `Profit Margin: ${(margin * 100).toFixed(1)}%`, points: marginPoints, reason: marginReason });
+                } else {
+                    items.push({ label: 'Profit Margin: N/A', points: 0, reason: 'No impact (data unavailable)' });
+                }
+                
+                return { items, baseScore, totalPoints, finalScore: Math.max(0, Math.min(100, baseScore + totalPoints)) };
+            }
+            
+            function getGrowthBreakdown(metrics) {
+                let items = [];
+                let baseScore = 50;
+                let totalPoints = 0;
+                
+                const revGrowth = metrics.revenue_growth;
+                let revPoints = 0;
+                let revReason = '';
+                if (revGrowth !== null && revGrowth !== undefined) {
+                    if (revGrowth > 0.25) { revPoints = 25; revReason = 'Excellent (> 25%)'; }
+                    else if (revGrowth > 0.10) { revPoints = 15; revReason = 'Good (10-25%)'; }
+                    else if (revGrowth > 0) { revPoints = 5; revReason = 'Slow (0-10%)'; }
+                    else { revPoints = -15; revReason = 'Declining'; }
+                    totalPoints += revPoints;
+                    items.push({ label: `Revenue Growth: ${(revGrowth * 100).toFixed(1)}%`, points: revPoints, reason: revReason });
+                } else {
+                    items.push({ label: 'Revenue Growth: N/A', points: 0, reason: 'No impact (data unavailable)' });
+                }
+                
+                const earnGrowth = metrics.earnings_growth;
+                let earnPoints = 0;
+                let earnReason = '';
+                if (earnGrowth !== null && earnGrowth !== undefined) {
+                    if (earnGrowth > 0.25) { earnPoints = 25; earnReason = 'Excellent (> 25%)'; }
+                    else if (earnGrowth > 0.10) { earnPoints = 15; earnReason = 'Good (10-25%)'; }
+                    else if (earnGrowth > 0) { earnPoints = 5; earnReason = 'Slow (0-10%)'; }
+                    else { earnPoints = -15; earnReason = 'Declining'; }
+                    totalPoints += earnPoints;
+                    items.push({ label: `Earnings Growth: ${(earnGrowth * 100).toFixed(1)}%`, points: earnPoints, reason: earnReason });
+                } else {
+                    items.push({ label: 'Earnings Growth: N/A', points: 0, reason: 'No impact (data unavailable)' });
+                }
+                
+                return { items, baseScore, totalPoints, finalScore: Math.max(0, Math.min(100, baseScore + totalPoints)) };
+            }
+            
+            function getFinancialHealthBreakdown(metrics) {
+                let items = [];
+                let baseScore = 50;
+                let totalPoints = 0;
+                
+                const de = metrics.debt_to_equity;
+                let dePoints = 0;
+                let deReason = '';
+                if (de !== null && de !== undefined) {
+                    if (de < 30) { dePoints = 25; deReason = 'Low debt (< 30)'; }
+                    else if (de < 50) { dePoints = 15; deReason = 'Moderate (30-50)'; }
+                    else if (de < 100) { dePoints = 0; deReason = 'Average (50-100)'; }
+                    else if (de < 200) { dePoints = -15; deReason = 'High (100-200)'; }
+                    else { dePoints = -25; deReason = 'Very High (> 200)'; }
+                    totalPoints += dePoints;
+                    items.push({ label: `Debt/Equity: ${de.toFixed(1)}`, points: dePoints, reason: deReason });
+                } else {
+                    items.push({ label: 'Debt/Equity: N/A', points: 0, reason: 'No impact (data unavailable)' });
+                }
+                
+                const cr = metrics.current_ratio;
+                let crPoints = 0;
+                let crReason = '';
+                if (cr !== null && cr !== undefined) {
+                    if (cr > 2) { crPoints = 20; crReason = 'Strong (> 2)'; }
+                    else if (cr > 1.5) { crPoints = 10; crReason = 'Good (1.5-2)'; }
+                    else if (cr > 1) { crPoints = 0; crReason = 'Adequate (1-1.5)'; }
+                    else { crPoints = -20; crReason = 'Weak (< 1)'; }
+                    totalPoints += crPoints;
+                    items.push({ label: `Current Ratio: ${cr.toFixed(2)}`, points: crPoints, reason: crReason });
+                } else {
+                    items.push({ label: 'Current Ratio: N/A', points: 0, reason: 'No impact (data unavailable)' });
+                }
+                
+                return { items, baseScore, totalPoints, finalScore: Math.max(0, Math.min(100, baseScore + totalPoints)) };
+            }
+            
+            function getTechnicalBreakdown(metrics) {
+                let items = [];
+                let baseScore = 50;
+                let totalPoints = 0;
+                
+                const distHigh = metrics.distance_from_52w_high;
+                let distPoints = 0;
+                let distReason = '';
+                if (distHigh !== null && distHigh !== undefined) {
+                    if (distHigh > -10) { distPoints = 15; distReason = 'Near high (within 10%)'; }
+                    else if (distHigh > -20) { distPoints = 5; distReason = 'Moderate (10-20% off)'; }
+                    else if (distHigh > -30) { distPoints = -5; distReason = 'Down (20-30% off)'; }
+                    else { distPoints = -15; distReason = 'Far from high (> 30% off)'; }
+                    totalPoints += distPoints;
+                    items.push({ label: `From 52W High: ${distHigh.toFixed(1)}%`, points: distPoints, reason: distReason });
+                } else {
+                    items.push({ label: 'From 52W High: N/A', points: 0, reason: 'No impact (data unavailable)' });
+                }
+                
+                const volatility = metrics.volatility;
+                let volPoints = 0;
+                let volReason = '';
+                if (volatility !== null && volatility !== undefined) {
+                    if (volatility < 20) { volPoints = 15; volReason = 'Low (< 20%)'; }
+                    else if (volatility < 30) { volPoints = 5; volReason = 'Moderate (20-30%)'; }
+                    else if (volatility < 50) { volPoints = -5; volReason = 'High (30-50%)'; }
+                    else { volPoints = -15; volReason = 'Very High (> 50%)'; }
+                    totalPoints += volPoints;
+                    items.push({ label: `Volatility: ${volatility.toFixed(1)}%`, points: volPoints, reason: volReason });
+                } else {
+                    items.push({ label: 'Volatility: N/A', points: 0, reason: 'No impact (data unavailable)' });
+                }
+                
+                const beta = metrics.beta;
+                let betaPoints = 0;
+                let betaReason = '';
+                if (beta !== null && beta !== undefined) {
+                    if (beta >= 0.8 && beta <= 1.2) { betaPoints = 10; betaReason = 'Market-like (0.8-1.2)'; }
+                    else if (beta >= 0.5 && beta <= 1.5) { betaPoints = 5; betaReason = 'Reasonable (0.5-1.5)'; }
+                    else { betaPoints = -5; betaReason = 'Extreme'; }
+                    totalPoints += betaPoints;
+                    items.push({ label: `Beta: ${beta.toFixed(2)}`, points: betaPoints, reason: betaReason });
+                } else {
+                    items.push({ label: 'Beta: N/A', points: 0, reason: 'No impact (data unavailable)' });
+                }
+                
+                return { items, baseScore, totalPoints, finalScore: Math.max(0, Math.min(100, baseScore + totalPoints)) };
+            }
+            
+            const breakdownFunctions = {
+                valuation: getValuationBreakdown,
+                profitability: getProfitabilityBreakdown,
+                growth: getGrowthBreakdown,
+                financial_health: getFinancialHealthBreakdown,
+                technical: getTechnicalBreakdown
+            };
+
+            for (const [key, value] of Object.entries(scoreData.component_scores)) {
+                const weight = scoreData.weights[key];
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                const color = getScoreColor(value);
+                
+                const breakdown = breakdownFunctions[key] ? breakdownFunctions[key](metrics) : { items: [], baseScore: 50, totalPoints: 0, finalScore: value };
+                
+                // Generate detail items for the expandable section
+                let detailItems = breakdown.items.map(item => {
+                    const pointsClass = item.points > 0 ? 'positive' : (item.points < 0 ? 'negative' : 'neutral');
+                    const pointsStr = item.points > 0 ? `+${item.points}` : (item.points === 0 ? '±0' : `${item.points}`);
+                    return `<div class="detail-item ${pointsClass}">
+                        <span class="detail-label">${item.label}</span>
+                        <span>
+                            <span class="detail-value">${item.reason}</span>
+                            <span class="detail-points ${pointsClass}">${pointsStr}</span>
+                        </span>
+                    </div>`;
+                }).join('');
+                
+                const totalStr = breakdown.totalPoints >= 0 ? `+ ${breakdown.totalPoints}` : `- ${Math.abs(breakdown.totalPoints)}`;
+                
+                componentBars.innerHTML += `
+                    <div class="score-bar">
+                        <div class="score-bar-main">
+                            <span class="score-bar-label">${label}</span>
+                            <div class="score-bar-track">
+                                <div class="score-bar-fill" style="width: ${value}%; background: ${color}"></div>
+                            </div>
+                            <span class="score-bar-value" style="color: ${color}">${Math.round(value)}</span>
+                            <span class="score-bar-weight">${weight}%</span>
+                        </div>
+                        <div class="score-bar-details">
+                            <div class="score-bar-details-grid">
+                                ${detailItems}
+                            </div>
+                            <div class="score-bar-summary">
+                                <span>Calculation</span>
+                                <span style="color: ${color}">Base 50 ${totalStr} = ${breakdown.finalScore}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Analyst ratings section
+            const analystSection = document.getElementById('analystSection');
+            const recMean = metrics.recommendation_mean;
+            const recommendation = metrics.recommendation;
+            const numAnalysts = metrics.number_of_analysts;
+            const targetPrice = metrics.target_price;
+            const targetHigh = metrics.target_high;
+            const targetLow = metrics.target_low;
+            const currentPrice = metrics.current_price;
+            
+            // Only show if we have analyst data
+            if (recommendation || recMean || targetPrice) {
+                analystSection.style.display = 'block';
+                
+                // Set consensus rating
+                const consensusEl = document.getElementById('analystConsensus');
+                let consensusText = 'N/A';
+                let consensusClass = '';
+                
+                if (recommendation) {
+                    const recMap = {
+                        'strongBuy': { text: 'STRONG BUY', class: 'strong-buy' },
+                        'strong_buy': { text: 'STRONG BUY', class: 'strong-buy' },
+                        'buy': { text: 'BUY', class: 'buy' },
+                        'hold': { text: 'HOLD', class: 'hold' },
+                        'sell': { text: 'SELL', class: 'sell' },
+                        'strongSell': { text: 'STRONG SELL', class: 'strong-sell' },
+                        'strong_sell': { text: 'STRONG SELL', class: 'strong-sell' }
+                    };
+                    const rec = recMap[recommendation] || { text: recommendation.replace(/_/g, ' ').toUpperCase(), class: 'hold' };
+                    consensusText = rec.text;
+                    consensusClass = rec.class;
+                }
+                
+                consensusEl.textContent = consensusText;
+                consensusEl.className = 'analyst-value ' + consensusClass;
+                
+                // Position marker on scale (1 = Strong Buy, 5 = Strong Sell)
+                const markerEl = document.getElementById('analystMarker');
+                if (recMean) {
+                    const markerPos = ((recMean - 1) / 4) * 100;
+                    markerEl.style.left = markerPos + '%';
+                    markerEl.style.display = 'block';
+                } else {
+                    markerEl.style.display = 'none';
+                }
+                
+                // Analyst count
+                document.getElementById('analystCount').textContent = 
+                    numAnalysts ? `Based on ${numAnalysts} analyst${numAnalysts > 1 ? 's' : ''}` : '';
+                
+                // Price targets
+                document.getElementById('targetPrice').textContent = 
+                    targetPrice ? formatValue(targetPrice, 'price') : 'N/A';
+                
+                document.getElementById('targetRange').textContent = 
+                    (targetLow && targetHigh) ? `${formatValue(targetLow, 'price')} - ${formatValue(targetHigh, 'price')}` : 'N/A';
+                
+                // Upside/downside
+                const upsideEl = document.getElementById('targetUpside');
+                if (targetPrice && currentPrice) {
+                    const upside = ((targetPrice - currentPrice) / currentPrice) * 100;
+                    upsideEl.textContent = (upside >= 0 ? '+' : '') + upside.toFixed(1) + '%';
+                    upsideEl.className = 'target-value ' + (upside >= 0 ? 'upside' : 'downside');
+                } else {
+                    upsideEl.textContent = 'N/A';
+                    upsideEl.className = 'target-value';
+                }
+                
+                // Yahoo Finance link
+                document.getElementById('analystLink').href = 
+                    `https://finance.yahoo.com/quote/${metrics.ticker}/analysis`;
+            } else {
+                analystSection.style.display = 'none';
+            }
+
+            // Metrics grid
+            const metricsData = [
+                { label: 'P/E Ratio', value: formatValue(metrics.pe_ratio, 'ratio') },
+                { label: 'Forward P/E', value: formatValue(metrics.forward_pe, 'ratio') },
+                { label: 'PEG Ratio', value: formatValue(metrics.peg_ratio, 'ratio') },
+                { label: 'Market Cap', value: formatValue(metrics.market_cap, 'cap') },
+                { label: 'Profit Margin', value: formatValue(metrics.profit_margin, 'pct') },
+                { label: 'Return on Equity', value: formatValue(metrics.return_on_equity, 'pct') },
+                { label: 'Revenue Growth', value: formatValue(metrics.revenue_growth, 'pct') },
+                { label: 'Debt/Equity', value: formatValue(metrics.debt_to_equity, 'ratio') },
+                { label: 'Current Ratio', value: formatValue(metrics.current_ratio, 'ratio') },
+                { label: 'Dividend Yield', value: formatValue(metrics.dividend_yield, 'pct') },
+                { label: 'Beta', value: formatValue(metrics.beta, 'ratio') },
+                { label: 'Volatility', value: metrics.volatility ? metrics.volatility.toFixed(1) + '%' : 'N/A' }
+            ];
+
+            const metricsGrid = document.getElementById('metricsGrid');
+            metricsGrid.innerHTML = metricsData.map(m => `
+                <div class="metric-card">
+                    <div class="metric-label">${m.label}</div>
+                    <div class="metric-value">${m.value}</div>
+                </div>
+            `).join('');
+
+            // 52-week range
+            const low = metrics.fifty_two_week_low;
+            const high = metrics.fifty_two_week_high;
+            const current = metrics.current_price;
+            const position = high > low ? ((current - low) / (high - low)) * 100 : 50;
+
+            document.getElementById('rangeLow').textContent = formatValue(low, 'price');
+            document.getElementById('rangeHigh').textContent = formatValue(high, 'price');
+            document.getElementById('rangeCurrent').textContent = 'Current: ' + formatValue(current, 'price');
+            document.getElementById('rangeMarker').style.left = position + '%';
+
+            // Articles section
+            const articlesSection = document.getElementById('articlesSection');
+            const articlesGrid = document.getElementById('articlesGrid');
+            const news = metrics.news;
+            
+            if (news && news.length > 0) {
+                articlesSection.style.display = 'block';
+                
+                articlesGrid.innerHTML = news.map(article => {
+                    // Skip if no title
+                    if (!article.title) return '';
+                    
+                    // Format date
+                    let dateStr = '';
+                    if (article.published) {
+                        const date = new Date(article.published * 1000);
+                        const now = new Date();
+                        const diffMs = now - date;
+                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                        
+                        if (diffHours < 1) {
+                            dateStr = 'Just now';
+                        } else if (diffHours < 24) {
+                            dateStr = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                        } else if (diffDays < 7) {
+                            dateStr = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+                        } else {
+                            dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        }
+                    }
+                    
+                    return `
+                        <a class="article-card" href="${article.link || '#'}" target="_blank" rel="noopener noreferrer">
+                            <span class="article-source">${article.publisher || 'News'}</span>
+                            <span class="article-title">${article.title}</span>
+                            ${dateStr ? `<span class="article-date">${dateStr}</span>` : ''}
+                        </a>
+                    `;
+                }).filter(x => x).join('');
+                
+                // Set the "more" link
+                document.getElementById('articlesMoreLink').href = `https://finance.yahoo.com/quote/${metrics.ticker}/news`;
+            } else {
+                // Hide the section if no news
+                articlesSection.style.display = 'none';
+            }
+        }
+
+        // Sample data for demo/fallback
+        const sampleStocks = {
+            'AAPL': {
+                ticker: 'AAPL', name: 'Apple Inc.', sector: 'Technology', industry: 'Consumer Electronics',
+                current_price: 178.52, fifty_two_week_high: 199.62, fifty_two_week_low: 164.08,
+                day_change: 2.34, day_change_percent: 1.33,
+                market_cap: 2780000000000, pe_ratio: 28.5, forward_pe: 26.2, peg_ratio: 2.1,
+                price_to_book: 45.2, profit_margin: 0.253, return_on_equity: 1.47,
+                revenue_growth: 0.02, earnings_growth: 0.11, debt_to_equity: 176.3,
+                current_ratio: 0.99, dividend_yield: 0.0051, beta: 1.29, volatility: 24.5
+            },
+            'MSFT': {
+                ticker: 'MSFT', name: 'Microsoft Corporation', sector: 'Technology', industry: 'Software',
+                current_price: 378.91, fifty_two_week_high: 420.82, fifty_two_week_low: 309.45,
+                day_change: 4.12, day_change_percent: 1.10,
+                market_cap: 2810000000000, pe_ratio: 35.2, forward_pe: 30.1, peg_ratio: 2.4,
+                price_to_book: 12.1, profit_margin: 0.359, return_on_equity: 0.38,
+                revenue_growth: 0.13, earnings_growth: 0.21, debt_to_equity: 35.2,
+                current_ratio: 1.77, dividend_yield: 0.0074, beta: 0.89, volatility: 22.1
+            },
+            'GOOGL': {
+                ticker: 'GOOGL', name: 'Alphabet Inc.', sector: 'Technology', industry: 'Internet Services',
+                current_price: 141.80, fifty_two_week_high: 153.78, fifty_two_week_low: 115.83,
+                day_change: -1.25, day_change_percent: -0.87,
+                market_cap: 1750000000000, pe_ratio: 24.1, forward_pe: 19.8, peg_ratio: 1.1,
+                price_to_book: 5.8, profit_margin: 0.224, return_on_equity: 0.25,
+                revenue_growth: 0.11, earnings_growth: 0.31, debt_to_equity: 10.2,
+                current_ratio: 2.1, dividend_yield: null, beta: 1.05, volatility: 28.3
+            },
+            'AMZN': {
+                ticker: 'AMZN', name: 'Amazon.com Inc.', sector: 'Consumer Cyclical', industry: 'E-Commerce',
+                current_price: 178.25, fifty_two_week_high: 201.20, fifty_two_week_low: 118.35,
+                day_change: 3.47, day_change_percent: 1.98,
+                market_cap: 1850000000000, pe_ratio: 62.5, forward_pe: 42.1, peg_ratio: 1.8,
+                price_to_book: 8.2, profit_margin: 0.056, return_on_equity: 0.17,
+                revenue_growth: 0.12, earnings_growth: 0.95, debt_to_equity: 58.4,
+                current_ratio: 1.05, dividend_yield: null, beta: 1.16, volatility: 31.2
+            },
+            'TSLA': {
+                ticker: 'TSLA', name: 'Tesla Inc.', sector: 'Consumer Cyclical', industry: 'Auto Manufacturers',
+                current_price: 248.50, fifty_two_week_high: 299.29, fifty_two_week_low: 138.80,
+                day_change: -5.82, day_change_percent: -2.29,
+                market_cap: 790000000000, pe_ratio: 72.3, forward_pe: 58.2, peg_ratio: 3.2,
+                price_to_book: 15.8, profit_margin: 0.108, return_on_equity: 0.22,
+                revenue_growth: 0.19, earnings_growth: -0.23, debt_to_equity: 18.2,
+                current_ratio: 1.73, dividend_yield: null, beta: 2.31, volatility: 52.4
+            },
+            'NVDA': {
+                ticker: 'NVDA', name: 'NVIDIA Corporation', sector: 'Technology', industry: 'Semiconductors',
+                current_price: 875.28, fifty_two_week_high: 974.00, fifty_two_week_low: 373.56,
+                day_change: 12.45, day_change_percent: 1.44,
+                market_cap: 2160000000000, pe_ratio: 65.2, forward_pe: 35.1, peg_ratio: 1.2,
+                price_to_book: 52.3, profit_margin: 0.551, return_on_equity: 0.91,
+                revenue_growth: 1.22, earnings_growth: 5.81, debt_to_equity: 41.2,
+                current_ratio: 4.17, dividend_yield: 0.0004, beta: 1.67, volatility: 48.6
+            },
+            'META': {
+                ticker: 'META', name: 'Meta Platforms Inc.', sector: 'Technology', industry: 'Social Media',
+                current_price: 505.75, fifty_two_week_high: 542.81, fifty_two_week_low: 274.38,
+                day_change: 7.23, day_change_percent: 1.45,
+                market_cap: 1290000000000, pe_ratio: 27.8, forward_pe: 22.1, peg_ratio: 1.3,
+                price_to_book: 8.1, profit_margin: 0.290, return_on_equity: 0.28,
+                revenue_growth: 0.23, earnings_growth: 0.73, debt_to_equity: 27.5,
+                current_ratio: 2.67, dividend_yield: 0.004, beta: 1.21, volatility: 35.8
+            },
+            'JPM': {
+                ticker: 'JPM', name: 'JPMorgan Chase & Co.', sector: 'Financial Services', industry: 'Banks',
+                current_price: 195.42, fifty_two_week_high: 205.88, fifty_two_week_low: 135.19,
+                day_change: -0.87, day_change_percent: -0.44,
+                market_cap: 565000000000, pe_ratio: 11.2, forward_pe: 10.5, peg_ratio: 1.8,
+                price_to_book: 1.7, profit_margin: 0.321, return_on_equity: 0.15,
+                revenue_growth: 0.12, earnings_growth: 0.35, debt_to_equity: 125.3,
+                current_ratio: null, dividend_yield: 0.023, beta: 1.05, volatility: 23.4
+            }
+        };
+
+        // Main analyze function - calls Python backend API
+        async function analyzeStock(tickerSymbol) {
+            const ticker = tickerSymbol || '';
+            if (!ticker) return;
+
+            const loading = document.getElementById('loadingSection');
+            const results = document.getElementById('resultsSection');
+            const error = document.getElementById('errorSection');
+
+            // Reset states
+            loading.classList.add('active');
+            results.classList.remove('active');
+            error.classList.remove('active');
+
+            try {
+                // Call the Python backend API
+                const response = await fetch(`/api/analyze/${ticker}`);
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to fetch data');
+                }
+
+                const metrics = data.metrics;
+                const scoreData = data.score;
+
+                // Debug: log news data
+                console.log('News data received:', metrics.news);
+
+                // Add day change data (calculate from previous close if not provided)
+                if (!metrics.day_change) {
+                    const prevClose = metrics.previous_close || metrics.current_price;
+                    metrics.day_change = metrics.current_price - prevClose;
+                    metrics.day_change_percent = (metrics.day_change / prevClose) * 100;
+                }
+
+                // Display results
+                displayResults(metrics, scoreData);
+
+                loading.classList.remove('active');
+                results.classList.add('active');
+
+            } catch (err) {
+                console.error(err);
+                loading.classList.remove('active');
+                error.classList.add('active');
+                document.getElementById('errorMessage').textContent = err.message || 'Could not fetch data. Make sure the Python server is running.';
+            }
+        }
+
+        // Check for ticker in URL params and auto-analyze
+        const urlParams = new URLSearchParams(window.location.search);
+        const tickerParam = urlParams.get('ticker');
+        if (tickerParam) {
+            analyzeStock(tickerParam.toUpperCase());
+        } else {
+            // No ticker provided, redirect to landing page
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

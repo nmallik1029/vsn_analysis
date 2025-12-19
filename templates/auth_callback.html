@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome | VSN Analysis</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-card: #16161f;
+            --bg-input: #0f0f15;
+            --text-primary: #f0f0f0;
+            --text-secondary: #888899;
+            --accent-green: #00ff88;
+            --accent-green-dim: rgba(0, 255, 136, 0.1);
+            --accent-red: #ff4466;
+            --border-color: #2a2a3a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .grid-bg {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(68, 136, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(68, 136, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .callback-container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 2rem;
+            max-width: 420px;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 2.5rem;
+            text-align: center;
+        }
+
+        .checkmark {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1.5rem;
+            color: var(--accent-green);
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1.5rem;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-green);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent-green);
+        }
+
+        h1.neutral {
+            color: var(--text-primary);
+        }
+
+        p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-green);
+        }
+
+        .username-status {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            min-height: 1.2rem;
+        }
+
+        .username-status.available {
+            color: var(--accent-green);
+        }
+
+        .username-status.taken {
+            color: var(--accent-red);
+        }
+
+        .username-status.checking {
+            color: var(--text-secondary);
+        }
+
+        .continue-btn {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 0.875rem 2rem;
+            background: var(--accent-green);
+            border: none;
+            color: var(--bg-primary);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .continue-btn:hover {
+            filter: brightness(1.1);
+        }
+
+        .continue-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 68, 102, 0.1);
+            border: 1px solid rgba(255, 68, 102, 0.3);
+            color: var(--accent-red);
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        /* Hide all views by default */
+        .view { display: none; }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    
+    <div class="callback-container">
+        <!-- Loading View -->
+        <div class="card view" id="loading-view">
+            <div class="spinner"></div>
+            <h1 class="neutral">Setting things up...</h1>
+            <p>Please wait a moment.</p>
+        </div>
+
+        <!-- Email Verified View (for email confirmation flow) -->
+        <div class="card view" id="email-verified-view">
+            <svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 12l2.5 2.5L16 9"/>
+            </svg>
+            <h1>Email Verified!</h1>
+            <p>Click continue to access VSN Analysis.</p>
+            <button class="continue-btn" onclick="window.location.href='/index'">Continue</button>
+        </div>
+
+        <!-- Username Picker View (for users without a username) -->
+        <div class="card view" id="username-view">
+            <svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 12l2.5 2.5L16 9"/>
+            </svg>
+            <h1>Welcome!</h1>
+            <p>Choose a username to complete your account setup.</p>
+            
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="e.g. jsmith2025" maxlength="30">
+                <div class="username-status" id="username-status"></div>
+            </div>
+            
+            <button class="continue-btn" id="claim-btn" disabled>Continue</button>
+            <div class="error-message" id="error-message"></div>
+        </div>
+
+        <!-- Error View -->
+        <div class="card view" id="error-view">
+            <h1 style="color: var(--accent-red);">Something went wrong</h1>
+            <p id="error-text">We couldn't complete the authentication process.</p>
+            <button class="continue-btn" onclick="window.location.href='/auth'">Try Again</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const supabase = createClient(
+            'https://wtxxnhjknjwmlsqxdovv.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0eHhuaGprbmp3bWxzcXhkb3Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NTY2MDQsImV4cCI6MjA4MTUzMjYwNH0.5gBkeZj8JOo2GEQ1AOmsarLV5WJ1-pZUZbDwbChgZPw'
+        )
+
+        // ============================================
+        // VIEW MANAGEMENT
+        // ============================================
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+            document.getElementById(viewId).style.display = 'block';
+        }
+
+        function showError(message) {
+            document.getElementById('error-text').textContent = message;
+            showView('error-view');
+        }
+
+        // ============================================
+        // MAIN FLOW
+        // ============================================
+        async function handleCallback() {
+            showView('loading-view');
+
+            try {
+                // Get session from Supabase
+                const { data, error } = await supabase.auth.getSession();
+
+                if (error) {
+                    console.error('Session error:', error);
+                    showError('Authentication failed. Please try again.');
+                    return;
+                }
+
+                if (!data?.session) {
+                    // No session - might be email verification link clicked
+                    // Show the email verified view with login button
+                    showView('email-verified-view');
+                    document.querySelector('#email-verified-view .continue-btn').onclick = () => {
+                        window.location.href = '/auth';
+                    };
+                    document.querySelector('#email-verified-view .continue-btn').textContent = 'Sign In';
+                    return;
+                }
+
+                const session = data.session;
+                const user = session.user;
+
+                console.log('User authenticated:', user.email);
+
+                // Sync session to Flask
+                await fetch('/api/auth/session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        access_token: session.access_token,
+                        refresh_token: session.refresh_token
+                    })
+                });
+
+                // Check if user already has a username in the database
+                const hasUsername = await checkUserHasUsername(session.access_token);
+
+                if (hasUsername) {
+                    // User already has a username, go straight to app
+                    window.location.replace('/index');
+                    return;
+                }
+
+                // Check if there's a display_name in metadata (from email signup)
+                const metadataUsername = user.user_metadata?.display_name;
+
+                if (metadataUsername) {
+                    // Try to claim the username from metadata
+                    const claimed = await claimUsername(metadataUsername, session.access_token);
+                    if (claimed) {
+                        window.location.replace('/index');
+                        return;
+                    }
+                    // If claim failed (taken), fall through to username picker
+                }
+
+                // Show username picker
+                setupUsernamePicker(session.access_token, user);
+
+            } catch (err) {
+                console.error('Callback error:', err);
+                showError('An unexpected error occurred.');
+            }
+        }
+
+        // ============================================
+        // USERNAME HELPERS
+        // ============================================
+        async function checkUserHasUsername(accessToken) {
+            try {
+                const res = await fetch('/api/auth/user', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const data = await res.json();
+                
+                // Check if the user has a display_name set (from usernames table)
+                return data.authenticated && data.user?.display_name;
+            } catch (e) {
+                console.error('Error checking username:', e);
+                return false;
+            }
+        }
+
+        async function claimUsername(username, accessToken) {
+            try {
+                const res = await fetch('/api/claim_username', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({ username })
+                });
+                return res.ok;
+            } catch (e) {
+                console.error('Error claiming username:', e);
+                return false;
+            }
+        }
+
+        async function checkUsernameAvailable(username) {
+            try {
+                const res = await fetch(`/api/username_available?username=${encodeURIComponent(username)}`);
+                const data = await res.json();
+                return data.available;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // ============================================
+        // USERNAME PICKER UI
+        // ============================================
+        function setupUsernamePicker(accessToken, user) {
+            showView('username-view');
+
+            const input = document.getElementById('username');
+            const status = document.getElementById('username-status');
+            const claimBtn = document.getElementById('claim-btn');
+            const errorMsg = document.getElementById('error-message');
+
+            let checkTimeout;
+            let isAvailable = false;
+
+            // Pre-fill with a suggestion from Google name if available
+            const googleName = user.user_metadata?.full_name || user.user_metadata?.name;
+            if (googleName) {
+                // Create a username suggestion from the name
+                const suggestion = googleName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                input.placeholder = `e.g. ${suggestion}`;
+            }
+
+            input.addEventListener('input', () => {
+                const value = input.value.trim();
+                isAvailable = false;
+                claimBtn.disabled = true;
+                errorMsg.style.display = 'none';
+
+                if (!value) {
+                    status.textContent = '';
+                    status.className = 'username-status';
+                    return;
+                }
+
+                // Validate format
+                if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+                    status.textContent = 'Only letters, numbers, and underscores allowed';
+                    status.className = 'username-status taken';
+                    return;
+                }
+
+                if (value.length < 3) {
+                    status.textContent = 'Must be at least 3 characters';
+                    status.className = 'username-status taken';
+                    return;
+                }
+
+                // Debounce the availability check
+                status.textContent = 'Checking...';
+                status.className = 'username-status checking';
+
+                clearTimeout(checkTimeout);
+                checkTimeout = setTimeout(async () => {
+                    const available = await checkUsernameAvailable(value);
+                    
+                    if (input.value.trim() !== value) return; // Input changed
+
+                    if (available) {
+                        status.textContent = '✓ Available';
+                        status.className = 'username-status available';
+                        isAvailable = true;
+                        claimBtn.disabled = false;
+                    } else {
+                        status.textContent = '✗ Already taken';
+                        status.className = 'username-status taken';
+                        isAvailable = false;
+                        claimBtn.disabled = true;
+                    }
+                }, 400);
+            });
+
+            claimBtn.addEventListener('click', async () => {
+                const username = input.value.trim();
+
+                if (!username || !isAvailable) return;
+
+                claimBtn.disabled = true;
+                claimBtn.textContent = 'Setting up...';
+                errorMsg.style.display = 'none';
+
+                const claimed = await claimUsername(username, accessToken);
+
+                if (claimed) {
+                    window.location.replace('/index');
+                } else {
+                    errorMsg.textContent = 'That username was just taken. Please try another.';
+                    errorMsg.style.display = 'block';
+                    claimBtn.disabled = false;
+                    claimBtn.textContent = 'Continue';
+                    isAvailable = false;
+                    status.textContent = '✗ Already taken';
+                    status.className = 'username-status taken';
+                }
+            });
+        }
+
+        // ============================================
+        // START
+        // ============================================
+        handleCallback();
+    </script>
+</body>
+</html>
