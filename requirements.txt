@@ -8,3 +8,4 @@ gunicorn>=21.0.0
 flask-sqlalchemy>=3.0.0
 werkzeug>=2.0.0
 requests>=2.0.0
+supabase>=2.0.0
