@@ -22,6 +22,13 @@ from supabase import create_client
 from data_fetcher import get_stock_data
 from scoring import calculate_score
 
+import time
+
+TICKER_TAPE_CACHE = None
+TICKER_TAPE_CACHE_TIME = 0
+TICKER_TAPE_TTL = 120  # seconds
+
+
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 CORS(app)  # Allow cross-origin requests
 
@@ -429,56 +436,55 @@ def claim_username():
 
 @app.route('/api/ticker-tape')
 def ticker_tape():
-    """
-    Fetch basic price data for multiple stocks for the ticker tape.
-    Returns a random selection from a pool of popular stocks.
-    """
+    global TICKER_TAPE_CACHE, TICKER_TAPE_CACHE_TIME
+
+    now = time.time()
+    if TICKER_TAPE_CACHE and now - TICKER_TAPE_CACHE_TIME < TICKER_TAPE_TTL:
+        return jsonify(TICKER_TAPE_CACHE)
+
     import random
-    
+    import yfinance as yf
+
     stock_pool = [
-        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'JPM', 'V', 'WMT',
-        'JNJ', 'PG', 'MA', 'HD', 'CVX', 'MRK', 'ABBV', 'PEP', 'KO', 'COST',
-        'AVGO', 'TMO', 'MCD', 'CSCO', 'ACN', 'ABT', 'DHR', 'NEE', 'LIN', 'ADBE',
-        'NKE', 'TXN', 'UNH', 'CRM', 'AMD', 'INTC', 'QCOM', 'ORCL', 'IBM', 'GE',
-        'BA', 'CAT', 'GS', 'AXP', 'BKNG', 'ISRG', 'MDLZ', 'PLD', 'CB', 'SO'
+        'AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','JPM','V','WMT',
+        'JNJ','PG','MA','HD','CVX','MRK','ABBV','PEP','KO','COST'
     ]
-    
-    selected = random.sample(stock_pool, 20)
-    
+
+    selected = random.sample(stock_pool, 10)  # ⬅️ reduce to 10
+
     try:
-        import yfinance as yf
-        
-        tickers_str = ' '.join(selected)
-        data = yf.download(tickers_str, period='1d', progress=False, group_by='ticker')
-        
+        data = yf.download(
+            selected,
+            period='1d',
+            progress=False,
+            threads=True,
+            group_by='ticker'
+        )
+
         results = []
         for symbol in selected:
             try:
-                if len(selected) == 1:
-                    ticker_data = data
-                else:
-                    ticker_data = data[symbol] if symbol in data.columns.get_level_values(0) else None
-                
-                if ticker_data is not None and not ticker_data.empty:
-                    current = ticker_data['Close'].iloc[-1]
-                    open_price = ticker_data['Open'].iloc[-1]
-                    change_pct = ((current - open_price) / open_price) * 100 if open_price > 0 else 0
-                    
-                    results.append({
-                        'symbol': symbol,
-                        'price': round(float(current), 2),
-                        'change': round(float(change_pct), 2)
-                    })
-            except Exception as e:
-                print(f"Error fetching {symbol}: {e}")
-                continue
-        
-        return jsonify({'success': True, 'stocks': results})
-    
-    except Exception as e:
-        print(f"Ticker tape error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+                ticker_data = data[symbol]
+                current = ticker_data['Close'].iloc[-1]
+                open_price = ticker_data['Open'].iloc[-1]
+                change_pct = ((current - open_price) / open_price) * 100
 
+                results.append({
+                    'symbol': symbol,
+                    'price': round(float(current), 2),
+                    'change': round(float(change_pct), 2)
+                })
+            except Exception:
+                continue
+
+        response = {'success': True, 'stocks': results}
+        TICKER_TAPE_CACHE = response
+        TICKER_TAPE_CACHE_TIME = now
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/health')
 def health():
