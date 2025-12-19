@@ -1,48 +1,403 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <title>Reset Password | VSN Analysis</title>
+  <title>Reset Password · VSN Analysis</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: #08080c;
+      --bg-surface: #0f0f14;
+      --bg-elevated: #16161e;
+      --border-default: #2a2a3a;
+      --text-primary: #f4f4f6;
+      --text-secondary: #9898a8;
+      --accent-primary: #00ff88;
+      --accent-danger: #ff4466;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --transition: 200ms ease;
+    }
+
+    html[data-theme="light"] {
+      --bg-base: #f7f7fb;
+      --bg-surface: #ffffff;
+      --bg-elevated: #f1f1f6;
+      --border-default: #d4d4dd;
+      --text-primary: #0a0a0f;
+      --text-secondary: #555566;
+      --accent-primary: #00aa66;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+
+    .pattern-bg {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .pattern-layer {
+        position: absolute;
+        width: 300%;
+        height: 300%;
+        top: -100%;
+        left: -100%;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cellipse cx='50' cy='20' rx='12' ry='20' fill='%2366ccff' opacity='0.08'/%3E%3Cellipse cx='20' cy='35' rx='12' ry='20' fill='%23ff69b4' opacity='0.08' transform='rotate(-45 20 35)'/%3E%3Cellipse cx='80' cy='35' rx='12' ry='20' fill='%23b088f9' opacity='0.08' transform='rotate(45 80 35)'/%3E%3Cellipse cx='25' cy='70' rx='12' ry='20' fill='%23ffaa66' opacity='0.08' transform='rotate(-30 25 70)'/%3E%3Cellipse cx='75' cy='70' rx='12' ry='20' fill='%23ffee66' opacity='0.08' transform='rotate(30 75 70)'/%3E%3Cellipse cx='50' cy='95' rx='12' ry='25' fill='%23c4e538' opacity='0.08'/%3E%3Cellipse cx='50' cy='45' rx='8' ry='8' fill='%23ff69b4' opacity='0.08'/%3E%3C/svg%3E");
+        background-size: 80px 96px;
+        background-repeat: repeat;
+        transform: rotate(-15deg);
+        filter: saturate(0.85);
+    }
+
+    .layer-1 {
+        animation: driftUpRight 120s linear infinite;
+    }
+
+    .layer-2 {
+        animation: driftDownLeft 150s linear infinite;
+        opacity: 0.45;
+    }
+
+    @keyframes driftUpRight {
+        from { transform: rotate(-15deg) translate(0, 0); }
+        to { transform: rotate(-15deg) translate(800px, -600px); }
+    }
+
+    @keyframes driftDownLeft {
+        from { transform: rotate(-15deg) translate(0, 0); }
+        to { transform: rotate(-15deg) translate(-800px, 600px); }
+    }
+
+
+    .reset-container {
+        position: relative;
+        z-index: 1;
+    }
+
+
+
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(
+        60% 40% at 50% 0%,
+        rgba(0,255,136,0.08),
+        transparent 60%
+      ), var(--bg-base);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+      animation: fadeUp 0.4s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .header {
+      margin-bottom: 1.75rem;
+    }
+
+    .title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .input-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: var(--text-secondary);
+    }
+
+    input {
+      width: 100%;
+      padding: 0.75rem 0.9rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      transition: border var(--transition);
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+    }
+
+    .btn {
+      width: 100%;
+      margin-top: 0.75rem;
+      padding: 0.7rem;
+      background: var(--accent-primary);
+      color: #08080c;
+      border: none;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: transform var(--transition), opacity var(--transition);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .message {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    .message.error {
+      color: var(--accent-danger);
+    }
+
+    .message.success {
+      color: var(--accent-primary);
+    }
+
+
+    .password-strength {
+      margin-top: 0.5rem;
+    }
+
+    .strength-bar {
+        width: 100%;
+        height: 6px;
+        background: var(--border-default);
+        overflow: hidden;
+    }
+
+    .strength-fill {
+        height: 100%;
+        width: 0%;
+        background: var(--accent-danger);
+        transition: width 0.25s ease, background 0.25s ease;
+    }
+
+    .strength-text {
+        margin-top: 0.4rem;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    .password-wrapper {
+          position: relative;
+      }
+
+      .toggle-password {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: var(--text-secondary);
+          cursor: pointer;
+          font-size: 0.9rem;
+      }
+
+      .toggle-password:hover {
+          color: var(--text-primary);
+      }
+
+
+  </style>
 </head>
 <body>
+  <div class="pattern-bg">
+      <div class="pattern-layer layer-1"></div>
+      <div class="pattern-layer layer-2"></div>
+  </div>
 
-<h2>Set a new password</h2>
+  <div class="card">
+    <div class="header">
+      <h1 class="title">Set a new password</h1>
+      <p class="subtitle">Choose a strong password to secure your account</p>
+    </div>
 
-<form id="resetPasswordForm">
-  <input type="password" id="newPassword" placeholder="New password" required minlength="6">
-  <button type="submit">Update Password</button>
-</form>
+    <form id="resetPasswordForm">
 
-<p id="message"></p>
+    <div class="input-group password-wrapper">
+      <label class="input-label">New password</label>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  const SUPABASE_URL = "https://wtxxnhjknjwmlsqxdovv.supabase.co";
-  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+      <input
+        type="password"
+        id="newPassword"
+        placeholder="••••••••"
+        required
+        minlength="6"
+      />
+
+      <button
+        type="button"
+        class="toggle-password"
+        id="togglePassword"
+        aria-label="Toggle password"
+      >
+        👁
+      </button>
+    </div>
+
+    <div class="password-strength">
+      <div class="strength-bar">
+        <div class="strength-fill" id="strengthFill"></div>
+      </div>
+      <div class="strength-text" id="strengthText"></div>
+    </div>
+
+      <button class="btn" type="submit" id="submitBtn">
+        Update password
+      </button>
+    </form>
+
+    <p id="message" class="message"></p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  const SUPABASE_URL = 'https://wtxxnhjknjwmlsqxdovv.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0eHhuaGprbmp3bWxzcXhkb3Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NTY2MDQsImV4cCI6MjA4MTUzMjYwNH0.5gBkeZj8JOo2GEQ1AOmsarLV5WJ1-pZUZbDwbChgZPw';
 
   const supabase = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_ANON_KEY
   );
 
-  document.getElementById("resetPasswordForm").addEventListener("submit", async (e) => {
+  const form = document.getElementById('resetPasswordForm');
+  const message = document.getElementById('message');
+  const button = document.getElementById('submitBtn');
+  const passwordInput = document.getElementById('newPassword');
+  const strengthFill = document.getElementById('strengthFill');
+  const strengthText = document.getElementById('strengthText');
+  const toggleBtn = document.getElementById('togglePassword');
+
+  /* ------------------------
+     PASSWORD STRENGTH
+  ------------------------ */
+
+  passwordInput.addEventListener('input', () => {
+    const val = passwordInput.value;
+    let score = 0;
+
+    if (!val) {
+      strengthFill.style.width = '0%';
+      strengthText.textContent = '';
+      return;
+    }
+
+    if (val.length >= 6) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+
+    strengthFill.style.width = `${(score / 4) * 100}%`;
+
+    if (score <= 1) {
+      strengthFill.style.background = 'var(--accent-danger)';
+      strengthText.textContent = 'Weak password';
+    } else if (score === 2) {
+      strengthFill.style.background = '#ffb800';
+      strengthText.textContent = 'Fair password';
+    } else if (score === 3) {
+      strengthFill.style.background = '#00d4ff';
+      strengthText.textContent = 'Good password';
+    } else {
+      strengthFill.style.background = 'var(--accent-primary)';
+      strengthText.textContent = 'Strong password';
+    }
+  });
+
+  /* ------------------------
+     VISIBILITY TOGGLE
+  ------------------------ */
+
+  toggleBtn.addEventListener('click', () => {
+    const isHidden = passwordInput.type === 'password';
+    passwordInput.type = isHidden ? 'text' : 'password';
+    toggleBtn.textContent = isHidden ? '🙈' : '👁';
+  });
+
+  /* ------------------------
+     FORM SUBMIT
+  ------------------------ */
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const password = document.getElementById("newPassword").value;
-    const message = document.getElementById("message");
+    button.disabled = true;
+    button.textContent = 'Updating…';
+    message.textContent = '';
+    message.className = 'message';
 
-    const { error } = await supabase.auth.updateUser({ password });
+    const { error } = await supabase.auth.updateUser({
+      password: passwordInput.value
+    });
 
     if (error) {
       message.textContent = error.message;
-    } else {
-      message.textContent = "Password updated. Redirecting...";
-      setTimeout(() => {
-        window.location.href = "/auth";
-      }, 1500);
+      message.classList.add('error');
+      button.disabled = false;
+      button.textContent = 'Update password';
+      return;
     }
+
+    await supabase.auth.signOut();
+
+    message.textContent = 'Password updated. Redirecting…';
+    message.classList.add('success');
+
+    setTimeout(() => {
+      window.location.replace('/auth');
+    }, 800);
   });
+});
 </script>
 
 </body>

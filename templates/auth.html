@@ -453,12 +453,12 @@
                     </button>
                 </form>
 
-                <!-- <div style="text-align:right; margin-top:0.25rem;">
+                <div style="text-align:right; margin-top:0.25rem;">
                     <a href="#" id="forgotPasswordLink"
                     style="font-size:0.8rem;color:var(--accent-green);text-decoration:none;">
                         Forgot password?
                     </a>
-                </div> -->
+                </div>
 
                 <div class="error-message" id="errorMessage"></div>
                 <div class="success-message" id="successMessage"></div>
@@ -596,13 +596,13 @@
             // ============================================
             // GET ELEMENTS - Reset Password View
             // ============================================
-            // var forgotPasswordLink = document.getElementById('forgotPasswordLink');
-            // var resetView = document.getElementById('resetView');
-            // var resetForm = document.getElementById('resetForm');
-            // var resetEmailInput = document.getElementById('resetEmail');
-            // var resetSuccess = document.getElementById('resetSuccess');
-            // var resetError = document.getElementById('resetError');
-            // var backToLoginBtn = document.getElementById('backToLoginBtn');
+            var forgotPasswordLink = document.getElementById('forgotPasswordLink');
+            var resetView = document.getElementById('resetView');
+            var resetForm = document.getElementById('resetForm');
+            var resetEmailInput = document.getElementById('resetEmail');
+            var resetSuccess = document.getElementById('resetSuccess');
+            var resetError = document.getElementById('resetError');
+            var backToLoginBtn = document.getElementById('backToLoginBtn');
 
             // ============================================
             // VIEW MANAGEMENT
@@ -1095,11 +1095,11 @@
                 }
             });
 
-            // forgotPasswordLink.addEventListener('click', (e) => {
-            //     e.preventDefault();
-            //     clearAllMessages();
-            //     showView('resetView');
-            // });
+            forgotPasswordLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                clearAllMessages();
+                showView('resetView');
+            });
 
             backToLoginBtn.addEventListener('click', () => {
                 clearAllMessages();

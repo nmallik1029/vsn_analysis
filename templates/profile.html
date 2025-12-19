@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings · VSN Analysis</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #08080c;
+      --bg-surface: #0f0f14;
+      --bg-elevated: #16161e;
+      --bg-hover: #1c1c26;
+      --bg-active: #22222e;
+      --border-subtle: #1e1e2a;
+      --border-default: #2a2a3a;
+      --border-strong: #3a3a4a;
+      --text-primary: #f4f4f6;
+      --text-secondary: #9898a8;
+      --text-tertiary: #686878;
+      --accent-primary: #00ff88;
+      --accent-primary-dim: #00ff8820;
+      --accent-secondary: #00d4ff;
+      --accent-warning: #ffb800;
+      --accent-danger: #ff4466;
+      --accent-purple: #a855f7;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 20px;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
+      --shadow-glow: 0 0 30px rgba(0,255,136,0.15);
+      --transition-fast: 150ms ease;
+      --transition-normal: 250ms ease;
+      --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html[data-theme="light"] {
+        --bg-base: #f7f7fb;
+        --bg-surface: #ffffff;
+        --bg-elevated: #f1f1f6;
+        --bg-hover: #e9e9f0;
+        --bg-active: #dedee8;
+
+        --border-subtle: #e1e1e8;
+        --border-default: #d4d4dd;
+        --border-strong: #c4c4d0;
+
+        --text-primary: #0a0a0f;
+        --text-secondary: #555566;
+        --text-tertiary: #777788;
+
+        --accent-primary: #00aa66;
+        --accent-primary-dim: rgba(0, 170, 102, 0.15);
+    }
+
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* Layout */
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-subtle);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem;
+      margin-bottom: 2rem;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--bg-base);
+    }
+
+    .logo-text {
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .nav-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .nav-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all var(--transition-fast);
+      cursor: pointer;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: var(--accent-primary-dim);
+      color: var(--accent-primary);
+    }
+
+    .nav-item svg {
+      width: 18px;
+      height: 18px;
+      opacity: 0.7;
+    }
+
+    .nav-item.active svg {
+      opacity: 1;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .user-card {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+
+    .user-card:hover {
+      background: var(--bg-hover);
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-purple));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--bg-base);
+      overflow: hidden;
+    }
+
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .user-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .user-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-email {
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Main Content */
+    .main {
+      flex: 1;
+      margin-left: 260px;
+      padding: 2rem 3rem;
+      max-width: 900px;
+    }
+
+    .page-header {
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .page-description {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 2rem;
+      overflow-x: auto;
+      padding-bottom: 1px;
+    }
+
+    .tab {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      white-space: nowrap;
+      transition: color var(--transition-fast);
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+    }
+
+    .tab.active {
+      color: var(--text-primary);
+    }
+
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-primary);
+      border-radius: 2px 2px 0 0;
+    }
+
+    /* Tab Panels */
+    .tab-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Settings Sections */
+    .settings-section {
+      margin-bottom: 2.5rem;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 1.25rem;
+    }
+
+    .section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .section-description {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin: 0.25rem 0 0;
+    }
+
+    /* Layout Selector Cards */
+    .layout-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .layout-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 0.75rem;
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      position: relative;
+    }
+
+    .layout-card:hover {
+      border-color: var(--border-default);
+      transform: translateY(-2px);
+    }
+
+    .layout-card.selected {
+      border-color: var(--accent-primary);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .layout-card.selected::after {
+      content: '';
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      width: 20px;
+      height: 20px;
+      background: var(--accent-primary);
+      border-radius: 50%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2308080c' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+
+    .layout-preview {
+      aspect-ratio: 16/10;
+      background: var(--bg-elevated);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+      position: relative;
+      padding: 0.75rem;
+    }
+
+    .layout-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.15rem;
+    }
+
+    .layout-description {
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+    }
+
+    /* Dashboard Preview Styles */
+    .preview-default .preview-header {
+      height: 8px;
+      background: var(--border-default);
+      border-radius: 2px;
+      margin-bottom: 0.5rem;
+      width: 60%;
+    }
+
+    .preview-default .preview-chart {
+      height: 60%;
+      background: linear-gradient(to top, var(--accent-primary-dim), transparent);
+      border-radius: 4px;
+      position: relative;
+    }
+
+    .preview-default .preview-chart::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-primary);
+    }
+
+    .preview-minimal .layout-preview {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .preview-minimal .mini-bar {
+      height: 6px;
+      background: var(--border-default);
+      border-radius: 3px;
+    }
+
+    .preview-minimal .mini-bar:nth-child(1) { width: 80%; }
+    .preview-minimal .mini-bar:nth-child(2) { width: 60%; }
+    .preview-minimal .mini-bar:nth-child(3) { width: 70%; }
+
+    /* Pills/Tags */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+    }
+
+    .pill-success {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--accent-primary);
+    }
+
+    .pill-warning {
+      background: rgba(255, 184, 0, 0.15);
+      color: var(--accent-warning);
+    }
+
+    .pill-danger {
+      background: rgba(255, 68, 102, 0.15);
+      color: var(--accent-danger);
+    }
+
+    .pill-default {
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+    }
+
+    /* Profile Section */
+    .profile-header {
+      display: flex;
+      gap: 2rem;
+      align-items: flex-start;
+      padding: 1.5rem;
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 2rem;
+    }
+
+    .profile-avatar-large {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--bg-base);
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .profile-avatar-large img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-details {
+      flex: 1;
+    }
+
+    .profile-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .profile-email {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .profile-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .profile-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: inherit;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--accent-primary);
+      color: var(--bg-base);
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background: #00e07a;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border-default);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text-secondary);
+      background: var(--bg-hover);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--accent-danger);
+      border: 1px solid var(--accent-danger);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 68, 102, 0.1);
+    }
+
+    .btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Security Section */
+    .security-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      margin-bottom: 0.75rem;
+    }
+
+    .security-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .security-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      background: var(--bg-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .security-icon svg {
+      width: 20px;
+      height: 20px;
+      color: var(--text-secondary);
+    }
+
+    .security-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.15rem;
+    }
+
+    .security-desc {
+      font-size: 0.8rem;
+      color: var(--text-tertiary);
+    }
+
+    /* Footer Actions */
+    .footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-subtle);
+      margin-top: 2rem;
+    }
+
+    /* Input Fields */
+    .input-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .input-label {
+      display: block;
+      font-weight: 500;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+    }
+
+    .input {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: border-color var(--transition-fast);
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+    }
+
+    .input:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .input-hint {
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+      margin-top: 0.35rem;
+    }
+
+    .input-error {
+      color: var(--accent-danger);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-normal);
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 420px;
+      transform: scale(0.95);
+      transition: transform var(--transition-normal);
+    }
+
+    .modal-overlay.show .modal {
+      transform: scale(1);
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .modal-description {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .sidebar {
+        transform: translateX(-100%);
+        z-index: 100;
+      }
+
+      .main {
+        margin-left: 0;
+        padding: 1.5rem;
+      }
+
+      .profile-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .profile-meta {
+        justify-content: center;
+      }
+
+      .profile-actions {
+        justify-content: center;
+      }
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: var(--shadow-md);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all var(--transition-normal);
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast-success {
+      border-color: var(--accent-primary);
+    }
+
+    .toast-error {
+      border-color: var(--accent-danger);
+    }
+
+    .toast-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toast-success .toast-icon {
+      background: var(--accent-primary-dim);
+      color: var(--accent-primary);
+    }
+
+    .toast-error .toast-icon {
+      background: rgba(255, 68, 102, 0.15);
+      color: var(--accent-danger);
+    }
+
+    .toast .icon-success,
+    .toast .icon-error {
+    display: none;
+    }
+
+    .toast-success .icon-success {
+    display: block;
+    }
+
+    .toast-error .icon-error {
+    display: block;
+    }
+
+
+    /* Loading spinner */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a href="/" class="logo">
+        <div class="logo-icon">V</div>
+        <span class="logo-text">VSN Analysis</span>
+      </a>
+
+      <nav>
+        <div class="nav-section">
+          <div class="nav-label">Main</div>
+          <a href="/index" class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+            Dashboard
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-label">Account</div>
+          <a href="/profile" class="nav-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Settings
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-card" onclick="location.href='/profile'">
+          <div class="user-avatar" id="sidebarAvatar">U</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarName">User</div>
+            <div class="user-email" id="sidebarEmail">user@email.com</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+      <div class="page-header">
+        <h1 class="page-title">Settings</h1>
+        <p class="page-description">Manage your account settings and preferences</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" data-tab="profile">Profile</button>
+        <button class="tab" data-tab="appearance">Appearance</button>
+        <button class="tab" data-tab="security">Security</button>
+      </div>
+
+      <!-- Profile Tab -->
+      <div class="tab-panel active" id="profile">
+        <div class="profile-header">
+          <div class="profile-avatar-large" id="profileAvatar">U</div>
+          <div class="profile-details">
+            <h2 class="profile-name" id="displayName">User</h2>
+            <p class="profile-email" id="profileEmail">user@email.com</p>
+            <div class="profile-meta">
+              <span class="pill pill-success">Verified</span>
+              <span class="pill pill-default">Member since&nbsp;<span id="memberSince">—</span></span>
+            </div>
+            <div class="profile-actions">
+              <button class="btn btn-secondary" onclick="document.getElementById('avatarInput').click()" id="uploadBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span id="uploadBtnText">Upload photo</span>
+              </button>
+              <input type="file" id="avatarInput" hidden accept="image/*">
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-header">
+            <div>
+              <h3 class="section-title">Account Information</h3>
+              <p class="section-description">Update your account details</p>
+            </div>
+          </div>
+          
+          <div class="input-group">
+            <label class="input-label">Display Name</label>
+            <input type="text" class="input" id="inputDisplayName" placeholder="Choose a display name">
+            <p class="input-hint" id="displayNameHint">This is how others will see you.</p>
+          </div>
+          
+          <div class="input-group">
+            <label class="input-label">Email Address</label>
+            <input type="email" class="input" id="inputEmail" placeholder="your@email.com" disabled>
+            <p class="input-hint">Email cannot be changed.</p>
+          </div>
+        </div>
+
+        <div class="footer-actions">
+          <button class="btn btn-secondary" onclick="loadProfile()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveProfile()" id="saveBtn">
+            <span id="saveBtnText">Save changes</span>
+          </button>
+        </div>
+      </div>
+
+    <!-- Appearance Tab -->
+    <div class="tab-panel" id="appearance">
+    <div class="settings-section">
+        <div class="section-header">
+        <div>
+            <h3 class="section-title">Appearance Settings</h3>
+            <p class="section-description">Design your site</p>
+        </div>
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <div class="section-header">
+        <div>
+            <h3 class="section-title">Theme</h3>
+            <p class="section-description">
+            Customize the appearance of the page
+            </p>
+        </div>
+        </div>
+
+        <div class="layout-options">
+        <!-- Dark -->
+        <div class="layout-card selected" data-theme="dark" onclick="selectTheme(this)">
+            <div class="layout-preview" style="background: #0f0f14; display: flex; align-items: center; justify-content: center;"> <svg width="32" height="32" 
+                viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <!-- icon -->
+            </div>
+            <div class="layout-name">Dark</div>
+            <div class="layout-description">Easy on the eyes</div>
+        </div>
+
+        <!-- Light -->
+        <div class="layout-card" data-theme="light" onclick="selectTheme(this)">
+            <div class="layout-preview" style="background: #f4f4f6; display: flex; align-items: center; justify-content: center;"> 
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#686878" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><line x1="12" 
+                    y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" 
+                    x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <!-- icon -->   
+            </div>
+            <div class="layout-name">Light</div>
+            <div class="layout-description">Traditional.</div>
+        </div>
+        </div>
+    </div>
+    </div>
+
+
+      <!-- Security Tab -->
+      <div class="tab-panel" id="security">
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-header-text">
+                <h3 class="section-title">Security Settings</h3>
+                <p class="section-description">Keep your account secure</p>
+            </div>
+            </div>
+          
+          <div class="security-item">
+            <div class="security-info">
+              <div class="security-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div>
+                <div class="security-title">Password</div>
+                <div class="security-desc">Change your account password</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span class="pill pill-success">Set</span>
+              <button class="btn btn-secondary" onclick="location.href='/auth/reset'">Change</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-header">
+            <div>
+              <h3 class="section-title">Danger Zone</h3>
+              <p class="section-description">Irreversible account actions</p>
+            </div>
+          </div>
+          
+          <div class="security-item" style="border-color: rgba(255, 68, 102, 0.3);">
+            <div class="security-info">
+              <div class="security-icon" style="background: rgba(255, 68, 102, 0.1);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-danger)" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </div>
+              <div>
+                <div class="security-title">Delete Account</div>
+                <div class="security-desc">Permanently delete your account and all data</div>
+              </div>
+            </div>
+            <button class="btn btn-danger" onclick="showDeleteModal()">Delete</button>
+          </div>
+        </div>
+
+        <div class="footer-actions">
+          <button class="btn btn-danger" onclick="logout()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Log out
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Delete Account Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+      <h3 class="modal-title">Delete Account</h3>
+      <p class="modal-description">Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently removed.</p>
+      <div class="input-group">
+        <label class="input-label">Type "DELETE" to confirm</label>
+        <input type="text" class="input" id="deleteConfirmInput" placeholder="DELETE">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="hideDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="deleteAccount()" id="deleteBtn">
+          <span id="deleteBtnText">Delete Account</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+    <div class="toast" id="toast">
+    <div class="toast-icon">
+        <svg class="icon-success" width="16" height="16" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="20 6 9 17 4 12"/>
+        </svg>
+
+        <svg class="icon-error" width="16" height="16" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+    </div>
+    <span id="toastMessage"></span>
+    </div>
+
+
+  <script>
+
+    (function applySavedTheme() {
+        const saved = localStorage.getItem('theme');
+        if (saved) {
+            document.documentElement.setAttribute('data-theme', saved);
+        }
+    })();
+
+    // State
+    let currentUser = null;
+    let originalDisplayName = '';
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Layout selection
+    function selectLayout(card) {
+      const parent = card.parentElement;
+      parent.querySelectorAll('.layout-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      
+      // Save preference to localStorage
+      localStorage.setItem('vsn_layout', card.dataset.layout);
+      showToast('Layout preference saved');
+    }
+
+    // Theme selection (placeholder for future)
+    function selectTheme(card) {
+        const theme = card.dataset.theme;
+        const parent = card.parentElement;
+
+        // Update UI selection
+        parent.querySelectorAll('.layout-card').forEach(c =>
+            c.classList.remove('selected')
+        );
+        card.classList.add('selected');
+
+        // Apply theme globally
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+
+        showToast(`${theme.charAt(0).toUpperCase() + theme.slice(1)} theme applied`);
+    }
+
+
+    // Toast notification
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMessage').textContent = message;
+      toast.classList.remove('toast-success', 'toast-error');
+      toast.classList.add(isError ? 'toast-error' : 'toast-success');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Modal functions
+    function showDeleteModal() {
+      document.getElementById('deleteModal').classList.add('show');
+      document.getElementById('deleteConfirmInput').value = '';
+    }
+
+    function hideDeleteModal() {
+      document.getElementById('deleteModal').classList.remove('show');
+    }
+
+    // Close modal on overlay click
+    document.getElementById('deleteModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) hideDeleteModal();
+    });
+
+    // Logout
+    async function logout() {
+      await fetch('/api/logout', { method: 'POST' });
+      location.href = '/';
+    }
+
+    // Load profile data
+    async function loadProfile() {
+      try {
+        const res = await fetch('/api/profile');
+        if (!res.ok) {
+          if (res.status === 401) {
+            location.href = '/auth';
+            return;
+          }
+          throw new Error('Failed to load profile');
+        }
+        
+        const data = await res.json();
+        currentUser = data;
+        
+        const name = data.display_name || 'User';
+        const email = data.email || '';
+        const initial = name[0].toUpperCase();
+        
+        originalDisplayName = data.display_name || '';
+        
+        // Update display elements
+        document.getElementById('displayName').textContent = name;
+        document.getElementById('profileEmail').textContent = email;
+        document.getElementById('sidebarName').textContent = name;
+        document.getElementById('sidebarEmail').textContent = email;
+        
+        // Avatars
+        if (data.avatar_url) {
+          document.getElementById('profileAvatar').innerHTML = `<img src="${data.avatar_url}" alt="Avatar">`;
+          document.getElementById('sidebarAvatar').innerHTML = `<img src="${data.avatar_url}" alt="Avatar">`;
+        } else {
+          document.getElementById('profileAvatar').textContent = initial;
+          document.getElementById('sidebarAvatar').textContent = initial;
+        }
+        
+        // Input fields
+        document.getElementById('inputDisplayName').value = data.display_name || '';
+        document.getElementById('inputEmail').value = email;
+        
+        // Member since
+        if (data.created_at) {
+          const d = new Date(data.created_at);
+          document.getElementById('memberSince').textContent = d.toLocaleDateString(undefined, { year: 'numeric', month: 'long'});
+        }
+
+        // Load saved preferences
+        const savedLayout = localStorage.getItem('vsn_layout');
+        if (savedLayout) {
+          document.querySelectorAll('.layout-card[data-layout]').forEach(card => {
+            card.classList.toggle('selected', card.dataset.layout === savedLayout);
+          });
+        }
+
+        // Sync theme selector with current theme
+        const currentTheme =
+        document.documentElement.getAttribute('data-theme') || 'dark';
+
+        document.querySelectorAll('.layout-card[data-theme]').forEach(card => {
+        card.classList.toggle('selected', card.dataset.theme === currentTheme);
+        });
+
+
+        
+      } catch (e) {
+        console.error('Error loading profile:', e);
+        showToast('Failed to load profile', true);
+      }
+    }
+
+    // Save profile
+    async function saveProfile() {
+      const displayName = document.getElementById('inputDisplayName').value.trim();
+      const saveBtn = document.getElementById('saveBtn');
+      const saveBtnText = document.getElementById('saveBtnText');
+      
+      if (!displayName) {
+        showToast('Display name cannot be empty', true);
+        return;
+      }
+
+      // Validate display name
+      if (displayName.length < 3) {
+        showToast('Display name must be at least 3 characters', true);
+        return;
+      }
+
+      if (displayName.length > 30) {
+        showToast('Display name must be 30 characters or less', true);
+        return;
+      }
+
+      if (!/^[a-zA-Z0-9_]+$/.test(displayName)) {
+        showToast('Display name can only contain letters, numbers, and underscores', true);
+        return;
+      }
+
+      // Check if name changed
+      if (displayName === originalDisplayName) {
+        showToast('No changes to save');
+        return;
+      }
+
+      // Show loading
+      saveBtn.disabled = true;
+      saveBtnText.innerHTML = '<span class="spinner"></span> Saving...';
+
+      try {
+        const res = await fetch('/api/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ display_name: displayName })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to save profile');
+        }
+
+        originalDisplayName = displayName;
+        
+        // Update UI
+        document.getElementById('displayName').textContent = displayName;
+        document.getElementById('sidebarName').textContent = displayName;
+        
+        const initial = displayName[0].toUpperCase();
+        if (!currentUser?.avatar_url) {
+          document.getElementById('profileAvatar').textContent = initial;
+          document.getElementById('sidebarAvatar').textContent = initial;
+        }
+
+        showToast('Profile saved successfully');
+      } catch (e) {
+        console.error('Error saving profile:', e);
+        showToast(e.message || 'Failed to save profile', true);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtnText.textContent = 'Save changes';
+      }
+    }
+
+    // Avatar upload
+    document.getElementById('avatarInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Validate file
+      if (!file.type.startsWith('image/')) {
+        showToast('Please select an image file', true);
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Image must be less than 5MB', true);
+        return;
+      }
+
+      const uploadBtn = document.getElementById('uploadBtn');
+      const uploadBtnText = document.getElementById('uploadBtnText');
+      
+      uploadBtn.disabled = true;
+      uploadBtnText.innerHTML = '<span class="spinner"></span> Uploading...';
+
+      const fd = new FormData();
+      fd.append('avatar', file);
+
+      try {
+        const res = await fetch('/api/avatar', { 
+          method: 'POST', 
+          body: fd,
+          credentials: 'include'
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Upload failed');
+        }
+
+        // Reload profile to get new avatar URL
+        await loadProfile();
+        showToast('Avatar updated successfully');
+      } catch (e) {
+        console.error('Error uploading avatar:', e);
+        showToast(e.message || 'Failed to upload avatar', true);
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBtnText.textContent = 'Upload photo';
+        e.target.value = ''; // Reset file input
+      }
+    });
+
+    // Delete account
+    async function deleteAccount() {
+      const confirmInput = document.getElementById('deleteConfirmInput');
+      const deleteBtn = document.getElementById('deleteBtn');
+      const deleteBtnText = document.getElementById('deleteBtnText');
+
+      if (confirmInput.value !== 'DELETE') {
+        showToast('Please type DELETE to confirm', true);
+        return;
+      }
+
+      deleteBtn.disabled = true;
+      deleteBtnText.innerHTML = '<span class="spinner"></span> Deleting...';
+
+      try {
+        const res = await fetch('/api/account', { 
+          method: 'DELETE',
+          credentials: 'include'
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to delete account');
+        }
+
+        showToast('Account deleted successfully');
+        
+        // Redirect to home after short delay
+        setTimeout(() => {
+          location.href = '/';
+        }, 1500);
+
+      } catch (e) {
+        console.error('Error deleting account:', e);
+        showToast(e.message || 'Failed to delete account', true);
+        deleteBtn.disabled = false;
+        deleteBtnText.textContent = 'Delete Account';
+      }
+    }
+
+    // Initialize
+    loadProfile();
+  </script>
+</body>
+</html>

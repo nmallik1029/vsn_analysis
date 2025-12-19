@@ -24,6 +24,42 @@
             --glow-red: rgba(255, 68, 102, 0.15);
         }
 
+        html[data-theme="light"] {
+            --bg-primary: #f7f7fb;
+            --bg-secondary: #ffffff;
+            --bg-card: #f1f1f6;
+
+            --text-primary: #0a0a0f;
+            --text-secondary: #555566;
+
+            --border-color: #dddddd;
+
+            --accent-green: #00aa66;
+            --accent-blue: #3366ff;
+            --accent-red: #dd3355;
+            --accent-yellow: #cc9900;
+
+            --glow-green: rgba(0, 170, 102, 0.2);
+            --glow-red: rgba(221, 51, 85, 0.2);
+        }
+
+
+        body,
+        nav,
+        .ticker-tape,
+        .feature-card,
+        .sample-stock,
+        .hero-input,
+        .hero-btn,
+        .quick-pick,
+        footer {
+        transition:
+            background-color 250ms ease,
+            color 250ms ease,
+            border-color 250ms ease,
+            box-shadow 250ms ease;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -652,11 +688,74 @@
             background: var(--bg-card);
         }
 
+        #themeRipple {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            z-index: 9999;
+            pointer-events: none;
 
-        
+            clip-path: circle(0% at 50% 0%);
+            transition: clip-path 600ms cubic-bezier(0.4, 0, 0.2, 1);
+
+            display: none;
+        }
+
+
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            top: 130%;
+            min-width: 160px;
+            z-index: 1000;
+
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+
+            opacity: 0;
+            transform: translateY(-6px) scale(0.98);
+            pointer-events: none;
+            visibility: hidden;
+
+            transition:
+                opacity 150ms ease,
+                transform 150ms ease,
+                visibility 150ms ease;
+        }
+
+        .user-dropdown.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+            visibility: visible;
+        }
+
+        .user-dropdown a,
+        .user-dropdown button {
+            display: block;
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .user-dropdown a:hover,
+        .user-dropdown button:hover {
+            background: var(--bg-secondary);
+        }
+
     </style>
 </head>
 <body>
+    <div id="themeRipple"></div>
+
     <div class="grid-bg"></div>
     
     <div class="container">
@@ -667,6 +766,7 @@
             </div>
 
             <div class="nav-links" id="navLinks">
+
                 <a href="#features">Features</a>
                 <a href="#how-it-works">How It Works</a>
 
@@ -682,21 +782,31 @@
                             style="width:28px;height:28px;border-radius:50%;
                                     background:#00ff88;color:#0a0a0f;
                                     display:flex;align-items:center;justify-content:center;
-                                    font-weight:700;font-size:0.9rem;">
+                                    font-weight:700;font-size:0.9rem;
+                                    overflow:hidden;">
+                            {% if avatar_url %}
+                                <img src="{{ avatar_url }}"
+                                    style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+                            {% else %}
+                                {{ display_name[0]|upper if display_name else "N" }}
+                            {% endif %}
                         </span>
                         <span id="userEmail" style="font-size:0.85rem;"></span>
                     </span>
 
                     <!-- Dropdown -->
-                    <div id="userDropdown"
-                        style="display:none;position:absolute;right:0;top:130%;
-                                background:#16161f;border:1px solid #2a2a3a;
-                                min-width:140px;z-index:1000;">
+                    <div id="userDropdown" class="user-dropdown">
+                        <a href="/profile"
+                        style="display:block;padding:0.6rem;
+                                color:var(--text-primary);text-decoration:none;">
+                            Profile
+                        </a>
+
                         <button onclick="logout()"
                                 style="width:100%;padding:0.6rem;
                                     background:none;border:none;
                                     color:#ff4466;cursor:pointer;text-align:left;">
-                        Log out
+                            Log out
                         </button>
                     </div>
                 </span>
@@ -912,6 +1022,23 @@
     </div>
 
     <script>
+        (function applySavedTheme() {
+        const saved = localStorage.getItem('theme');
+        if (saved) {
+            document.documentElement.setAttribute('data-theme', saved);
+        }
+        })();
+
+        (function () {
+        const saved = localStorage.getItem('theme');
+        if (saved) {
+            document.documentElement.setAttribute('data-theme', saved);
+        }
+        })();
+
+
+
+
         function analyzeStock() {
             const input = document.getElementById('tickerInput');
             const ticker = input.value;
@@ -1001,11 +1128,40 @@
                 const userAvatar = document.getElementById('userAvatar');
                 
                 if (data.authenticated && data.user) {
-                    // User is logged in
                     authLinks.style.display = 'none';
                     userMenu.style.display = 'inline-flex';
-                    userEmail.innerText = data.user.email;
-                    userAvatar.innerText = data.user.email[0].toUpperCase();
+
+                    const displayName =
+                        data.user.display_name ||
+                        data.user.email ||
+                        'User';
+
+                    userEmail.innerText = displayName;
+
+                    // Clear existing content first
+                    userAvatar.innerHTML = '';
+
+                    if (data.user.avatar_url) {
+                        const img = document.createElement('img');
+                        img.src = data.user.avatar_url;
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        img.style.objectFit = 'cover';
+                        img.style.borderRadius = '50%';
+                        userAvatar.appendChild(img);
+                    } else {
+                        const initials = displayName
+                            .split(' ')
+                            .map(word => word[0])
+                            .join('')
+                            .slice(0, 2)
+                            .toUpperCase();
+
+                        userAvatar.innerText = initials;
+                        userAvatar.style.background = avatarColor(displayName);
+                    }
+
+
                 } else {
                     // User is not logged in
                     authLinks.style.display = 'inline-flex';
@@ -1027,14 +1183,15 @@
         function toggleUserMenu(e) {
             e.stopPropagation();
             const menu = document.getElementById('userDropdown');
-            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+            menu.classList.toggle('show');
         }
 
         // Close dropdown when clicking anywhere else
         window.addEventListener('click', () => {
             const menu = document.getElementById('userDropdown');
-            if (menu) menu.style.display = 'none';
+            if (menu) menu.classList.remove('show');
         });
+
 
         const TICKER_REGEX = /^[A-Z]{1,5}$/;
 
@@ -1080,6 +1237,22 @@
         let lastQuery = '';
 
         let suggestionAbort;
+
+
+        function avatarColor(seed) {
+            const colors = [
+                '#00ff88', '#4488ff', '#ffcc00',
+                '#ff4466', '#aa88ff', '#44ffaa'
+            ];
+
+            let hash = 0;
+            for (let i = 0; i < seed.length; i++) {
+                hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+            }
+
+            return colors[Math.abs(hash) % colors.length];
+        }
+
 
         async function renderSuggestions(prefix) {
             const box = document.getElementById('tickerSuggestions');

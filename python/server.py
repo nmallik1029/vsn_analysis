@@ -17,6 +17,10 @@ import os
 import json
 import requests
 from supabase import create_client
+from PIL import Image
+from io import BytesIO
+import uuid
+
 
 # Import our stock analyzer modules
 from data_fetcher import get_stock_data
@@ -180,8 +184,23 @@ def require_auth_page(f):
 # ============================================
 @app.route('/')
 def home():
-    """Serve the landing page."""
-    return render_template('landing.html')
+    user = None
+    avatar_url = None
+    display_name = None
+
+    access_token = session.get('supabase_access_token')
+    if access_token:
+        user = get_user_from_token(access_token)
+        if user:
+            meta = user.get('user_metadata') or {}
+            avatar_url = meta.get('avatar_url')
+            display_name = meta.get('display_name') or meta.get('full_name')
+
+    return render_template(
+        'landing.html',
+        avatar_url=avatar_url,
+        display_name=display_name
+    )
 
 
 @app.route('/auth')
@@ -264,44 +283,48 @@ def store_session():
 
 @app.route('/api/auth/user')
 def get_current_user():
-    """Get the current authenticated user."""
     access_token = None
-    
-    # Try Authorization header first
+
     auth_header = request.headers.get('Authorization', '')
     if auth_header.startswith('Bearer '):
         access_token = auth_header[7:]
-    
-    # Fallback to session
+
     if not access_token:
         access_token = session.get('supabase_access_token')
-    
+
     if not access_token:
         return jsonify({'authenticated': False}), 200
-    
+
     user = get_user_from_token(access_token)
     if not user:
-        # Token expired or invalid
         session.clear()
         return jsonify({'authenticated': False}), 200
-    
-    # Get username from database (this is the source of truth)
-    db_username = get_username_from_db(user.get('id'))
-    
-    # Fallback to metadata if not in database
-    if not db_username:
-        meta = user.get('user_metadata') or {}
-        db_username = meta.get('display_name') or meta.get('full_name')
-    
+
+    res = supabase.table('usernames') \
+        .select('display_name, avatar_url') \
+        .eq('user_id', user['id']) \
+        .single() \
+        .execute()
+
+    data = res.data or {}
+
+    avatar_url = None
+    if data.get('avatar_url'):
+        avatar_url = supabase.storage.from_('avatars').get_public_url(
+            data['avatar_url']
+        )
+
     return jsonify({
         'authenticated': True,
         'user': {
             'id': user.get('id'),
             'email': user.get('email'),
             'created_at': user.get('created_at'),
-            'display_name': db_username
+            'display_name': data.get('display_name'),
+            'avatar_url': avatar_url
         }
     })
+
 
 
 @app.route('/api/logout', methods=['POST'])
@@ -491,6 +514,228 @@ def health():
     """Health check endpoint."""
     return jsonify({'status': 'ok'})
 
+@app.route('/profile')
+@require_auth_page
+def profile():
+    user_id = session.get('user_id')
+
+    avatar_url = None
+    display_name = None
+
+    if user_id:
+        res = supabase.table('usernames') \
+            .select('display_name, avatar_url') \
+            .eq('user_id', user_id) \
+            .single() \
+            .execute()
+
+        if res.data:
+            avatar_url = res.data.get('avatar_url')
+            display_name = res.data.get('display_name')
+
+    return render_template(
+        'profile.html',
+        avatar_url=avatar_url,
+        display_name=display_name
+    )
+
+from werkzeug.utils import secure_filename
+
+@app.route('/api/avatar', methods=['POST'])
+@require_auth
+def upload_avatar():
+    if 'avatar' not in request.files:
+        return jsonify({'error': 'No file'}), 400
+
+    file = request.files['avatar']
+    if file.filename == '':
+        return jsonify({'error': 'Empty filename'}), 400
+
+    user_id = request.user['id']
+    
+    # Generate unique filename to avoid conflicts
+    import uuid
+    ext = os.path.splitext(file.filename)[1] or '.jpg'
+    filename = f"{uuid.uuid4()}{ext}"
+    path = f"{user_id}/{filename}"
+    
+    content = file.read()
+
+    try:
+        # Try to remove old avatar first (ignore errors)
+        try:
+            existing = supabase.table('usernames') \
+                .select('avatar_url') \
+                .eq('user_id', user_id) \
+                .single() \
+                .execute()
+            
+            if existing.data and existing.data.get('avatar_url'):
+                old_path = existing.data['avatar_url']
+                supabase.storage.from_('avatars').remove([old_path])
+        except Exception as e:
+            print(f"Could not remove old avatar: {e}")
+
+        # Upload new avatar
+        res = supabase.storage.from_('avatars').upload(
+            path,
+            content,
+            {'content-type': file.content_type, 'upsert': 'true'}
+        )
+
+        # Save path in DB
+        supabase.table('usernames').update({
+            'avatar_url': path
+        }).eq('user_id', user_id).execute()
+
+        return jsonify({'success': True, 'path': path})
+        
+    except Exception as e:
+        print(f"Avatar upload error: {e}")
+        return jsonify({'error': 'Upload failed'}), 500
+
+@app.route('/api/profile')
+@require_auth
+def get_profile():
+    user = request.user  # from require_auth
+    user_id = user['id']
+
+    res = supabase.table('usernames') \
+        .select('display_name, avatar_url') \
+        .eq('user_id', user_id) \
+        .single() \
+        .execute()
+
+    data = res.data or {}
+
+    avatar_url = None
+    if data.get('avatar_url'):
+        avatar_url = supabase.storage.from_('avatars').get_public_url(
+            data['avatar_url']
+        )
+
+    return jsonify({
+        'display_name': data.get('display_name'),
+        'avatar_url': avatar_url,
+        'email': user.get('email'),
+        'created_at': user.get('created_at')
+    })
+
+
+@app.route('/api/profile', methods=['PUT'])
+@require_auth
+def update_profile():
+    """Update user profile (display name)."""
+    user = request.user
+    user_id = user['id']
+    
+    data = request.json
+    display_name = data.get('display_name', '').strip()
+    
+    if not display_name:
+        return jsonify({'error': 'Display name required'}), 400
+    
+    # Validate display name format
+    if len(display_name) < 3:
+        return jsonify({'error': 'Display name must be at least 3 characters'}), 400
+    
+    if len(display_name) > 30:
+        return jsonify({'error': 'Display name must be 30 characters or less'}), 400
+    
+    import re
+    if not re.match(r'^[a-zA-Z0-9_]+$', display_name):
+        return jsonify({'error': 'Display name can only contain letters, numbers, and underscores'}), 400
+    
+    try:
+        # Check if username is taken by someone else
+        existing = supabase.table('usernames') \
+            .select('user_id') \
+            .eq('display_name', display_name) \
+            .execute()
+        
+        if existing.data:
+            for row in existing.data:
+                if row['user_id'] != user_id:
+                    return jsonify({'error': 'Display name already taken'}), 409
+        
+        # Check if user has a record
+        user_record = supabase.table('usernames') \
+            .select('user_id') \
+            .eq('user_id', user_id) \
+            .execute()
+        
+        if user_record.data:
+            # Update existing record
+            supabase.table('usernames').update({
+                'display_name': display_name
+            }).eq('user_id', user_id).execute()
+        else:
+            # Create new record
+            supabase.table('usernames').insert({
+                'user_id': user_id,
+                'display_name': display_name
+            }).execute()
+        
+        session['display_name'] = display_name
+        
+        return jsonify({'success': True, 'display_name': display_name})
+        
+    except Exception as e:
+        print(f"Profile update error: {e}")
+        return jsonify({'error': 'Failed to update profile'}), 500
+
+
+@app.route('/api/account', methods=['DELETE'])
+@require_auth
+def delete_account():
+    """Delete user account and all associated data."""
+    user = request.user
+    user_id = user['id']
+    
+    try:
+        # Delete avatar from storage
+        try:
+            avatar_record = supabase.table('usernames') \
+                .select('avatar_url') \
+                .eq('user_id', user_id) \
+                .single() \
+                .execute()
+            
+            if avatar_record.data and avatar_record.data.get('avatar_url'):
+                supabase.storage.from_('avatars').remove([avatar_record.data['avatar_url']])
+        except Exception as e:
+            print(f"Could not delete avatar: {e}")
+        
+        # Delete username record
+        try:
+            supabase.table('usernames').delete().eq('user_id', user_id).execute()
+        except Exception as e:
+            print(f"Could not delete username record: {e}")
+        
+        # Delete user from Supabase Auth (requires service role key)
+        try:
+            response = requests.delete(
+                f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+                headers={
+                    'Authorization': f'Bearer {SUPABASE_SERVICE_ROLE_KEY}',
+                    'apikey': SUPABASE_ANON_KEY
+                }
+            )
+            
+            if response.status_code not in [200, 204]:
+                print(f"Auth user delete returned: {response.status_code}")
+        except Exception as e:
+            print(f"Could not delete auth user: {e}")
+        
+        # Clear session
+        session.clear()
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        print(f"Account deletion error: {e}")
+        return jsonify({'error': 'Failed to delete account'}), 500
+
 
 # ============================================
 # MAIN
@@ -506,6 +751,9 @@ if __name__ == '__main__':
     print("  GET  /api/auth/user         - Get current user")
     print("  POST /api/auth/session      - Store auth session")
     print("  POST /api/logout            - Log out")
+    print("  GET  /api/profile           - Get profile")
+    print("  PUT  /api/profile           - Update profile")
+    print("  DELETE /api/account         - Delete account")
     print("  GET  /api/health            - Health check")
     print("\nPress Ctrl+C to stop the server.\n")
     
