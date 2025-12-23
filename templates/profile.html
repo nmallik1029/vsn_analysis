@@ -861,7 +861,6 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <a href="/" class="logo">
-        <div class="logo-icon">V</div>
         <span class="logo-text">VSN Analysis</span>
       </a>
 
@@ -888,7 +887,7 @@
           <div class="user-avatar" id="sidebarAvatar">U</div>
           <div class="user-info">
             <div class="user-name" id="sidebarName">User</div>
-            <div class="user-email" id="sidebarEmail">user@email.com</div>
+            <div class="user-email" id="sidebarEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6f1a1c0a1d2f0a020e0603410c0002">[email&#160;protected]</a></div>
           </div>
         </div>
       </div>
@@ -914,7 +913,7 @@
           <div class="profile-avatar-large" id="profileAvatar">U</div>
           <div class="profile-details">
             <h2 class="profile-name" id="displayName">User</h2>
-            <p class="profile-email" id="profileEmail">user@email.com</p>
+            <p class="profile-email" id="profileEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="631610061123060e020a0f4d000c0e">[email&#160;protected]</a></p>
             <div class="profile-meta">
               <span class="pill pill-success">Verified</span>
               <span class="pill pill-default">Member since&nbsp;<span id="memberSince">—</span></span>
@@ -938,9 +937,15 @@
           </div>
           
           <div class="input-group">
+            <label class="input-label">Username</label>
+            <input type="text" class="input" id="inputUsername" placeholder="username" disabled>
+            <p class="input-hint">Your unique username for login. This cannot be changed.</p>
+          </div>
+          
+          <div class="input-group">
             <label class="input-label">Display Name</label>
-            <input type="text" class="input" id="inputDisplayName" placeholder="Choose a display name">
-            <p class="input-hint" id="displayNameHint">This is how others will see you.</p>
+            <input type="text" class="input" id="inputDisplayName" placeholder="Your display name" maxlength="50">
+            <p class="input-hint" id="displayNameHint">This is how others will see you. You can use spaces and special characters.</p>
           </div>
           
           <div class="input-group">
@@ -1102,7 +1107,7 @@
     </div>
 
 
-  <script>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 
     (function applySavedTheme() {
         const saved = localStorage.getItem('theme');
@@ -1201,17 +1206,18 @@
         const data = await res.json();
         currentUser = data;
         
-        const name = data.display_name || 'User';
+        const username = data.username || '';
+        const displayName = data.display_name || username || 'User';
         const email = data.email || '';
-        const initial = name[0].toUpperCase();
+        const initial = displayName[0].toUpperCase();
         
         originalDisplayName = data.display_name || '';
         
-        // Update display elements
-        document.getElementById('displayName').textContent = name;
-        document.getElementById('profileEmail').textContent = email;
-        document.getElementById('sidebarName').textContent = name;
-        document.getElementById('sidebarEmail').textContent = email;
+        // Update display elements - show display_name as the visible name
+        document.getElementById('displayName').textContent = displayName;
+        document.getElementById('profileEmail').textContent = username ? `@${username}` : email;
+        document.getElementById('sidebarName').textContent = displayName;
+        document.getElementById('sidebarEmail').textContent = username ? `@${username}` : email;
         
         // Avatars
         if (data.avatar_url) {
@@ -1223,7 +1229,8 @@
         }
         
         // Input fields
-        document.getElementById('inputDisplayName').value = data.display_name || '';
+        document.getElementById('inputUsername').value = username;
+        document.getElementById('inputDisplayName').value = displayName;
         document.getElementById('inputEmail').value = email;
         
         // Member since
@@ -1242,7 +1249,7 @@
 
         // Sync theme selector with current theme
         const currentTheme =
-        document.documentElement.getAttribute('data-theme') || 'dark';
+        document.documentElement.getAttribute('data-theme') || 'light';
 
         document.querySelectorAll('.layout-card[data-theme]').forEach(card => {
         card.classList.toggle('selected', card.dataset.theme === currentTheme);
@@ -1267,19 +1274,9 @@
         return;
       }
 
-      // Validate display name
-      if (displayName.length < 3) {
-        showToast('Display name must be at least 3 characters', true);
-        return;
-      }
-
-      if (displayName.length > 30) {
-        showToast('Display name must be 30 characters or less', true);
-        return;
-      }
-
-      if (!/^[a-zA-Z0-9_]+$/.test(displayName)) {
-        showToast('Display name can only contain letters, numbers, and underscores', true);
+      // Validate display name - more permissive than username
+      if (displayName.length > 50) {
+        showToast('Display name must be 50 characters or less', true);
         return;
       }
 
@@ -1409,9 +1406,7 @@
         
         // Redirect to home after short delay
         setTimeout(() => {
-          location.href = '/';
-        }, 1500);
-
+          location.href = '/';        }, 1500);
       } catch (e) {
         console.error('Error deleting account:', e);
         showToast(e.message || 'Failed to delete account', true);

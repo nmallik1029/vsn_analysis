@@ -1,0 +1,356 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Administrator Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+            --bg: #f7f8fb;
+            --panel: #ffffff;
+            --card: #ffffff;
+            --border: #e5e7ef;
+            --muted: #6c7285;
+            --text: #1a1d2a;
+            --accent: #2563eb;
+            --accent-2: #10b981;
+            --shadow: 0 10px 24px rgba(17,24,39,0.08);
+            --btn-bg: #111827;
+            --btn-text: #f8fafc;
+            --btn-border: #1f2937;
+            --tab-bg: #e5e7ef;
+            --tab-border: #d1d5db;
+        }
+        html[data-theme="dark"] {
+            --bg: #0b0c10;
+            --panel: #11131a;
+            --card: #161922;
+            --border: #232737;
+            --muted: #7d8299;
+            --text: #f5f7ff;
+            --accent: #4fb3ff;
+            --accent-2: #8ef6c8;
+            --shadow: 0 8px 24px rgba(0,0,0,0.35);
+            --btn-bg: #161922;
+            --btn-text: #f5f7ff;
+            --btn-border: #232737;
+            --tab-bg: #161922;
+            --tab-border: #232737;
+        }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Inter", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+    .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+    .sidebar { position: sticky; top: 0; align-self: start; height: 100vh; background: var(--panel); border-right: 1px solid var(--border); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+    .nav { display: flex; flex-direction: column; gap: 0.5rem; height: 100%; }
+        .nav a { color: var(--text); text-decoration: none; padding: 0.65rem 0.75rem; border-radius: 8px; font-weight: 700; border: 1px solid transparent; }
+        .nav a:hover, .nav a.active { background: var(--tab-bg); border-color: var(--tab-border); }
+    .nav .back { margin-top: auto; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+    .main { padding: 1.5rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    .title { font-size: 1.4rem; font-weight: 700; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; box-shadow: var(--shadow); }
+    .screen { display: none; opacity: 0; transform: translateY(12px); transition: opacity 200ms ease, transform 200ms ease; }
+    .screen.active { display: block; opacity: 1; transform: translateY(0); }
+    label { display: block; margin: 0.75rem 0 0.35rem; color: var(--muted); font-size: 0.9rem; font-weight: 600; }
+    input { width: 100%; padding: 0.7rem 0.8rem; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 0.95rem; }
+        .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.9rem; border-radius: 10px; border: 1px solid var(--btn-border); background: var(--btn-bg); color: var(--btn-text); cursor: pointer; font-weight: 600; box-shadow: var(--shadow); }
+    .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #0b1021; border: none; }
+    .actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; align-items: center; padding: 0.75rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+    .row .uid { color: var(--muted); font-size: 0.9rem; }
+    .row strong { display: block; margin-bottom: 0.1rem; }
+    .empty { color: var(--muted); font-size: 0.9rem; padding: 0.5rem 0; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <nav class="nav">
+        <a href="#welcome" data-target="welcome">Welcome</a>
+        <a href="#mods" data-target="mods">Moderators</a>
+        <a href="#logs" data-target="logs">Logs</a>
+        <a class="back" href="/">Back to Home</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <div class="title" id="pageTitle">Administrator Dashboard</div>
+          <div style="color:var(--muted);" id="pageSubtitle">Welcome to the admin dashboard. Use the bar on the left to navigate.</div>
+        </div>
+        <div class="actions"></div>
+      </div>
+
+      <div id="welcome" class="screen active">
+        <div class="panel">
+          <h3>Welcome</h3>
+          <p style="color:var(--muted); margin-top:0.5rem;">Welcome to the admin dashboard. Use the navigation on the left to manage moderators, bans, or review logs.</p>
+        </div>
+      </div>
+
+      <div id="mods" class="screen">
+        <div class="panel">
+          <h3>Add Moderator</h3>
+          <label for="modUsername">Username</label>
+          <input id="modUsername" type="text" placeholder="Enter username" />
+          <div class="actions" style="margin-top:0.75rem;">
+            <button class="btn primary" onclick="addModerator()">Add Moderator</button>
+          </div>
+          <div id="status" class="status" style="color:var(--muted);"></div>
+          <h3 style="margin-top:1.2rem;">Current Moderators</h3>
+          <div id="modsList" class="list"></div>
+        </div>
+        <div class="panel" style="margin-top:1rem;">
+          <h3>Remove Moderator</h3>
+          <label for="removeUsername">Username</label>
+          <input id="removeUsername" type="text" placeholder="Enter username" />
+          <div class="actions" style="margin-top:0.75rem;">
+            <button class="btn" onclick="removeModerator()">Remove Moderator</button>
+          </div>
+          <div id="removeStatus" class="status" style="color:var(--muted);"></div>
+        </div>
+        <div class="panel" style="margin-top:1rem;">
+          <h3>Ban a User</h3>
+          <label for="banUsername">Username</label>
+          <input id="banUsername" placeholder="username" />
+          <label for="banReason" style="margin-top:0.5rem;">Reason</label>
+          <input id="banReason" placeholder="Reason for ban" />
+          <div class="actions" style="margin-top:0.75rem;">
+            <button class="btn primary" onclick="banUser()">Ban User</button>
+          </div>
+          <div id="banStatus" style="margin-top:0.5rem;color:var(--muted);"></div>
+        </div>
+        <div class="panel" style="margin-top:1rem;">
+          <h3>Unban a User</h3>
+          <label for="unbanUsername">Username</label>
+          <input id="unbanUsername" placeholder="username" />
+          <label for="unbanReason" style="margin-top:0.5rem;">Reason</label>
+          <input id="unbanReason" placeholder="Reason for unban" />
+          <div class="actions" style="margin-top:0.75rem;">
+            <button class="btn" onclick="unbanUser()">Unban User</button>
+          </div>
+          <div id="unbanStatus" style="margin-top:0.5rem;color:var(--muted);"></div>
+        </div>
+      </div>
+
+      <div id="logs" class="screen">
+        <div class="panel">
+          <div style="margin-top:0.5rem; font-weight:700;">Banned / Unbanned Users</div>
+          <div id="bans" class="list"></div>
+          <div style="margin-top:1rem; font-weight:700;">Deleted Posts</div>
+          <div id="deletes" class="list"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      applySavedTheme();
+      setupNav();
+      loadMods();
+      loadLogs();
+    });
+
+    function applySavedTheme() {
+      const saved = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+
+    function setupNav() {
+      const links = document.querySelectorAll('.nav a[data-target]');
+      const sections = {
+        welcome: document.getElementById('welcome'),
+        mods: document.getElementById('mods'),
+        logs: document.getElementById('logs')
+      };
+      function activate(target) {
+        Object.keys(sections).forEach(key => {
+          const isActive = key === target;
+          sections[key].style.display = isActive ? 'block' : 'none';
+          sections[key].classList.toggle('active', isActive);
+        });
+        links.forEach(l => l.classList.toggle('active', l.dataset.target === target));
+        const title = document.getElementById('pageTitle');
+        const subtitle = document.getElementById('pageSubtitle');
+        if (target === 'welcome') {
+          title.textContent = 'Administrator Dashboard';
+          subtitle.textContent = 'Welcome to the admin dashboard. Use the bar on the left to navigate.';
+        } else if (target === 'mods') {
+          title.textContent = 'Moderators';
+          subtitle.textContent = 'Manage moderator access and user bans.';
+        } else {
+          title.textContent = 'Logs';
+          subtitle.textContent = 'Review recent moderation actions.';
+        }
+      }
+      links.forEach(link => {
+        link.addEventListener('click', (e) => {
+          if (!link.dataset.target) return; // allow Back to Home
+          e.preventDefault();
+          const target = link.dataset.target;
+          activate(target);
+          history.replaceState(null, '', `#${target}`);
+        });
+      });
+      const initial = (location.hash || '#welcome').replace('#', '');
+      activate(sections[initial] ? initial : 'welcome');
+    }
+
+    function renderMod(mod) {
+      return `
+        <div class="row">
+          <div>
+            <strong>${mod.display_name || mod.username || 'Unknown'}</strong>
+            <div class="uid">@${mod.username || 'unknown'}</div>
+          </div>
+          <div class="uid">${mod.id || ''}</div>
+        </div>`;
+    }
+
+    async function loadMods() {
+      const res = await fetch('/api/admin/moderators');
+      const data = await res.json();
+      const list = document.getElementById('modsList');
+      if (!data.success || !data.moderators.length) {
+        list.innerHTML = '<div class="empty">No moderators found.</div>';
+        return;
+      }
+      list.innerHTML = data.moderators.map(renderMod).join('');
+    }
+
+    async function addModerator() {
+      const status = document.getElementById('status');
+      const username = document.getElementById('modUsername').value.trim();
+      if (!username) { status.textContent = 'Please enter a username.'; return; }
+      status.textContent = 'Adding moderator...';
+      try {
+        const res = await fetch('/api/admin/moderators', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        status.textContent = 'Moderator added.';
+        document.getElementById('modUsername').value = '';
+        loadMods();
+      } catch (e) {
+        status.textContent = `Error: ${e.message}`;
+      }
+    }
+
+    async function removeModerator() {
+      const status = document.getElementById('removeStatus');
+      const username = document.getElementById('removeUsername').value.trim();
+      if (!username) { status.textContent = 'Enter a username.'; return; }
+      status.textContent = 'Processing...';
+      try {
+        const res = await fetch('/api/admin/moderators/remove', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        status.textContent = 'Moderator removed.';
+        document.getElementById('removeUsername').value = '';
+        loadMods();
+      } catch (e) {
+        status.textContent = e.message || 'Failed to remove moderator';
+      }
+    }
+
+    async function banUser() {
+      const status = document.getElementById('banStatus');
+      const username = document.getElementById('banUsername').value.trim();
+      const reason = document.getElementById('banReason').value.trim() || 'Not provided';
+      if (!username) { status.textContent = 'Enter a username.'; return; }
+      status.textContent = 'Processing...';
+      try {
+        const lookup = await fetch(`/api/users/${encodeURIComponent(username)}`);
+        const lookupData = await lookup.json();
+        if (!lookupData.success) throw new Error(lookupData.error || 'User not found');
+        const userId = lookupData.user.id;
+        const res = await fetch(`/api/mod/users/${userId}/ban`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to ban');
+        status.textContent = 'User banned';
+        loadLogs();
+      } catch (e) {
+        status.textContent = e.message || 'Failed to ban user';
+      }
+    }
+
+    async function unbanUser() {
+      const status = document.getElementById('unbanStatus');
+      const username = document.getElementById('unbanUsername').value.trim();
+      const reason = document.getElementById('unbanReason').value.trim() || 'Not provided';
+      if (!username) { status.textContent = 'Enter a username.'; return; }
+      status.textContent = 'Processing...';
+      try {
+        const lookup = await fetch(`/api/users/${encodeURIComponent(username)}`);
+        const lookupData = await lookup.json();
+        if (!lookupData.success) throw new Error(lookupData.error || 'User not found');
+        const userId = lookupData.user.id;
+        const res = await fetch(`/api/mod/users/${userId}/unban`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to unban');
+        status.textContent = 'User unbanned';
+        loadLogs();
+      } catch (e) {
+        status.textContent = e.message || 'Failed to unban user';
+      }
+    }
+
+    function renderBan(entry) {
+      const action = entry.type === 'unban_user' ? 'Unbanned' : 'Banned';
+      return `
+        <div class="row">
+          <div>
+            <strong>${action}</strong>
+            <div class="uid">${entry.target_username || 'unknown'} (${entry.target_user_id || ''})</div>
+          </div>
+          <div class="uid">${entry.reason || 'Not provided'}<br>${entry.actor_username || entry.actor_id || ''}<br>${entry.timestamp}</div>
+        </div>`;
+    }
+
+    function renderDelete(entry) {
+      return `
+        <div class="row">
+          <div>
+            <strong>Post ${entry.post_id}</strong>
+            <div class="uid">Owner: ${entry.target_user_id || ''}</div>
+          </div>
+          <div class="uid">${entry.reason || 'Not provided'}<br>${entry.actor_username || entry.actor_id || ''}<br>${entry.timestamp}</div>
+        </div>`;
+    }
+
+    async function loadLogs() {
+      try {
+        const res = await fetch('/api/mod/logs?limit=50');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        const bans = data.logs.filter(l => l.type === 'ban_user' || l.type === 'unban_user');
+        const deletes = data.logs.filter(l => l.type === 'delete_post');
+        document.getElementById('bans').innerHTML = bans.length ? bans.map(renderBan).join('') : '<div class="empty">No recent bans.</div>';
+        document.getElementById('deletes').innerHTML = deletes.length ? deletes.map(renderDelete).join('') : '<div class="empty">No recent deletions.</div>';
+      } catch (e) {
+        document.getElementById('bans').innerHTML = e.message || 'Failed to load logs';
+      }
+    }
+  </script>
+</body>
+</html>

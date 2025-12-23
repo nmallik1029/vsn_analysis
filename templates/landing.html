@@ -8,20 +8,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            const saved = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
     <style>
         :root {
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #12121a;
-            --bg-card: #16161f;
+            --bg-primary: #000000;
+            --bg-secondary: #070709;
+            --bg-card: #0b0b0f;
             --text-primary: #f0f0f0;
             --text-secondary: #888899;
-            --accent-green: #00ff88;
-            --accent-red: #ff4466;
-            --accent-blue: #4488ff;
+            --accent-green: #00ff9c;
+            --accent-red: #ff4d6d;
+            --accent-blue: #4f8cff;
             --accent-yellow: #ffcc00;
-            --border-color: #2a2a3a;
-            --glow-green: rgba(0, 255, 136, 0.15);
-            --glow-red: rgba(255, 68, 102, 0.15);
+            --border-color: #14141c;
+            --glow-green: rgba(0, 255, 156, 0.18);
+            --glow-red: rgba(255, 77, 109, 0.18);
         }
 
         html[data-theme="light"] {
@@ -37,10 +43,10 @@
             --accent-green: #00aa66;
             --accent-blue: #3366ff;
             --accent-red: #dd3355;
-            --accent-yellow: #cc9900;
+            --accent-yellow: #ffcc00;
 
-            --glow-green: rgba(0, 170, 102, 0.2);
-            --glow-red: rgba(221, 51, 85, 0.2);
+            --glow-green: rgba(0, 170, 102, 0.15);
+            --glow-red: rgba(221, 51, 85, 0.15);
         }
 
 
@@ -94,69 +100,227 @@
         }
 
         .container {
-            position: relative;
             z-index: 1;
         }
 
-        /* Navigation */
-        nav {
+        /* Navigation (standardized persistent header) */
+        .site-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.5rem 4rem;
+            gap: 1.5rem;
+            padding: 0.75rem 2rem;
+            background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: relative;
         }
-
+        .header-spacer {
+            height: 60px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            min-width: 0;
+        }
         .brand {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-        }
-
-        .brand img {
-            width: 40px;
-            height: 40px;
-        }
-
-        .logo-text {
+            text-decoration: none;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.25rem;
-            color: var(--accent-green);
         }
-
-
-        .nav-links, #authLinks {
+        .brand img { width: 36px; height: 36px; object-fit: contain; }
+        .brand span {
+            font-size: 1.1rem;
+            color: var(--accent-green);
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+        .nav-search {
+            flex: 0 0 220px;
+            position: relative;
+        }
+        .nav-search input {
+            width: 100%;
+            padding: 0.4rem 0.65rem;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .nav-search input::placeholder { color: var(--text-secondary); font-weight: 500; }
+        .nav-suggestions {
+            position: absolute;
+            top: calc(100% + 0.35rem);
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+            padding: 0.35rem 0;
+            display: none;
+            z-index: 1100;
+        }
+        .nav-suggestions.show { display: block; }
+        .nav-suggestion {
+            padding: 0.45rem 0.65rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        .nav-suggestion:hover { background: var(--bg-secondary); color: var(--accent-green); }
+        .site-nav {
             display: flex;
             align-items: center;
-            gap: 2rem;
+            gap: 1rem;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
         }
-
-        .nav-links a {
+        .nav-item { position: relative; padding-bottom: 0.8rem; }
+        .nav-link {
             color: var(--text-secondary);
             text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.2s;
-            line-height: 1;
-            display: inline-flex;
-            align-items: center;
+            font-weight: 600;
+            padding: 0.35rem 0.7rem;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+            font-family: 'Space Grotesk', sans-serif;
         }
-
-        .nav-links a:hover {
+        .nav-link:hover {
             color: var(--text-primary);
+        }
+        .nav-link.active {
+            color: var(--text-primary);
+            border-color: var(--border-color);
+            background: var(--bg-card);
+        }
+        .nav-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-6px);
+            min-width: 260px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 18px 45px rgba(0,0,0,0.4);
+            padding: 0.75rem;
+            display: grid;
+            gap: 0.85rem;
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+            transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+            z-index: 1001;
+        }
+        .nav-item:hover .nav-dropdown,
+        .nav-item:focus-within .nav-dropdown,
+        .nav-dropdown:hover {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+            visibility: visible;
+        }
+        .nav-dropdown-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .nav-dropdown-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-secondary);
+            font-weight: 700;
+        }
+        .nav-dropdown a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.88rem;
+            padding: 0.35rem 0.5rem;
+            border-radius: 8px;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .nav-dropdown a:hover {
+            background: var(--bg-secondary);
+            color: var(--accent-green);
+        }
+        .nav-dropdown-meta {
+            display: grid;
+            gap: 0.35rem;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 0.6rem;
+        }
+        .nav-actions { display: flex; align-items: center; gap: 1rem; }
+        /* Hide legacy landing sections we no longer link to */
+        .features,
+        .how-it-works {
+            display: none !important;
         }
 
         .nav-signin {
-            padding: 0.35rem 0.6rem;
+            padding: 0.4rem 0.8rem;
             background: var(--accent-green);
             color: var(--bg-primary);
-            border-radius: 4px;
+            border-radius: 6px;
             font-weight: 600;
-            display: inline-center;
-            align-items: center;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.2s;
         }
 
         .nav-signin:hover {
             background: #00dd77;
+        }
+        
+        .user-menu { position: relative; }
+        .user-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            overflow: hidden;
+        }
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        .user-name {
+            font-size: 0.85rem;
+            color: var(--text-primary);
         }
 
         /* Ticker Tape */
@@ -758,60 +922,95 @@
 
     <div class="grid-bg"></div>
     
-    <div class="container">
-        <nav>
-            <div class = "brand">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="VSN Logo" style = "width: 40px; height: 75px;">
-                <div class="logo-text">VSN ANALYSIS</div>
-            </div>
-
-            <div class="nav-links" id="navLinks">
-
-                <a href="#features">Features</a>
-                <a href="#how-it-works">How It Works</a>
-
-                <span id="authLinks">
-                    <a href="/auth" class="nav-signin">Sign In</a>
-                </span>
-
-                <span id="userMenu" style="display:none; position:relative;">
-                    <span id="userTrigger"
-                            style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer;"
-                            onclick="toggleUserMenu(event)">
-                        <span id="userAvatar"
-                            style="width:28px;height:28px;border-radius:50%;
-                                    background:#00ff88;color:#0a0a0f;
-                                    display:flex;align-items:center;justify-content:center;
-                                    font-weight:700;font-size:0.9rem;
-                                    overflow:hidden;">
-                            {% if avatar_url %}
-                                <img src="{{ avatar_url }}"
-                                    style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
-                            {% else %}
-                                {{ display_name[0]|upper if display_name else "N" }}
-                            {% endif %}
-                        </span>
-                        <span id="userEmail" style="font-size:0.85rem;"></span>
-                    </span>
-
-                    <!-- Dropdown -->
-                    <div id="userDropdown" class="user-dropdown">
-                        <a href="/profile"
-                        style="display:block;padding:0.6rem;
-                                color:var(--text-primary);text-decoration:none;">
-                            Profile
-                        </a>
-
-                        <button onclick="logout()"
-                                style="width:100%;padding:0.6rem;
-                                    background:none;border:none;
-                                    color:#ff4466;cursor:pointer;text-align:left;">
-                            Log out
-                        </button>
+    <header class="site-header">
+        <div class="header-left">
+            <a href="/" class="brand">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="VSN Logo">
+                <span>VSN Analysis</span>
+            </a>
+            <form class="nav-search" id="navSearchForm" onsubmit="return handleNavSearch(event)">
+                <input id="navSearchInput" type="search" placeholder="Search ticker..." autocomplete="off" spellcheck="false">
+                <div id="navSuggestions" class="nav-suggestions"></div>
+            </form>
+        </div>
+        <nav class="site-nav">
+            <div class="nav-item">
+                <a href="/" class="nav-link active">Home</a>
+                <div class="nav-dropdown">
+                    <div class="nav-dropdown-group">
+                        <span class="nav-dropdown-title">Quick Start</span>
+                        <a href="/">Analyze a ticker</a>
+                        <a href="/?ticker=AAPL">Try AAPL</a>
+                        <a href="/?ticker=TSLA">Try TSLA</a>
                     </div>
-                </span>
+                    <div class="nav-dropdown-group">
+                        <span class="nav-dropdown-title">Explore</span>
+                        <a href="/markets">Market overview</a>
+                        <a href="/blog">Community feed</a>
+                    </div>
+                    <div class="nav-dropdown-meta">
+                        <span>Signal: score + trend</span>
+                        <span>Coverage: tickers on demand</span>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-item">
+                <a href="/markets" class="nav-link">Markets</a>
+                <div class="nav-dropdown">
+                    <div class="nav-dropdown-group">
+                        <span class="nav-dropdown-title">Indices</span>
+                        <a href="/markets#indicesList">Global indices</a>
+                        <a href="/markets#marketChartSection">Index charts</a>
+                    </div>
+                    <div class="nav-dropdown-group">
+                        <span class="nav-dropdown-title">Movers</span>
+                        <a href="/markets#watchlist">Top gainers</a>
+                        <a href="/markets#watchlist">Top losers</a>
+                    </div>
+                    <div class="nav-dropdown-meta">
+                        <span>Ranges: 1D to Max</span>
+                        <span>Refresh: on demand</span>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-item">
+                <a href="/blog" class="nav-link">Community</a>
+                <div class="nav-dropdown">
+                    <div class="nav-dropdown-group">
+                        <span class="nav-dropdown-title">Community</span>
+                        <a href="/blog">Latest posts</a>
+                        <a href="/blog#trending">Trending tags</a>
+                        <a href="/blog/new">Create a post</a>
+                    </div>
+                    <div class="nav-dropdown-group">
+                        <span class="nav-dropdown-title">You</span>
+                        <a href="/profile">Your profile</a>
+                        <a href="/blog#community-feed">Live feed</a>
+                    </div>
+                    <div class="nav-dropdown-meta">
+                        <span>Share: charts, notes, screenshots</span>
+                        <span>Follow: market takes</span>
+                    </div>
+                </div>
             </div>
         </nav>
+        <div class="nav-actions">
+            <span id="authLinks">
+                <a href="/auth" class="nav-signin">Sign In</a>
+            </span>
+            <div id="userMenu" class="user-menu" style="display:none;">
+                <div class="user-trigger" onclick="toggleUserMenu(event)">
+                    <div class="user-avatar" id="userAvatar"></div>
+                    <span class="user-name" id="userName"></span>
+                </div>
+                <div class="user-dropdown" id="userDropdown"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="header-spacer"></div>
+
+    <div class="container">
 
 
 
@@ -1031,10 +1230,15 @@
 
         (function () {
         const saved = localStorage.getItem('theme');
-        if (saved) {
-            document.documentElement.setAttribute('data-theme', saved);
-        }
+        document.documentElement.setAttribute('data-theme', saved || 'light');
         })();
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'light';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
 
 
 
@@ -1116,6 +1320,8 @@
         // Load ticker data on page load
         loadTickerData();
 
+        let currentRoles = { admin: false, moderator: false };
+
         // Check if user is logged in by calling Flask API
         async function checkAuthState() {
             try {
@@ -1124,10 +1330,11 @@
                 
                 const authLinks = document.getElementById('authLinks');
                 const userMenu = document.getElementById('userMenu');
-                const userEmail = document.getElementById('userEmail');
+                const userName = document.getElementById('userName');
                 const userAvatar = document.getElementById('userAvatar');
                 
                 if (data.authenticated && data.user) {
+                    currentRoles = data.roles || { admin: false, moderator: false };
                     authLinks.style.display = 'none';
                     userMenu.style.display = 'inline-flex';
 
@@ -1136,7 +1343,7 @@
                         data.user.email ||
                         'User';
 
-                    userEmail.innerText = displayName;
+                    userName.innerText = displayName;
 
                     // Clear existing content first
                     userAvatar.innerHTML = '';
@@ -1161,6 +1368,38 @@
                         userAvatar.style.background = avatarColor(displayName);
                     }
 
+                    // Build dropdown links including admin/mod dashboards if applicable
+                    const dropdown = document.getElementById('userDropdown');
+                    let links = `
+                        <a href="/profile"
+                        style="display:block;padding:0.6rem;
+                                color:var(--text-primary);text-decoration:none;">
+                            Profile
+                        </a>`;
+                    if (currentRoles.admin) {
+                        links += `
+                        <a href="/admin"
+                        style="display:block;padding:0.6rem;
+                                color:var(--text-primary);text-decoration:none;">
+                            Admin Dashboard
+                        </a>`;
+                    }
+                    if (currentRoles.moderator && !currentRoles.admin) {
+                        links += `
+                        <a href="/moderator"
+                        style="display:block;padding:0.6rem;
+                                color:var(--text-primary);text-decoration:none;">
+                            Moderator Dashboard
+                        </a>`;
+                    }
+                    links += `
+                        <button onclick="logout()"
+                                style="width:100%;padding:0.6rem;
+                                    background:none;border:none;
+                                    color:#ff4466;cursor:pointer;text-align:left;">
+                            Log out
+                        </button>`;
+                    dropdown.innerHTML = links;
 
                 } else {
                     // User is not logged in
@@ -1192,6 +1431,79 @@
             if (menu) menu.classList.remove('show');
         });
 
+        let navSuggestionAbort;
+
+        function initNavSearch() {
+            const input = document.getElementById('navSearchInput');
+            const box = document.getElementById('navSuggestions');
+            if (!input || !box) return;
+
+            input.addEventListener('input', (e) => {
+                let value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+                if (value.length > 5) value = value.slice(0, 5);
+                e.target.value = value;
+                renderNavSuggestions(value);
+            });
+
+            input.addEventListener('keydown', (e) => {
+                const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'];
+                if (allowedKeys.includes(e.key)) return;
+                if (!/^[a-zA-Z]$/.test(e.key)) e.preventDefault();
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!box.contains(e.target) && e.target !== input) {
+                    box.classList.remove('show');
+                }
+            });
+        }
+
+        async function renderNavSuggestions(prefix) {
+            const box = document.getElementById('navSuggestions');
+            box.innerHTML = '';
+            if (!prefix) {
+                box.classList.remove('show');
+                return;
+            }
+            if (navSuggestionAbort) navSuggestionAbort.abort();
+            navSuggestionAbort = new AbortController();
+            try {
+                const res = await fetch(`/api/search-tickers?q=${encodeURIComponent(prefix)}`, { signal: navSuggestionAbort.signal });
+                const matches = await res.json();
+                if (!matches.length) {
+                    box.classList.remove('show');
+                    return;
+                }
+                matches.forEach((t) => {
+                    const item = document.createElement('div');
+                    item.className = 'nav-suggestion';
+                    item.textContent = t;
+                    item.onclick = () => {
+                        const input = document.getElementById('navSearchInput');
+                        input.value = t;
+                        box.classList.remove('show');
+                        input.focus();
+                    };
+                    box.appendChild(item);
+                });
+                box.classList.add('show');
+            } catch (e) {
+                if (e.name !== 'AbortError') console.error(e);
+            }
+        }
+
+        function handleNavSearch(event) {
+            event.preventDefault();
+            const input = document.getElementById('navSearchInput');
+            if (!input) return false;
+            const ticker = input.value.trim().toUpperCase();
+            if (!ticker) return false;
+            sessionStorage.setItem('pendingReportTicker', ticker);
+            window.location.href = `/chart/${encodeURIComponent(ticker)}`;
+            return false;
+        }
+
+        initNavSearch();
 
         const TICKER_REGEX = /^[A-Z]{1,5}$/;
 

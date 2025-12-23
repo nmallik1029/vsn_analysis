@@ -439,8 +439,8 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" placeholder="you@example.com" required>
+                        <label for="email" id="emailLabel">Email or Username</label>
+                        <input type="text" id="email" placeholder="you@example.com or username" required>
                     </div>
 
                     <div class="form-group">
@@ -855,6 +855,8 @@
             // ============================================
             // TAB SWITCHING
             // ============================================
+            var emailLabel = document.getElementById('emailLabel');
+            
             loginTab.addEventListener('click', function() {
                 console.log('Login tab clicked');
                 currentMode = 'login';
@@ -862,6 +864,9 @@
                 signupTab.classList.remove('active');
                 displayNameGroup.style.display = 'none';
                 submitText.textContent = 'Sign In';
+                emailLabel.textContent = 'Email or Username';
+                emailInput.placeholder = 'you@example.com or username';
+                emailInput.type = 'text';
                 hideMessages();
             });
 
@@ -872,6 +877,9 @@
                 loginTab.classList.remove('active');
                 displayNameGroup.style.display = 'block';
                 submitText.textContent = 'Create Account';
+                emailLabel.textContent = 'Email';
+                emailInput.placeholder = 'you@example.com';
+                emailInput.type = 'email';
                 hideMessages();
             });
 
@@ -1013,8 +1021,27 @@
                         }
                     } else {
                         console.log('Attempting login...');
+                        
+                        // Check if input is email or username
+                        var loginEmail = email;
+                        var isEmail = email.includes('@');
+                        
+                        if (!isEmail) {
+                            // It's a username - look up the email
+                            console.log('Username detected, looking up email...');
+                            var lookupRes = await fetch(`/api/lookup_email_by_username?username=${encodeURIComponent(email)}`);
+                            var lookupData = await lookupRes.json();
+                            
+                            if (!lookupRes.ok || lookupData.error) {
+                                throw new Error('Username not found. Please check your username or use your email.');
+                            }
+                            
+                            loginEmail = lookupData.email;
+                            console.log('Found email for username');
+                        }
+                        
                         var loginResult = await supabaseClient.auth.signInWithPassword({
-                            email: email,
+                            email: loginEmail,
                             password: password
                         });
 
