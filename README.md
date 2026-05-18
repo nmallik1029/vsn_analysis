@@ -1,4 +1,4 @@
-# Stock Analyzer
+# VSN Analysis
 
 A web-based stock analysis tool that provides buy consideration scores based on fundamental analysis.
 
@@ -11,7 +11,6 @@ A web-based stock analysis tool that provides buy consideration scores based on 
   - Growth (revenue & earnings growth)
   - Financial health (debt/equity, current ratio)
   - Technical factors (52-week position, volatility, beta)
-- Beautiful dark-themed dashboard UI
 - Key metrics display
 - 52-week price range indicator
 

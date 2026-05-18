@@ -17,6 +17,7 @@ import os
 import json
 import re
 import requests
+from urllib.parse import urlparse
 from supabase import create_client
 from PIL import Image
 from io import BytesIO
@@ -36,6 +37,15 @@ TICKER_TAPE_CACHE_TIME = 0
 TICKER_TAPE_TTL = 120  # seconds
 INDEX_CACHE = {}
 INDEX_CACHE_TTL = 120
+SEARCH_CACHE = {}
+SEARCH_CACHE_TTL = 30
+LOGO_CACHE = {}
+LOGO_CACHE_TTL = 60 * 60 * 6
+YAHOO_SESSION = requests.Session()
+YAHOO_SESSION.headers.update({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                  '(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+})
 INDEX_MAP = {
     '^GSPC': 'S&P 500',
     '^NDX': 'Nasdaq 100',
@@ -65,6 +75,9 @@ WATCHLIST = {
 
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 CORS(app)  # Allow cross-origin requests
+# Helpful for development: reload templates when files change
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.auto_reload = True
 
 # ============================================
 # CONFIGURATION
@@ -622,6 +635,176 @@ def search_tickers():
 
     matches = [t for t in ALL_TICKERS if t.startswith(q)]
     return jsonify(matches[:10])
+
+
+def _fetch_yahoo_search(query: str, limit: int = 12) -> dict:
+    url = 'https://query2.finance.yahoo.com/v1/finance/search'
+    params = {
+        'q': query,
+        'quotesCount': limit,
+        'newsCount': 0,
+        'enableFuzzyQuery': 'false'
+    }
+    resp = YAHOO_SESSION.get(url, params=params, timeout=5)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _fetch_yahoo_trending(region: str = 'US') -> list[dict]:
+    url = f'https://query2.finance.yahoo.com/v1/finance/trending/{region}'
+    resp = YAHOO_SESSION.get(url, timeout=5)
+    resp.raise_for_status()
+    payload = resp.json()
+    results = payload.get('finance', {}).get('result', [])
+    if not results:
+        return []
+    return results[0].get('quotes', [])
+
+
+def _filter_quotes(quotes: list[dict], mode: str) -> list[dict]:
+    results = []
+    for quote in quotes:
+        quote_type = quote.get('quoteType', '')
+        if mode == 'indices':
+            if quote_type != 'INDEX':
+                continue
+        else:
+            if quote_type not in ('EQUITY', 'ETF'):
+                continue
+        symbol = quote.get('symbol') or ''
+        name = quote.get('shortname') or quote.get('longname') or symbol
+        exchange = quote.get('exchDisp') or quote.get('exchange') or ''
+        results.append({
+            'symbol': symbol,
+            'name': name,
+            'exchange': exchange,
+            'type': quote_type
+        })
+    return results[:10]
+
+
+def _domain_from_url(value: str) -> str | None:
+    try:
+        parsed = urlparse(value)
+        host = parsed.netloc or parsed.path
+        if host.startswith('www.'):
+            host = host[4:]
+        return host or None
+    except Exception:
+        return None
+
+
+def _fetch_company_website(symbol: str) -> str | None:
+    url = f'https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}'
+    params = {'modules': 'assetProfile'}
+    resp = YAHOO_SESSION.get(url, params=params, timeout=5)
+    resp.raise_for_status()
+    payload = resp.json()
+    result = payload.get('quoteSummary', {}).get('result') or []
+    if not result:
+        return None
+    profile = result[0].get('assetProfile') or {}
+    return profile.get('website')
+
+
+@app.route('/api/logo/<symbol>')
+def get_logo(symbol):
+    symbol = (symbol or '').upper().strip()
+    if not symbol:
+        return jsonify({'success': False})
+
+    now = time.time()
+    cached = LOGO_CACHE.get(symbol)
+    if cached and now - cached['ts'] < LOGO_CACHE_TTL:
+        return jsonify({'success': True, 'logo_url': cached['url']})
+
+    try:
+        # Try to discover company website via Yahoo first
+        website = None
+        try:
+            website = _fetch_company_website(symbol)
+        except Exception:
+            # Yahoo may block requests (401); continue to fallback heuristics
+            website = None
+
+        domain = _domain_from_url(website or '')
+
+        # Helper to test a Clearbit URL quickly and cache if valid
+        def _test_and_cache(domain_candidate: str):
+            if not domain_candidate:
+                return None
+            logo_url = f'https://logo.clearbit.com/{domain_candidate}'
+            try:
+                r = requests.get(logo_url, timeout=4, stream=True)
+                if r.status_code == 200 and r.headers.get('Content-Type', '').startswith('image'):
+                    LOGO_CACHE[symbol] = {'ts': now, 'url': logo_url}
+                    return logo_url
+            except Exception:
+                return None
+            return None
+
+        # 1) If yahoo returned a website, try its domain
+        if domain:
+            ok = _test_and_cache(domain)
+            if ok:
+                return jsonify({'success': True, 'logo_url': ok})
+
+        # 2) Fallback: try a few guessed domains
+        guesses = []
+        # prefer lowercased symbol.com
+        guesses.append(f"{symbol.lower()}.com")
+        guesses.append(f"{symbol}.com")
+
+        # 3) If we have a small watchlist name, try name -> domain
+        name = WATCHLIST.get(symbol)
+        if name:
+            # turn 'Apple Inc' -> 'apple.com'
+            slug = re.sub(r"[^a-z0-9]+", '', name.lower())
+            if slug:
+                guesses.append(f"{slug}.com")
+
+        for g in guesses:
+            ok = _test_and_cache(g)
+            if ok:
+                return jsonify({'success': True, 'logo_url': ok})
+
+        # nothing found
+        return jsonify({'success': False})
+    except Exception as e:
+        print(f"Logo fetch error for {symbol}: {e}")
+        return jsonify({'success': False})
+
+
+@app.route('/api/search')
+def search_symbols():
+    query = request.args.get('q', '').strip()
+    mode = request.args.get('type', 'symbols').strip().lower()
+    if mode not in ('symbols', 'indices'):
+        mode = 'symbols'
+
+    cache_key = (query.upper(), mode)
+    now = time.time()
+    cached = SEARCH_CACHE.get(cache_key)
+    if cached and now - cached['ts'] < SEARCH_CACHE_TTL:
+        return jsonify({'success': True, 'results': cached['data']})
+
+    try:
+        if query:
+            payload = _fetch_yahoo_search(query)
+            quotes = payload.get('quotes', [])
+        else:
+            if mode == 'indices':
+                payload = _fetch_yahoo_search('index')
+                quotes = payload.get('quotes', [])
+            else:
+                quotes = _fetch_yahoo_trending('US')
+
+        results = _filter_quotes(quotes, mode)
+        SEARCH_CACHE[cache_key] = {'ts': now, 'data': results}
+        return jsonify({'success': True, 'results': results})
+    except Exception as e:
+        print(f"Search API error: {e}")
+        return jsonify({'success': False, 'results': []})
 
 @app.route('/api/debug_insert')
 def debug_insert():

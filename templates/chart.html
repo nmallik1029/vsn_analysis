@@ -12,39 +12,41 @@
     <script>
         // Theme initialization before render
         (function() {
-            const saved = localStorage.getItem('theme') || 'dark';
+            const saved = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', saved);
         })();
     </script>
     <style>
         :root {
             --bg-primary: #000000;
-            --bg-secondary: #0a0a0f;
-            --bg-tertiary: #141419;
-            --bg-hover: #1e1e26;
-            --text-primary: #e8e8ed;
-            --text-secondary: #787888;
-            --text-muted: #5d5d6b;
-            --accent-green: #22c55e;
-            --accent-red: #ef4444;
-            --accent-blue: #3b82f6;
-            --border-color: #1e1e28;
-            --chart-bg: #000000;
+            --bg-secondary: #070709;
+            --bg-card: #0b0b0f;
+            --bg-tertiary: var(--bg-card);
+            --bg-hover: #101015;
+            --text-primary: #f0f0f0;
+            --text-secondary: #888899;
+            --text-muted: #666677;
+            --accent-green: #00ff9c;
+            --accent-red: #ff4d6d;
+            --accent-blue: #4f8cff;
+            --border-color: #14141c;
+            --chart-bg: var(--bg-primary);
         }
         
         html[data-theme="light"] {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f8f9fa;
-            --bg-tertiary: #f0f1f3;
-            --bg-hover: #e8e9eb;
-            --text-primary: #1a1a2e;
-            --text-secondary: #6b7280;
-            --text-muted: #9ca3af;
-            --accent-green: #16a34a;
-            --accent-red: #dc2626;
-            --accent-blue: #2563eb;
-            --border-color: #e5e7eb;
-            --chart-bg: #ffffff;
+            --bg-primary: #f7f7fb;
+            --bg-secondary: #ffffff;
+            --bg-card: #f1f1f6;
+            --bg-tertiary: var(--bg-card);
+            --bg-hover: #e9e9f0;
+            --text-primary: #0a0a0f;
+            --text-secondary: #555566;
+            --text-muted: #888899;
+            --accent-green: #00aa66;
+            --accent-red: #dd3355;
+            --accent-blue: #3366ff;
+            --border-color: #dddddd;
+            --chart-bg: var(--bg-primary);
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -162,26 +164,6 @@
         .range-btn.active { background: var(--accent-green); color: #fff; }
         
         .header-spacer { flex: 1; }
-        
-        /* Theme Toggle */
-        .theme-toggle {
-            width: 36px;
-            height: 36px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: var(--text-secondary);
-            transition: all 0.15s;
-        }
-        .theme-toggle:hover {
-            background: var(--bg-hover);
-            color: var(--text-primary);
-        }
-        .theme-toggle svg { width: 18px; height: 18px; }
         
         /* VSN Brand */
         .brand-link {
@@ -492,7 +474,7 @@
         
         <!-- Chart Type Toggle -->
         <div class="chart-type-toggle">
-            <button class="chart-type-btn active" data-type="candle" title="Candlestick">
+            <button class="chart-type-btn" data-type="candle" title="Candlestick">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                     <rect x="5" y="6" width="2" height="12" rx="0.5"/>
                     <rect x="4" y="9" width="4" height="6" rx="0.5"/>
@@ -503,7 +485,7 @@
                 </svg>
                 Candles
             </button>
-            <button class="chart-type-btn" data-type="line" title="Line">
+            <button class="chart-type-btn active" data-type="line" title="Line">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M3 17l6-6 4 4 8-8"/>
                 </svg>
@@ -528,16 +510,6 @@
         <div class="header-spacer"></div>
         
         <span class="header-time" id="headerTime">--:--:-- UTC</span>
-        
-        <!-- Theme Toggle -->
-        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-            <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="5"/>
-                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-            </svg>
-        </button>
-        
-        <div class="header-divider"></div>
         
         <!-- VSN Brand -->
         <a href="/" class="brand-link">
@@ -617,7 +589,7 @@
         let lineSeries = []; // Array to hold multiple line segments for coloring
         let volumeSeries = null;
         let currentRange = '6m';
-        let currentChartType = 'candle'; // 'candle' or 'line'
+        let currentChartType = 'line'; // 'candle' or 'line'
         let priceData = [];
         let basePrice = null; // First price for determining positive/negative
         
@@ -629,42 +601,27 @@
         const numberFmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const volumeFmt = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 });
         
-        // Colors
-        const GREEN = '#22c55e';
-        const RED = '#ef4444';
-        
-        // ============ THEME ============
-        function getTheme() {
-            return document.documentElement.getAttribute('data-theme') || 'dark';
-        }
-        
-        function toggleTheme() {
-            const current = getTheme();
-            const next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-            updateThemeIcon();
-            updateChartTheme();
-        }
-        
-        function updateThemeIcon() {
-            const icon = document.getElementById('themeIcon');
-            const isDark = getTheme() === 'dark';
-            if (isDark) {
-                icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
-            } else {
-                icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-            }
-        }
-        
         function getChartColors() {
-            const isDark = getTheme() === 'dark';
+            const styles = getComputedStyle(document.documentElement);
             return {
-                background: isDark ? '#000000' : '#ffffff',
-                textColor: isDark ? '#e8e8ed' : '#1a1a2e',
-                gridColor: isDark ? '#1e1e2810' : '#e5e7eb40',
-                borderColor: isDark ? '#1e1e28' : '#e5e7eb',
+                background: styles.getPropertyValue('--chart-bg').trim() || '#000000',
+                textColor: styles.getPropertyValue('--text-primary').trim() || '#e8e8ed',
+                gridColor: styles.getPropertyValue('--border-color').trim() || '#1e1e28',
+                borderColor: styles.getPropertyValue('--border-color').trim() || '#1e1e28',
+                labelBackground: styles.getPropertyValue('--bg-card').trim() || '#0b0b0f',
+                accentGreen: styles.getPropertyValue('--accent-green').trim() || '#22c55e',
+                accentRed: styles.getPropertyValue('--accent-red').trim() || '#ef4444',
+                accentBlue: styles.getPropertyValue('--accent-blue').trim() || '#3b82f6',
             };
+        }
+
+        function toRgba(hex, alpha) {
+            const clean = hex.replace('#', '');
+            if (clean.length !== 6) return hex;
+            const r = parseInt(clean.slice(0, 2), 16);
+            const g = parseInt(clean.slice(2, 4), 16);
+            const b = parseInt(clean.slice(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         }
         
         function updateChartTheme() {
@@ -689,7 +646,6 @@
             document.getElementById('symbolTicker').textContent = ticker;
             document.getElementById('symbolIcon').textContent = ticker.slice(0, 2);
             
-            updateThemeIcon();
             initChart();
             loadChartData(currentRange);
             loadMetadata();
@@ -716,13 +672,13 @@
                         color: '#758696',
                         width: 1,
                         style: LightweightCharts.LineStyle.Dashed,
-                        labelBackgroundColor: getTheme() === 'dark' ? '#1e1e28' : '#e5e7eb',
+                        labelBackgroundColor: colors.labelBackground,
                     },
                     horzLine: {
                         color: '#758696',
                         width: 1,
                         style: LightweightCharts.LineStyle.Dashed,
-                        labelBackgroundColor: getTheme() === 'dark' ? '#1e1e28' : '#e5e7eb',
+                        labelBackgroundColor: colors.labelBackground,
                     },
                 },
                 rightPriceScale: {
@@ -845,20 +801,21 @@
                 volumeSeries = null;
             }
             
+            const colors = getChartColors();
             if (currentChartType === 'candle') {
                 mainSeries = chart.addCandlestickSeries({
-                    upColor: GREEN,
-                    downColor: RED,
-                    borderDownColor: RED,
-                    borderUpColor: GREEN,
-                    wickDownColor: RED,
-                    wickUpColor: GREEN,
+                    upColor: colors.accentGreen,
+                    downColor: colors.accentRed,
+                    borderDownColor: colors.accentRed,
+                    borderUpColor: colors.accentGreen,
+                    wickDownColor: colors.accentRed,
+                    wickUpColor: colors.accentGreen,
                 });
             }
             // For line chart, we'll create series in applyDataToChart
             
             volumeSeries = chart.addHistogramSeries({
-                color: GREEN,
+                color: colors.accentGreen,
                 priceFormat: { type: 'volume' },
                 priceScaleId: 'volume',
                 scaleMargins: { top: 0.92, bottom: 0 },
@@ -881,6 +838,7 @@
             
             // Set base price for coloring
             basePrice = priceData[0].close;
+            const colors = getChartColors();
             
             if (currentChartType === 'candle') {
                 const candleData = priceData.map(p => ({
@@ -907,7 +865,7 @@
                     const p = priceData[i];
                     const prevP = i > 0 ? priceData[i-1] : p;
                     const isUp = p.close >= prevP.close;
-                    const color = isUp ? GREEN : RED;
+                    const color = isUp ? colors.accentGreen : colors.accentRed;
                     
                     if (!currentSegment || currentSegment.color !== color) {
                         // Start new segment, but include the last point from previous segment for continuity
@@ -961,9 +919,9 @@
             const volumeData = priceData.map((p, i) => ({
                 time: p.time,
                 value: p.volume,
-                color: i === 0 || p.close >= priceData[i-1].close 
-                    ? 'rgba(34, 197, 94, 0.5)' 
-                    : 'rgba(239, 68, 68, 0.5)',
+                color: i === 0 || p.close >= priceData[i - 1].close
+                    ? toRgba(colors.accentGreen, 0.5)
+                    : toRgba(colors.accentRed, 0.5),
             }));
             volumeSeries.setData(volumeData);
         }
@@ -1168,8 +1126,6 @@
                     openSearchModal();
                 }
                 if (e.key === 'Escape') closeSearchModal();
-                if (e.key === 't') toggleTheme();
-                
                 // Quick range shortcuts
                 if (e.key === '1') setRange('1d');
                 if (e.key === '5') setRange('5d');
@@ -1214,23 +1170,27 @@
             searchAbort = new AbortController();
             
             try {
-                const res = await fetch(`/api/search-tickers?q=${encodeURIComponent(query)}`, {
+                const params = new URLSearchParams();
+                params.set('q', query);
+                params.set('type', 'symbols');
+                const res = await fetch(`/api/search?${params.toString()}`, {
                     signal: searchAbort.signal
                 });
-                const matches = await res.json();
+                const data = await res.json();
+                const matches = data.results || [];
                 
                 resultsEl.innerHTML = '';
                 matches.slice(0, 8).forEach(t => {
                     const el = document.createElement('div');
                     el.className = 'search-result';
                     el.innerHTML = `
-                        <div class="search-result-icon">${t.slice(0, 2)}</div>
+                        <div class="search-result-icon">${(t.symbol || '').slice(0, 2)}</div>
                         <div class="search-result-info">
-                            <div class="search-result-ticker">${t}</div>
-                            <div class="search-result-name">Stock</div>
+                            <div class="search-result-ticker">${t.symbol}</div>
+                            <div class="search-result-name">${t.name || 'Symbol'}${t.exchange ? ` - ${t.exchange}` : ''}</div>
                         </div>
                     `;
-                    el.onclick = () => navigateToTicker(t);
+                    el.onclick = () => navigateToTicker(t.symbol);
                     resultsEl.appendChild(el);
                 });
             } catch (e) {

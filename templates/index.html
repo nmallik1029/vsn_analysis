@@ -6,6 +6,67 @@
     <title>Stock Analyzer | Buy Consideration Score</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <script>
+        // ========================================
+        // QUARTR-STYLE NAV INDICATOR ANIMATION
+        // ========================================
+        const siteNav = document.getElementById('siteNav');
+        const navIndicator = document.getElementById('navIndicator');
+        const navItems = document.querySelectorAll('[data-nav-item]');
+
+        function positionIndicatorOnActive() {
+            const activeLink = siteNav?.querySelector('.nav-link.active');
+            if (activeLink) {
+                const navItem = activeLink.closest('[data-nav-item]');
+                if (navItem) updateIndicator(navItem);
+            }
+        }
+
+        function updateIndicator(element) {
+            if (!element || !siteNav || !navIndicator) return;
+            const navRect = siteNav.getBoundingClientRect();
+            const itemRect = element.getBoundingClientRect();
+            const left = itemRect.left - navRect.left;
+            const width = itemRect.width;
+            navIndicator.style.left = `${left}px`;
+            navIndicator.style.width = `${width}px`;
+        }
+
+        navItems.forEach((item) => {
+            item.addEventListener('mouseenter', () => updateIndicator(item));
+        });
+
+        siteNav?.addEventListener('mouseleave', () => {
+            positionIndicatorOnActive();
+        });
+
+        window.addEventListener('resize', () => {
+            positionIndicatorOnActive();
+        });
+
+        const siteHeader = document.getElementById('siteHeader');
+        let navTicking = false;
+
+        function updateHeader() {
+            const scrollY = window.scrollY;
+            if (siteHeader) {
+                if (scrollY > 50) {
+                    siteHeader.classList.add('is-scrolled');
+                } else {
+                    siteHeader.classList.remove('is-scrolled');
+                }
+            }
+            setTimeout(positionIndicatorOnActive, 50);
+            navTicking = false;
+        }
+
+        window.addEventListener('scroll', () => {
+            if (!navTicking) {
+                requestAnimationFrame(updateHeader);
+                navTicking = true;
+            }
+        });
+
+        positionIndicatorOnActive();
         (function() {
             const saved = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', saved);
@@ -222,7 +283,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.75rem 2rem;
+            padding: 20px 28px;
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
             backdrop-filter: blur(12px);
@@ -230,7 +291,7 @@
             position: relative;
         }
         .header-spacer {
-            height: 60px;
+            height: 80px;
         }
         .header-left {
             display: flex;
@@ -266,8 +327,155 @@
             font-size: 0.85rem;
             font-weight: 600;
             font-family: 'Space Grotesk', sans-serif;
+            cursor: pointer;
         }
         .nav-search input::placeholder { color: var(--text-secondary); font-weight: 500; }
+
+        .search-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            display: none;
+            z-index: 2000;
+            overflow: auto;
+            padding: 32px 20px 48px;
+        }
+        .search-overlay.active { display: block; }
+        body.search-open { overflow: hidden; }
+        .search-panel {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            box-shadow: 0 40px 120px rgba(0, 0, 0, 0.45);
+            overflow: hidden;
+        }
+        .search-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 18px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .search-bar input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 16px;
+            outline: none;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        /* Auth modal for search when user is unauthenticated (standardized) */
+        .auth-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .auth-modal[aria-hidden="false"] { display: flex; align-items: center; justify-content: center; }
+        .auth-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 18px 20px;
+            border-radius: 12px;
+            max-width: 540px;
+            width: 100%;
+            color: var(--text-primary);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+        }
+        .auth-panel h3 { margin: 0 0 8px 0; font-size: 1.15rem; }
+        .auth-close { background: transparent; border: none; font-size: 20px; float: right; cursor: pointer; }
+        .auth-actions { display:flex; gap:12px; margin-top:12px; justify-content:center; }
+        .auth-actions .btn { min-width: 140px; }
+        .search-bar input::placeholder { color: var(--text-secondary); }
+        .search-bar .search-clear {
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .search-bar .search-close {
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .search-tabs {
+            display: flex;
+            gap: 12px;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+        .search-tab {
+            padding: 8px 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .search-tab.active {
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--accent-green);
+        }
+        .search-list {
+            max-height: 520px;
+            overflow: auto;
+        }
+        .search-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .search-row:hover { background: var(--bg-card); }
+        .search-row-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .search-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--accent-green);
+            font-size: 12px;
+            overflow: hidden;
+        }
+        .search-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+        .search-icon.has-logo img { display: block; }
+        .search-icon.has-logo span { display: none; }
+        .search-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .search-symbol { font-weight: 700; }
+        .search-name { color: var(--text-secondary); font-size: 12px; }
+        .search-meta { color: var(--text-secondary); font-size: 12px; }
         .nav-suggestions {
             position: absolute;
             top: calc(100% + 0.35rem);
@@ -1325,96 +1533,385 @@
                 text-align: center;
             }
         }
+        /* Unified nav (landing) */
+        .site-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 16px 0;
+            transition: padding 400ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .site-header.is-scrolled {
+            padding: 10px 0;
+        }
+        .header-inner {
+            max-width: none;
+            margin: 0;
+            padding: 12px 24px 12px 12px;
+            background: transparent;
+            border-radius: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition:
+                max-width 500ms cubic-bezier(0.16, 1, 0.3, 1),
+                padding 500ms cubic-bezier(0.16, 1, 0.3, 1),
+                background-color 500ms cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 500ms cubic-bezier(0.16, 1, 0.3, 1),
+                border-radius 500ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .site-header.is-scrolled .header-inner {
+            max-width: none;
+            padding: 8px 24px 8px 12px;
+            background: rgba(10, 10, 14, 0.72);
+            backdrop-filter: blur(20px) saturate(1.4);
+            -webkit-backdrop-filter: blur(20px) saturate(1.4);
+            border-radius: 100px;
+            box-shadow:
+                0 4px 30px rgba(0, 0, 0, 0.25),
+                0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                0 -1px 0 rgba(0, 0, 0, 0.2) inset;
+        }
+        html[data-theme="light"] .site-header.is-scrolled .header-inner {
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow:
+                0 4px 30px rgba(0, 0, 0, 0.08),
+                0 1px 0 rgba(255, 255, 255, 0.9) inset,
+                0 -1px 0 rgba(0, 0, 0, 0.05) inset;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            min-width: 0;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            text-decoration: none;
+            font-family: 'JetBrains Mono', monospace;
+            transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms ease;
+        }
+        .brand:hover { transform: scale(1.02); }
+        .brand img {
+            width: 34px;
+            height: 34px;
+            object-fit: contain;
+            transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1), height 400ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .site-header.is-scrolled .brand img {
+            width: 28px;
+            height: 28px;
+        }
+        .brand span {
+            font-size: 1rem;
+            color: var(--accent-green);
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            transition: font-size 400ms cubic-bezier(0.16, 1, 0.3, 1), opacity 400ms ease;
+        }
+        .site-header.is-scrolled .brand span {
+            font-size: 0;
+            opacity: 0;
+            width: 0;
+        }
+        .nav-search {
+            flex: 0 0 200px;
+            position: relative;
+            transition: flex-basis 400ms cubic-bezier(0.16, 1, 0.3, 1), opacity 400ms ease;
+        }
+        .site-header.is-scrolled .nav-search {
+            flex: 0 0 0;
+            opacity: 0;
+        }
+        .nav-search input {
+            width: 100%;
+            padding: 0.45rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(15, 15, 20, 0.7);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            transition: border-color 200ms ease, box-shadow 200ms ease;
+            cursor: pointer;
+        }
+        .nav-search input:hover {
+            border-color: rgba(0, 255, 156, 0.35);
+        }
+        .nav-search input:focus {
+            outline: none;
+            border-color: rgba(0, 255, 156, 0.6);
+            box-shadow: 0 0 0 4px rgba(0, 255, 156, 0.15);
+        }
+        .nav-search input::placeholder {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .site-nav {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+            padding: 6px 8px;
+            background: rgba(8, 8, 10, 0.4);
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: padding 400ms cubic-bezier(0.16, 1, 0.3, 1), background-color 400ms ease;
+        }
+        html[data-theme="light"] .site-nav {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        .site-header.is-scrolled .site-nav {
+            padding: 4px 6px;
+            background: rgba(0, 0, 0, 0.4);
+        }
+        .nav-indicator {
+            position: absolute;
+            top: 6px;
+            left: 0;
+            height: calc(100% - 12px);
+            background: rgba(0, 255, 156, 0.15);
+            border-radius: 999px;
+            transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 0;
+        }
+        .nav-item { position: relative; z-index: 1; }
+        .nav-link {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            padding: 0.5rem 0.9rem;
+            display: inline-flex;
+            transition: color 200ms ease;
+        }
+        .site-header.is-scrolled .nav-link {
+            font-size: 0.85rem;
+            padding: 0.4rem 0.7rem;
+        }
+        .nav-link:hover,
+        .nav-link.active { color: var(--text-primary); }
+        .nav-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 10, 14, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1rem;
+            min-width: 240px;
+            display: none;
+            flex-direction: column;
+            gap: 0.75rem;
+            z-index: 50;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+        }
+        .nav-item:hover .nav-dropdown { display: flex; }
+        .nav-dropdown-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .nav-dropdown-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+        }
+        .nav-dropdown a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .nav-dropdown a:hover { color: var(--accent-green); }
+        .nav-dropdown-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .nav-signin {
+            padding: 0.45rem 1rem;
+            border-radius: 999px;
+            background: rgba(0, 255, 156, 0.1);
+            color: var(--accent-green);
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 200ms ease;
+        }
+        .site-header.is-scrolled .nav-signin {
+            padding: 0.35rem 0.8rem;
+            font-size: 0.85rem;
+        }
+        .nav-signin:hover { background: rgba(0, 255, 156, 0.2); }
+        .user-menu { position: relative; }
+        .user-trigger {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            cursor: pointer;
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        .site-header.is-scrolled .user-avatar {
+            width: 28px;
+            height: 28px;
+        }
+        .user-name {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        .site-header.is-scrolled .user-name { font-size: 0.8rem; }
+        @media (max-width: 768px) {
+            .site-nav { display: none; }
+            .nav-search { display: none; }
+        }
     </style>
 </head>
 <body>
-    <header class="site-header">
-        <div class="header-left">
-            <a href="/" class="brand">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="VSN Logo">
-                <span>VSN Analysis</span>
-            </a>
-            <form class="nav-search" id="navSearchForm" onsubmit="return handleNavSearch(event)">
-                <input id="navSearchInput" type="search" placeholder="Search ticker..." autocomplete="off" spellcheck="false">
-                <div id="navSuggestions" class="nav-suggestions"></div>
-            </form>
-        </div>
-        <nav class="site-nav">
-            <div class="nav-item">
-                <a href="/" class="nav-link active">Home</a>
-                <div class="nav-dropdown">
-                    <div class="nav-dropdown-group">
-                        <span class="nav-dropdown-title">Quick Start</span>
-                        <a href="/">Analyze a ticker</a>
-                        <a href="/?ticker=AAPL">Try AAPL</a>
-                        <a href="/?ticker=TSLA">Try TSLA</a>
-                    </div>
-                    <div class="nav-dropdown-group">
-                        <span class="nav-dropdown-title">Explore</span>
-                        <a href="/markets">Market overview</a>
-                        <a href="/blog">Community feed</a>
-                    </div>
-                    <div class="nav-dropdown-meta">
-                        <span>Signal: score + trend</span>
-                        <span>Coverage: tickers on demand</span>
-                    </div>
-                </div>
+    <header class="site-header" id="siteHeader">
+        <div class="header-inner">
+            <div class="header-left">
+                <a href="/" class="brand">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="VSN Logo">
+                    <span>VSN Analysis</span>
+                </a>
+                <form class="nav-search" id="navSearchForm" onsubmit="return handleNavSearch(event)">
+                    <input id="navSearchInput" type="search" placeholder="Search ticker..." autocomplete="off" spellcheck="false">
+                </form>
             </div>
-            <div class="nav-item">
-                <a href="/markets" class="nav-link">Markets</a>
-                <div class="nav-dropdown">
-                    <div class="nav-dropdown-group">
-                        <span class="nav-dropdown-title">Indices</span>
-                        <a href="/markets#indicesList">Global indices</a>
-                        <a href="/markets#marketChartSection">Index charts</a>
-                    </div>
-                    <div class="nav-dropdown-group">
-                        <span class="nav-dropdown-title">Movers</span>
-                        <a href="/markets#watchlist">Top gainers</a>
-                        <a href="/markets#watchlist">Top losers</a>
-                    </div>
-                    <div class="nav-dropdown-meta">
-                        <span>Ranges: 1D to Max</span>
-                        <span>Refresh: on demand</span>
-                    </div>
-                </div>
-            </div>
-            <div class="nav-item">
-                <a href="/blog" class="nav-link">Community</a>
-                <div class="nav-dropdown">
-                    <div class="nav-dropdown-group">
-                        <span class="nav-dropdown-title">Community</span>
-                        <a href="/blog">Latest posts</a>
-                        <a href="/blog#trending">Trending tags</a>
-                        <a href="/blog/new">Create a post</a>
-                    </div>
-                    <div class="nav-dropdown-group">
-                        <span class="nav-dropdown-title">You</span>
-                        <a href="/profile">Your profile</a>
-                        <a href="/blog#community-feed">Live feed</a>
-                    </div>
-                    <div class="nav-dropdown-meta">
-                        <span>Share: charts, notes, screenshots</span>
-                        <span>Follow: market takes</span>
+            <nav class="site-nav" id="siteNav">
+                <div class="nav-indicator" id="navIndicator"></div>
+                <div class="nav-item" data-nav-item>
+                    <a href="/" class="nav-link active">Home</a>
+                    <div class="nav-dropdown">
+                        <div class="nav-dropdown-group">
+                            <span class="nav-dropdown-title">Quick Start</span>
+                            <a href="/">Analyze a ticker</a>
+                            <a href="/?ticker=AAPL">Try AAPL</a>
+                            <a href="/?ticker=TSLA">Try TSLA</a>
+                        </div>
+                        <div class="nav-dropdown-group">
+                            <span class="nav-dropdown-title">Explore</span>
+                            <a href="/markets">Market overview</a>
+                            <a href="/blog">Community feed</a>
+                        </div>
+                        <div class="nav-dropdown-meta">
+                            <span>Signal: score + trend</span>
+                            <span>Coverage: tickers on demand</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </nav>
-        <div class="nav-actions">
-            <span id="authLinks">
-                <a href="/auth" class="nav-signin">Sign In</a>
-            </span>
-            <div id="userMenu" class="user-menu" style="display:none;">
-                <div class="user-trigger" onclick="toggleUserMenu(event)">
-                    <div class="user-avatar" id="userAvatar"></div>
-                    <span class="user-name" id="userName"></span>
+                <div class="nav-item" data-nav-item>
+                    <a href="/markets" class="nav-link">Markets</a>
+                    <div class="nav-dropdown">
+                        <div class="nav-dropdown-group">
+                            <span class="nav-dropdown-title">Indices</span>
+                            <a href="/markets#indicesList">Global indices</a>
+                            <a href="/markets#marketChartSection">Index charts</a>
+                        </div>
+                        <div class="nav-dropdown-group">
+                            <span class="nav-dropdown-title">Movers</span>
+                            <a href="/markets#watchlist">Top gainers</a>
+                            <a href="/markets#watchlist">Top losers</a>
+                        </div>
+                        <div class="nav-dropdown-meta">
+                            <span>Ranges: 1D to Max</span>
+                            <span>Refresh: on demand</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="user-dropdown" id="userDropdown"></div>
+                <div class="nav-item" data-nav-item>
+                    <a href="/blog" class="nav-link">Community</a>
+                    <div class="nav-dropdown">
+                        <div class="nav-dropdown-group">
+                            <span class="nav-dropdown-title">Community</span>
+                            <a href="/blog">Latest posts</a>
+                            <a href="/blog#trending">Trending tags</a>
+                            <a href="/blog/new">Create a post</a>
+                        </div>
+                        <div class="nav-dropdown-group">
+                            <span class="nav-dropdown-title">You</span>
+                            <a href="/profile">Your profile</a>
+                            <a href="/blog#community-feed">Live feed</a>
+                        </div>
+                        <div class="nav-dropdown-meta">
+                            <span>Share: charts, notes, screenshots</span>
+                            <span>Follow: market takes</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            <div class="nav-actions">
+                <span id="authLinks">
+                    <a href="/auth" class="nav-signin">Sign In</a>
+                </span>
+                <div id="userMenu" class="user-menu" style="display:none;">
+                    <div class="user-trigger" onclick="toggleUserMenu(event)">
+                        <div class="user-avatar" id="userAvatar"></div>
+                        <span class="user-name" id="userName"></span>
+                    </div>
+                    <div class="user-dropdown" id="userDropdown"></div>
+                </div>
             </div>
         </div>
     </header>
 
+    <div id="searchOverlay" class="search-overlay" aria-hidden="true">
+        <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search symbols and indices">
+            <div class="search-bar">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <input id="searchOverlayInput" type="search" placeholder="Symbol, ISIN, or CUSIP" autocomplete="off" spellcheck="false">
+                <button type="button" class="search-clear" id="searchOverlayClear">Clear</button>
+                <button type="button" class="search-close" id="searchOverlayClose" aria-label="Close">x</button>
+            </div>
+            <div class="search-tabs">
+                <button type="button" class="search-tab active" data-tab="symbols">Symbols</button>
+                <button type="button" class="search-tab" data-tab="indices">Indices</button>
+            </div>
+            <div class="search-list" id="searchOverlayResults"></div>
+        </div>
+    </div>
+
     <div class="header-spacer"></div>
+    
+    <!-- Search Auth Modal -->
+    <div id="searchAuthModal" class="auth-modal" aria-hidden="true">
+        <div class="auth-panel" role="dialog" aria-modal="true" aria-label="Sign in to search">
+            <button class="auth-close" aria-label="Close" onclick="closeSearchAuthModal()">✕</button>
+            <h3>Sign in to search VSN Analysis</h3>
+            <p>Sign in to access full search and chart navigation. Don’t have an account? Create a free one here.</p>
+            <div class="auth-actions">
+                <a href="/auth" class="btn btn-primary">Join us</a>
+            </div>
+        </div>
+    </div>
     <div class="grid-bg"></div>
     
     <div class="container">
@@ -2476,6 +2973,7 @@
 
         /* ============ AUTH & USER MENU ============ */
         let currentRoles = { admin: false, moderator: false };
+        let isAuthenticated = false;
 
         function avatarColor(seed) {
             const colors = ['#00ff88', '#4488ff', '#ffcc00', '#ff4466', '#aa88ff', '#44ffaa'];
@@ -2497,6 +2995,7 @@
                 const userName = document.getElementById('userName');
                 
                 if (data.authenticated && data.user) {
+                    isAuthenticated = true;
                     currentRoles = data.roles || { admin: false, moderator: false };
                     authLinks.style.display = 'none';
                     userMenu.style.display = 'block';
@@ -2526,13 +3025,18 @@
                     links += `<button class="logout-btn" onclick="logout()">Log out</button>`;
                     dropdown.innerHTML = links;
                 } else {
+                    isAuthenticated = false;
                     authLinks.style.display = 'inline-flex';
                     userMenu.style.display = 'none';
                 }
+                updateNavSearchAccess();
+                primeSearchCache();
             } catch (e) {
                 console.error('Auth check failed:', e);
+                isAuthenticated = false;
                 document.getElementById('authLinks').style.display = 'inline-flex';
                 document.getElementById('userMenu').style.display = 'none';
+                updateNavSearchAccess();
             }
         }
 
@@ -2551,79 +3055,283 @@
             if (menu) menu.classList.remove('show');
         });
 
-        let navSuggestionAbort;
+        function redirectToAuth(nextPath) {
+            const target = nextPath || `${window.location.pathname}${window.location.search}`;
+            sessionStorage.setItem('next', target);
+            window.location.href = '/auth';
+        }
 
-        function initNavSearch() {
+        function requireAuthForSearch(ticker) {
+            if (isAuthenticated) return true;
+            const target = ticker ? `/chart/${encodeURIComponent(ticker)}` : `${window.location.pathname}${window.location.search}`;
+            sessionStorage.setItem('next', target || '');
+            openSearchAuthModal();
+            return false;
+        }
+
+        function updateNavSearchAccess() {
             const input = document.getElementById('navSearchInput');
-            const box = document.getElementById('navSuggestions');
-            if (!input || !box) return;
+            if (!input) return;
+            input.placeholder = isAuthenticated ? 'Search ticker...' : 'Sign in to search...';
+        }
 
-            input.addEventListener('input', (e) => {
-                let value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
-                if (value.length > 5) value = value.slice(0, 5);
-                e.target.value = value;
-                renderNavSuggestions(value);
+        const searchCache = new Map();
+        const logoCache = new Map();
+        let searchAbort = null;
+        let searchTab = 'symbols';
+
+        function openSearchOverlay() {
+            if (!requireAuthForSearch()) return;
+            const overlay = document.getElementById('searchOverlay');
+            const input = document.getElementById('searchOverlayInput');
+            overlay.classList.add('active');
+            overlay.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('search-open');
+            input.value = '';
+            setSearchTab('symbols');
+            renderSearchResults('');
+            setTimeout(() => input.focus(), 0);
+        }
+
+        function openSearchAuthModal() {
+            const modal = document.getElementById('searchAuthModal');
+            if (!modal) return;
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('search-open');
+            const firstAction = modal.querySelector('a, button');
+            if (firstAction) firstAction.focus();
+        }
+
+        function closeSearchAuthModal() {
+            const modal = document.getElementById('searchAuthModal');
+            if (!modal) return;
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('search-open');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const closeBtn = document.querySelector('#searchAuthModal .auth-close');
+            if (closeBtn) closeBtn.addEventListener('click', closeSearchAuthModal);
+            const modal = document.getElementById('searchAuthModal');
+            if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeSearchAuthModal(); });
+        });
+
+        function closeSearchOverlay() {
+            const overlay = document.getElementById('searchOverlay');
+            overlay.classList.remove('active');
+            overlay.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('search-open');
+        }
+
+        function setSearchTab(tab) {
+            searchTab = tab;
+            document.querySelectorAll('.search-tab').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
             });
+        }
 
-            input.addEventListener('keydown', (e) => {
-                const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'];
-                if (allowedKeys.includes(e.key)) return;
-                if (!/^[a-zA-Z]$/.test(e.key)) e.preventDefault();
-            });
+        function renderSearchResults(query) {
+            const list = document.getElementById('searchOverlayResults');
+            list.innerHTML = '';
+            const q = query.trim().toUpperCase();
+            const type = searchTab === 'indices' ? 'indices' : 'symbols';
+            const cacheKey = `${type}:${q || '__default__'}`;
+            if (searchCache.has(cacheKey)) {
+                renderSymbolList(searchCache.get(cacheKey), type);
+                return;
+            }
+            fetchSearchResults(q, type);
+        }
 
-            document.addEventListener('click', (e) => {
-                if (!box.contains(e.target) && e.target !== input) {
-                    box.classList.remove('show');
+        function buildSearchRow(item, meta, onClick) {
+            const row = document.createElement('div');
+            row.className = 'search-row';
+            row.innerHTML = `
+                <div class="search-row-left">
+                    <div class="search-icon">
+                        <img alt="">
+                        <span>${item.symbol.slice(0, 2)}</span>
+                    </div>
+                    <div class="search-text">
+                        <div class="search-symbol">${item.symbol}</div>
+                        <div class="search-name">${item.name || ''}</div>
+                    </div>
+                </div>
+                <div class="search-meta">${meta}</div>
+            `;
+            row.addEventListener('click', onClick);
+            return row;
+        }
+
+        async function fetchSearchResults(query, type) {
+            const list = document.getElementById('searchOverlayResults');
+            const controller = new AbortController();
+            if (query) {
+                if (searchAbort) searchAbort.abort();
+                searchAbort = controller;
+            }
+            try {
+                const params = new URLSearchParams();
+                if (query) params.set('q', query);
+                params.set('type', type);
+                const res = await fetch(`/api/search?${params.toString()}`, { signal: controller.signal });
+                const data = await res.json();
+                const results = data.results || [];
+                const cacheKey = `${type}:${query || '__default__'}`;
+                searchCache.set(cacheKey, results);
+                renderSymbolList(results, type);
+            } catch (e) {
+                if (e.name !== 'AbortError') console.error(e);
+                list.innerHTML = '';
+            }
+        }
+
+        function renderSymbolList(items, type) {
+            const list = document.getElementById('searchOverlayResults');
+            list.innerHTML = '';
+            items.forEach((item) => {
+                const meta = type === 'indices'
+                    ? `Index - ${item.exchange || ''}`
+                    : `${item.type ? item.type.toLowerCase() : 'symbol'} - ${item.exchange || ''}`;
+                const row = buildSearchRow(item, meta.trim(), () => {
+                    if (type === 'indices') {
+                        window.location.href = '/markets#indicesList';
+                        return;
+                    }
+                    goToChart(item.symbol);
+                });
+                list.appendChild(row);
+                if (type !== 'indices') {
+                    const iconEl = row.querySelector('.search-icon');
+                    loadLogo(item.symbol, iconEl);
                 }
             });
         }
 
-        async function renderNavSuggestions(prefix) {
-            const box = document.getElementById('navSuggestions');
-            box.innerHTML = '';
-            if (!prefix) {
-                box.classList.remove('show');
+        function loadLogo(symbol, iconEl) {
+            if (!symbol || !iconEl) return;
+            const cached = logoCache.get(symbol);
+            if (cached === null) return;
+            if (cached) {
+                const img = iconEl.querySelector('img');
+                if (img) img.src = cached;
+                iconEl.classList.add('has-logo');
                 return;
             }
-            if (navSuggestionAbort) navSuggestionAbort.abort();
-            navSuggestionAbort = new AbortController();
-            try {
-                const res = await fetch(`/api/search-tickers?q=${encodeURIComponent(prefix)}`, { signal: navSuggestionAbort.signal });
-                const matches = await res.json();
-                if (!matches.length) {
-                    box.classList.remove('show');
-                    return;
-                }
-                matches.forEach((t) => {
-                    const item = document.createElement('div');
-                    item.className = 'nav-suggestion';
-                    item.textContent = t;
-                    item.onclick = () => {
-                        const input = document.getElementById('navSearchInput');
-                        input.value = t;
-                        box.classList.remove('show');
-                        input.focus();
-                    };
-                    box.appendChild(item);
+            fetch(`/api/logo/${encodeURIComponent(symbol)}`)
+                .then((res) => res.json())
+                .then((data) => {
+                    if (!data.success || !data.logo_url) {
+                        logoCache.set(symbol, null);
+                        return;
+                    }
+                    logoCache.set(symbol, data.logo_url);
+                    const img = iconEl.querySelector('img');
+                    if (!img) return;
+                    img.onload = () => iconEl.classList.add('has-logo');
+                    img.onerror = () => logoCache.set(symbol, null);
+                    img.src = data.logo_url;
+                })
+                .catch(() => logoCache.set(symbol, null));
+        }
+
+        function primeSearchCache() {
+            if (!isAuthenticated) return;
+            ['symbols', 'indices'].forEach((type) => {
+                const cacheKey = `${type}:__default__`;
+                if (searchCache.has(cacheKey)) return;
+                fetchSearchResults('', type);
+            });
+        }
+
+        function goToChart(symbol) {
+            if (!requireAuthForSearch(symbol)) return;
+            sessionStorage.setItem('pendingReportTicker', symbol);
+            window.location.href = `/chart/${encodeURIComponent(symbol)}`;
+        }
+
+        function initNavSearch() {
+            const input = document.getElementById('navSearchInput');
+            if (!input) return;
+            if (!isAuthenticated) {
+                input.setAttribute('readonly', 'readonly');
+                input.addEventListener('focus', (e) => {
+                    e.preventDefault();
+                    openSearchAuthModal();
+                    input.blur();
                 });
-                box.classList.add('show');
-            } catch (e) {
-                if (e.name !== 'AbortError') console.error(e);
+                input.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openSearchAuthModal();
+                });
+            } else {
+                input.removeAttribute('readonly');
+                input.addEventListener('focus', () => openSearchOverlay());
+                input.addEventListener('click', () => openSearchOverlay());
             }
         }
 
         function handleNavSearch(event) {
             event.preventDefault();
-            const input = document.getElementById('navSearchInput');
-            if (!input) return false;
-            const ticker = input.value.trim().toUpperCase();
-            if (!ticker) return false;
-            sessionStorage.setItem('pendingReportTicker', ticker);
-            window.location.href = `/chart/${encodeURIComponent(ticker)}`;
+            openSearchOverlay();
             return false;
         }
 
+        function initSearchOverlay() {
+            const overlay = document.getElementById('searchOverlay');
+            const input = document.getElementById('searchOverlayInput');
+            const clearBtn = document.getElementById('searchOverlayClear');
+            const closeBtn = document.getElementById('searchOverlayClose');
+            if (!overlay || !input || !clearBtn || !closeBtn) return;
+
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) closeSearchOverlay();
+            });
+
+            closeBtn.addEventListener('click', closeSearchOverlay);
+            clearBtn.addEventListener('click', () => {
+                input.value = '';
+                renderSearchResults('');
+                input.focus();
+            });
+
+            input.addEventListener('input', (e) => {
+                let value = e.target.value.toUpperCase().replace(/[^A-Z0-9^.-]/g, '');
+                if (value.length > 12) value = value.slice(0, 12);
+                e.target.value = value;
+                renderSearchResults(value);
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeSearchOverlay();
+                if (e.key === 'Enter') {
+                    const value = input.value.trim().toUpperCase();
+                    if (!value) return;
+                    if (searchTab === 'indices') {
+                        window.location.href = '/markets#indicesList';
+                        return;
+                    }
+                    goToChart(value);
+                }
+            });
+
+            document.querySelectorAll('.search-tab').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    setSearchTab(btn.dataset.tab);
+                    renderSearchResults(input.value.trim().toUpperCase());
+                });
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === '/' && !overlay.classList.contains('active')) {
+                    e.preventDefault();
+                    openSearchOverlay();
+                }
+            });
+        }
+
         initNavSearch();
+        initSearchOverlay();
         checkAuthState();
     </script>
 </body>
