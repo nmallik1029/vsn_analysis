@@ -9,3 +9,8 @@ instance/
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Node / Wrangler
+node_modules/
+.wrangler/
+.dev.vars

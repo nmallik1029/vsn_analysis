@@ -1508,22 +1508,25 @@
         function initNavSearch() {
             const input = document.getElementById('navSearchInput');
             if (!input) return;
-            if (!isAuthenticated) {
-                input.setAttribute('readonly', 'readonly');
-                input.addEventListener('focus', (e) => {
+            // Check isAuthenticated at click-time, not init-time, so we
+            // do the right thing once the async auth check completes.
+            input.addEventListener('focus', (e) => {
+                if (!isAuthenticated) {
                     e.preventDefault();
                     openSearchAuthModal();
                     input.blur();
-                });
-                input.addEventListener('click', (e) => {
+                } else {
+                    openSearchOverlay();
+                }
+            });
+            input.addEventListener('click', (e) => {
+                if (!isAuthenticated) {
                     e.preventDefault();
                     openSearchAuthModal();
-                });
-            } else {
-                input.removeAttribute('readonly');
-                input.addEventListener('focus', () => openSearchOverlay());
-                input.addEventListener('click', () => openSearchOverlay());
-            }
+                } else {
+                    openSearchOverlay();
+                }
+            });
         }
 
         async function renderNavSuggestions(prefix, box, input) {
@@ -1900,6 +1903,11 @@
             const input = document.getElementById('navSearchInput');
             if (!input) return;
             input.placeholder = isAuthenticated ? 'Search ticker...' : 'Sign in to search...';
+            if (isAuthenticated) {
+                input.removeAttribute('readonly');
+            } else {
+                input.setAttribute('readonly', 'readonly');
+            }
         }
 
         function requireAuthForSearch(ticker) {

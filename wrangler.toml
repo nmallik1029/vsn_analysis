@@ -1,0 +1,31 @@
+name = "stock-analyzer"
+main = "worker/index.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Container definition — built from the repo Dockerfile.
+[[containers]]
+class_name = "StockAnalyzerContainer"
+image = "./Dockerfile"
+max_instances = 5
+instance_type = "basic"
+
+# Durable Object that fronts the container.
+[[durable_objects.bindings]]
+name = "STOCK_ANALYZER_CONTAINER"
+class_name = "StockAnalyzerContainer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["StockAnalyzerContainer"]
+
+# Non-secret config (override per-env as needed).
+[vars]
+SUPABASE_URL = "https://wtxxnhjknjwmlsqxdovv.supabase.co"
+
+# Secrets — DO NOT put real values here. Set with:
+#   wrangler secret put SUPABASE_ANON_KEY
+#   wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+#   wrangler secret put SECRET_KEY
+# They become available on `env` in the Worker, and we forward them
+# into the container via the Container class's envVars getter.

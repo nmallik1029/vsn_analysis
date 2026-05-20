@@ -1,0 +1,33 @@
+import { Container, getContainer } from "@cloudflare/containers";
+
+interface Env {
+  STOCK_ANALYZER_CONTAINER: DurableObjectNamespace<StockAnalyzerContainer>;
+  SUPABASE_URL?: string;
+  SUPABASE_ANON_KEY?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+  SECRET_KEY?: string;
+  MODERATOR_EMAILS?: string;
+  MODERATOR_IDS?: string;
+}
+
+export class StockAnalyzerContainer extends Container<Env> {
+  defaultPort = 8080;
+  sleepAfter = "10m";
+  requiredPorts = [8080];
+
+  override envVars = {
+    SUPABASE_URL: this.env.SUPABASE_URL ?? "",
+    SUPABASE_ANON_KEY: this.env.SUPABASE_ANON_KEY ?? "",
+    SUPABASE_SERVICE_ROLE_KEY: this.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+    SECRET_KEY: this.env.SECRET_KEY ?? "",
+    MODERATOR_EMAILS: this.env.MODERATOR_EMAILS ?? "",
+    MODERATOR_IDS: this.env.MODERATOR_IDS ?? "",
+  };
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const container = getContainer(env.STOCK_ANALYZER_CONTAINER, "singleton");
+    return container.fetch(request);
+  },
+} satisfies ExportedHandler<Env>;

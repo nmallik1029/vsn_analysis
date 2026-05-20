@@ -2217,6 +2217,11 @@
             const input = document.getElementById('navSearchInput');
             if (!input) return;
             input.placeholder = isAuthenticated ? 'Search ticker...' : 'Sign in to search...';
+            if (isAuthenticated) {
+                input.removeAttribute('readonly');
+            } else {
+                input.setAttribute('readonly', 'readonly');
+            }
         }
 
         const searchCache = new Map();
@@ -2397,24 +2402,25 @@
         function initNavSearch() {
             const input = document.getElementById('navSearchInput');
             if (!input) return;
-            // If user is not authenticated, open the auth modal on click/focus.
-            if (!isAuthenticated) {
-                input.setAttribute('readonly', 'readonly');
-                input.addEventListener('focus', (e) => {
+            // Check isAuthenticated at click-time, not init-time, so we
+            // do the right thing once the async auth check completes.
+            input.addEventListener('focus', (e) => {
+                if (!isAuthenticated) {
                     e.preventDefault();
                     openSearchAuthModal();
                     input.blur();
-                });
-                input.addEventListener('click', (e) => {
+                } else {
+                    openSearchOverlay();
+                }
+            });
+            input.addEventListener('click', (e) => {
+                if (!isAuthenticated) {
                     e.preventDefault();
                     openSearchAuthModal();
-                });
-            } else {
-                // Authenticated users open the search overlay and can type directly
-                input.removeAttribute('readonly');
-                input.addEventListener('focus', () => openSearchOverlay());
-                input.addEventListener('click', () => openSearchOverlay());
-            }
+                } else {
+                    openSearchOverlay();
+                }
+            });
         }
 
         function handleNavSearch(event) {

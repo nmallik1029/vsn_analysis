@@ -1,0 +1,33 @@
+.git
+.gitignore
+.dockerignore
+Dockerfile
+README.md
+
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+.env.*
+instance/
+
+# Node / Wrangler
+node_modules/
+.wrangler/
+worker/
+package.json
+package-lock.json
+pnpm-lock.yaml
+tsconfig.json
+wrangler.toml
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
