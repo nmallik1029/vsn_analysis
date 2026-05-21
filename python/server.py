@@ -306,6 +306,27 @@ def get_profiles_by_ids(user_ids: list[str]) -> dict[str, dict]:
     return profiles
 
 
+def _public_profile_from_row(row: dict) -> dict:
+    avatar_url = None
+    if row.get('avatar_url'):
+        avatar_url = supabase.storage.from_('avatars').get_public_url(row['avatar_url'])
+    return {
+        'id': row.get('user_id'),
+        'username': row.get('username') or row.get('display_name'),
+        'display_name': row.get('display_name') or row.get('username'),
+        'avatar_url': avatar_url,
+        'created_at': row.get('created_at'),
+        'is_private': bool(row.get('is_private')),
+        'social_links': {
+            'twitter': row.get('twitter_handle') or '',
+            'reddit': row.get('reddit_handle') or '',
+            'instagram': row.get('instagram_handle') or '',
+            'website': row.get('website_url') or '',
+            'other': row.get('other_url') or '',
+        }
+    }
+
+
 def is_moderator(user: dict | None) -> bool:
     """Check if a user is allowed to perform moderator actions."""
     if not user:
@@ -510,6 +531,14 @@ def require_auth_page(f):
 # ============================================
 @app.route('/')
 def home():
+    if request.host.split(':', 1)[0].lower() == 'admin.vsnanalysis.com':
+        if not session.get('supabase_access_token'):
+            return redirect('/auth')
+        user = get_user_from_token(session['supabase_access_token'])
+        if not is_admin(user):
+            return redirect('https://www.vsnanalysis.com/')
+        request.user = user
+        return render_template('admin_dashboard.html')
     return render_template('design.html')
 
 
@@ -1546,7 +1575,7 @@ def get_profile():
     user_id = user['id']
 
     res = supabase.table('usernames') \
-        .select('display_name, username, avatar_url') \
+        .select('*') \
         .eq('user_id', user_id) \
         .single() \
         .execute()
@@ -1568,14 +1597,22 @@ def get_profile():
         'display_name': display_name,
         'avatar_url': avatar_url,
         'email': user.get('email'),
-        'created_at': user.get('created_at')
+        'created_at': user.get('created_at'),
+        'is_private': bool(data.get('is_private')),
+        'social_links': {
+            'twitter': data.get('twitter_handle') or '',
+            'reddit': data.get('reddit_handle') or '',
+            'instagram': data.get('instagram_handle') or '',
+            'website': data.get('website_url') or '',
+            'other': data.get('other_url') or '',
+        }
     })
 
 
 @app.route('/api/profile', methods=['PUT'])
 @require_auth
 def update_profile():
-    """Update user profile (display name only - username cannot be changed)."""
+    """Update user profile fields. Username cannot be changed here."""
     user = request.user
     user_id = user['id']
     
@@ -1618,10 +1655,15 @@ def update_profile():
             .execute()
         
         if user_record.data:
-            # Update existing record - only update display_name, preserve username
-            supabase.table('usernames').update({
-                'display_name': display_name
-            }).eq('user_id', user_id).execute()
+            update_payload = {'display_name': display_name}
+            for key in ('is_private', 'twitter_handle', 'reddit_handle', 'instagram_handle', 'website_url', 'other_url'):
+                if key in data:
+                    value = data.get(key)
+                    if isinstance(value, str):
+                        value = value.strip()
+                    update_payload[key] = value
+
+            supabase.table('usernames').update(update_payload).eq('user_id', user_id).execute()
         else:
             # This shouldn't happen normally - user should have username from signup
             return jsonify({'error': 'User profile not found. Please contact support.'}), 404
@@ -1887,25 +1929,41 @@ def get_user_profile_by_username(username: str):
         
         if not res.data:
             return None
-        
-        avatar_url = None
-        if res.data.get('avatar_url'):
-            avatar_url = supabase.storage.from_('avatars').get_public_url(
-                res.data['avatar_url']
-            )
+
         stats = get_public_user_stats(res.data['user_id'])
-        
-        return {
-            'id': res.data['user_id'],
-            'username': res.data.get('username'),
-            'display_name': res.data.get('display_name'),
-            'avatar_url': avatar_url,
-            'created_at': res.data.get('created_at'),
-            **stats
-        }
+        profile = _public_profile_from_row(res.data)
+        profile.update(stats)
+        return profile
     except Exception as e:
         print(f"Error fetching user by username: {e}")
         return None
+
+
+def get_follow_list(user_id: str, kind: str, limit: int = 50) -> list[dict]:
+    """Return public profiles for followers/following. kind: followers|following."""
+    id_field = 'follower_id' if kind == 'followers' else 'following_id'
+    match_field = 'following_id' if kind == 'followers' else 'follower_id'
+    ids = []
+    try:
+        if FOLLOWS_TABLE_AVAILABLE:
+            result = supabase.table('follows') \
+                .select(id_field) \
+                .eq(match_field, user_id) \
+                .limit(limit) \
+                .execute()
+            ids = [row.get(id_field) for row in (result.data or []) if row.get(id_field)]
+    except Exception as e:
+        _mark_follows_unavailable(e)
+
+    if not ids:
+        rows = _load_follow_rows()
+        ids = [
+            row.get(id_field) for row in rows
+            if row.get(match_field) == user_id and row.get(id_field)
+        ][:limit]
+
+    profiles = get_profiles_by_ids(ids)
+    return [profiles[uid] for uid in ids if uid in profiles]
 
 
 @app.route('/api/posts', methods=['GET'])
@@ -1920,15 +1978,37 @@ def get_posts():
     offset = (page - 1) * limit
     
     try:
+        profile_row = None
         if username_filter and not user_id_filter:
             user_result = supabase.table('usernames') \
-                .select('user_id') \
+                .select('*') \
                 .eq('username', username_filter) \
                 .single() \
                 .execute()
             if not user_result.data:
                 return jsonify({'success': True, 'posts': [], 'page': page, 'limit': limit, 'has_more': False})
+            profile_row = user_result.data
             user_id_filter = user_result.data['user_id']
+        if user_id_filter and profile_row is None:
+            profile_result = supabase.table('usernames') \
+                .select('*') \
+                .eq('user_id', user_id_filter) \
+                .single() \
+                .execute()
+            profile_row = profile_result.data or {}
+        if user_id_filter and profile_row and profile_row.get('is_private'):
+            access_token = session.get('supabase_access_token')
+            current_user = get_user_from_token(access_token) if access_token else None
+            current_user_id = current_user.get('id') if current_user else None
+            if current_user_id != user_id_filter and not is_following_user(current_user_id, user_id_filter):
+                return jsonify({
+                    'success': True,
+                    'posts': [],
+                    'page': page,
+                    'limit': limit,
+                    'has_more': False,
+                    'private': True
+                })
 
         query = supabase.table('posts') \
             .select('*, usernames!inner(username, display_name, avatar_url), post_images(id, image_path, display_order), post_tags(tags(id, name))') \
@@ -2038,8 +2118,37 @@ def get_user_by_username(username):
     current_user_id = current_user.get('id') if current_user else None
     profile['is_self'] = current_user_id == profile['id']
     profile['is_following'] = is_following_user(current_user_id, profile['id'])
+    if profile.get('is_private') and not profile['is_self'] and not profile['is_following']:
+        profile.update({
+            'post_count': 0,
+            'comment_count': 0,
+            'repost_count': 0,
+            'is_private_view': True
+        })
     
     return jsonify({'success': True, 'user': profile})
+
+
+@app.route('/api/users/<username>/<kind>')
+def get_user_follow_list(username, kind):
+    if kind not in ('followers', 'following'):
+        return jsonify({'error': 'Invalid follow list'}), 404
+    profile = get_user_profile_by_username(username)
+    if not profile:
+        return jsonify({'error': 'User not found'}), 404
+
+    access_token = session.get('supabase_access_token')
+    current_user = get_user_from_token(access_token) if access_token else None
+    current_user_id = current_user.get('id') if current_user else None
+    can_view = (
+        not profile.get('is_private')
+        or current_user_id == profile['id']
+        or is_following_user(current_user_id, profile['id'])
+    )
+    if not can_view:
+        return jsonify({'success': True, 'users': [], 'private': True})
+
+    return jsonify({'success': True, 'users': get_follow_list(profile['id'], kind)})
 
 
 @app.route('/api/users/<username>/follow', methods=['POST', 'DELETE'])
@@ -3114,7 +3223,7 @@ def vote_comment(comment_id):
         return jsonify({'error': 'Failed to vote'}), 500
 
 
-@app.route('/api/posts/<post_id>/repost', methods=['POST'])
+@app.route('/api/posts/<post_id>/repost', methods=['POST', 'DELETE'])
 @require_auth
 def repost(post_id):
     """Repost a post."""
@@ -3123,6 +3232,23 @@ def repost(post_id):
     
     try:
         existing = supabase.table('reposts').select('repost_id').eq('user_id', user_id).eq('original_post_id', post_id).execute()
+        if request.method == 'DELETE':
+            if not existing.data:
+                return jsonify({'success': True, 'repost_count': 0})
+            repost_ids = [row['repost_id'] for row in existing.data if row.get('repost_id')]
+            if repost_ids:
+                supabase.table('posts').delete().in_('id', repost_ids).execute()
+            supabase.table('reposts').delete().eq('user_id', user_id).eq('original_post_id', post_id).execute()
+            repost_count_result = supabase.table('reposts') \
+                .select('repost_id', count='exact') \
+                .eq('original_post_id', post_id) \
+                .execute()
+            repost_count = repost_count_result.count
+            if repost_count is None:
+                repost_count = len(repost_count_result.data or [])
+            supabase.table('posts').update({'repost_count': repost_count}).eq('id', post_id).execute()
+            return jsonify({'success': True, 'repost_count': repost_count})
+
         if existing.data:
             return jsonify({'error': 'You have already reposted this'}), 409
         
@@ -3212,7 +3338,7 @@ def price_history(ticker):
                 # Fetch a generous window before the visible edge so horizontal
                 # panning can populate history in one smooth prepend instead
                 # of many small, jumpy fetches.
-                lookback_days = max(220, min(1400, count * 3))
+                lookback_days = max(220, min(3650, count * 3))
                 start_dt = end_dt - timedelta(days=lookback_days)
                 
                 df = yf.download(
@@ -3361,6 +3487,8 @@ def blog_redirect(rest):
 def admin_dashboard():
     if not is_admin(request.user):
         return redirect('/')
+    if request.host.split(':', 1)[0].lower().endswith('vsnanalysis.com'):
+        return redirect('https://admin.vsnanalysis.com/', code=301)
     return render_template('admin_dashboard.html')
 
 @app.route('/moderator')

@@ -8,6 +8,9 @@ interface Env {
   SECRET_KEY?: string;
   MODERATOR_EMAILS?: string;
   MODERATOR_IDS?: string;
+  CLOUDFLARE_API_TOKEN?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_SITE_TAG?: string;
 }
 
 export class StockAnalyzerContainer extends Container<Env> {
@@ -22,6 +25,9 @@ export class StockAnalyzerContainer extends Container<Env> {
     SECRET_KEY: this.env.SECRET_KEY ?? "",
     MODERATOR_EMAILS: this.env.MODERATOR_EMAILS ?? "",
     MODERATOR_IDS: this.env.MODERATOR_IDS ?? "",
+    CLOUDFLARE_API_TOKEN: this.env.CLOUDFLARE_API_TOKEN ?? "",
+    CLOUDFLARE_ACCOUNT_ID: this.env.CLOUDFLARE_ACCOUNT_ID ?? "",
+    CLOUDFLARE_SITE_TAG: this.env.CLOUDFLARE_SITE_TAG ?? "",
   };
 }
 

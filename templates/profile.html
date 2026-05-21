@@ -30,26 +30,6 @@
       --shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
     }
 
-    html[data-theme="light"] {
-      --bg-0: #f7f7fa;
-      --bg-1: #ffffff;
-      --bg-2: #f0f0f5;
-      --bg-3: #e7e7ef;
-      --line: #dedee8;
-      --line-2: #c9c9d6;
-      --ink-1: #09090d;
-      --ink-2: #3f3f4e;
-      --ink-3: #686879;
-      --ink-4: #8a8a99;
-      --up: #008f5c;
-      --up-soft: rgba(0, 143, 92, 0.11);
-      --up-line: rgba(0, 143, 92, 0.32);
-      --down: #d9284d;
-      --down-soft: rgba(217, 40, 77, 0.1);
-      --focus: rgba(0, 143, 92, 0.16);
-      --shadow: 0 22px 60px rgba(10, 10, 20, 0.12);
-    }
-
     * {
       box-sizing: border-box;
       margin: 0;
@@ -590,15 +570,15 @@
     }
 
     .btn-primary {
-      border-color: var(--up);
-      background: var(--up);
-      color: #030305;
+      border-color: var(--text);
+      background: var(--text);
+      color: var(--bg);
     }
 
     .btn-primary:hover {
-      border-color: var(--up);
-      background: var(--up);
-      color: #030305;
+      border-color: var(--text);
+      background: var(--text);
+      color: var(--bg);
     }
 
     .btn-danger {
@@ -633,52 +613,6 @@
     .pill-success {
       background: var(--up-soft);
       color: var(--up);
-    }
-
-    .theme-options {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      width: min(420px, 100%);
-    }
-
-    .theme-choice {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-height: 50px;
-      padding: 0 14px;
-      border: 1px solid var(--line-2);
-      border-radius: 7px;
-      background: transparent;
-      color: var(--ink-1);
-      cursor: pointer;
-      font-weight: 700;
-      transition: border-color 160ms ease, background 160ms ease;
-    }
-
-    .theme-choice:hover {
-      background: var(--bg-2);
-    }
-
-    .theme-choice.selected {
-      border-color: var(--up-line);
-      background: var(--up-soft);
-    }
-
-    .theme-swatch {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      border: 1px solid var(--line-2);
-    }
-
-    .theme-swatch.dark {
-      background: #050508;
-    }
-
-    .theme-swatch.light {
-      background: #f5f5f7;
     }
 
     .switch {
@@ -932,10 +866,6 @@
         max-width: none;
       }
 
-      .theme-options {
-        grid-template-columns: 1fr;
-      }
-
       .action-row,
       .modal-actions {
         justify-content: stretch;
@@ -1005,8 +935,7 @@
 
         <div class="nav-group">
           <div class="nav-group-title">Preferences</div>
-          <button class="settings-link" type="button" data-panel="appearance">Appearance</button>
-        </div>
+      </div>
       </aside>
 
       <section class="settings-content">
@@ -1052,11 +981,20 @@
               </button>
             </div>
           </div>
+
+          <div class="section">
+            <h3 class="section-title">Profile links</h3>
+            <div class="settings-row"><div class="row-label">X / Twitter</div><div class="row-main"><input type="text" class="inline-input" id="inputTwitter" placeholder="@username"></div><div></div></div>
+            <div class="settings-row"><div class="row-label">Reddit</div><div class="row-main"><input type="text" class="inline-input" id="inputReddit" placeholder="username"></div><div></div></div>
+            <div class="settings-row"><div class="row-label">Instagram</div><div class="row-main"><input type="text" class="inline-input" id="inputInstagram" placeholder="@username"></div><div></div></div>
+            <div class="settings-row"><div class="row-label">Website</div><div class="row-main"><input type="url" class="inline-input" id="inputWebsite" placeholder="https://example.com"></div><div></div></div>
+            <div class="settings-row"><div class="row-label">Other</div><div class="row-main"><input type="url" class="inline-input" id="inputOther" placeholder="https://..."></div><div></div></div>
+          </div>
         </div>
 
         <div class="content-panel" id="panel-privacy">
           <h2 class="panel-title">Privacy preferences</h2>
-          <p class="panel-copy">Simple visibility controls for your VSN presence. These switches are local interface preferences for now.</p>
+          <p class="panel-copy">Simple visibility controls for your VSN presence.</p>
 
           <div class="section">
             <div class="settings-row with-icon">
@@ -1068,9 +1006,9 @@
               </div>
               <div class="row-main">
                 <div class="row-title">Show public profile</div>
-                <div class="row-text">Allow others to view your VSN profile details.</div>
+                <div class="row-text">When this is on, others can view your VSN profile and posts.</div>
               </div>
-              <button class="switch" type="button" aria-checked="true" onclick="toggleSwitch(this)"></button>
+              <button class="switch" id="publicProfileSwitch" type="button" aria-checked="true" onclick="togglePublicProfile(this)"></button>
             </div>
 
             <div class="settings-row with-icon">
@@ -1173,31 +1111,6 @@
           </div>
         </div>
 
-        <div class="content-panel" id="panel-appearance">
-          <h2 class="panel-title">Appearance</h2>
-          <p class="panel-copy">Set the visual mode you prefer while researching markets.</p>
-
-          <div class="section">
-            <h3 class="section-title">Theme</h3>
-            <div class="settings-row">
-              <div class="row-label">Interface theme</div>
-              <div class="row-main">
-                <div class="theme-options">
-                  <button class="theme-choice selected" type="button" data-theme="dark" onclick="selectTheme(this)">
-                    <span>Dark</span>
-                    <span class="theme-swatch dark"></span>
-                  </button>
-                  <button class="theme-choice" type="button" data-theme="light" onclick="selectTheme(this)">
-                    <span>Light</span>
-                    <span class="theme-swatch light"></span>
-                  </button>
-                </div>
-                <div class="row-caption">Your choice is saved in this browser.</div>
-              </div>
-              <div></div>
-            </div>
-          </div>
-        </div>
       </section>
     </div>
   </main>
@@ -1231,9 +1144,9 @@
   </div>
 
   <script>
-    (function applySavedTheme() {
-      const saved = localStorage.getItem('theme');
-      document.documentElement.setAttribute('data-theme', saved || 'dark');
+    (function forceDarkTheme() {
+      localStorage.removeItem('theme');
+      document.documentElement.setAttribute('data-theme', 'dark');
     })();
 
     let currentUser = null;
@@ -1283,17 +1196,6 @@
       }
       joinCta.style.display = 'none';
       navUser.classList.add('show');
-    }
-
-    function selectTheme(card) {
-      const theme = card.dataset.theme;
-      document.querySelectorAll('.theme-choice[data-theme]').forEach(choice => {
-        choice.classList.toggle('selected', choice.dataset.theme === theme);
-      });
-
-      document.documentElement.setAttribute('data-theme', theme);
-      localStorage.setItem('theme', theme);
-      showToast(`${theme.charAt(0).toUpperCase() + theme.slice(1)} theme applied`);
     }
 
     function showToast(message, isError = false) {
@@ -1370,11 +1272,14 @@
         document.getElementById('inputUsername').value = username;
         document.getElementById('inputDisplayName').value = displayName;
         document.getElementById('inputEmail').value = email;
-
-        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-        document.querySelectorAll('.theme-choice[data-theme]').forEach(choice => {
-          choice.classList.toggle('selected', choice.dataset.theme === currentTheme);
-        });
+        const links = data.social_links || {};
+        document.getElementById('inputTwitter').value = links.twitter || '';
+        document.getElementById('inputReddit').value = links.reddit || '';
+        document.getElementById('inputInstagram').value = links.instagram || '';
+        document.getElementById('inputWebsite').value = links.website || '';
+        document.getElementById('inputOther').value = links.other || '';
+        const publicSwitch = document.getElementById('publicProfileSwitch');
+        if (publicSwitch) publicSwitch.setAttribute('aria-checked', data.is_private ? 'false' : 'true');
       } catch (e) {
         console.error('Error loading profile:', e);
         showToast('Failed to load profile', true);
@@ -1396,11 +1301,6 @@
         return;
       }
 
-      if (displayName === originalDisplayName) {
-        showToast('No changes to save');
-        return;
-      }
-
       saveBtn.disabled = true;
       saveBtnText.innerHTML = '<span class="spinner"></span> Saving...';
 
@@ -1408,7 +1308,15 @@
         const res = await fetch('/api/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ display_name: displayName })
+          body: JSON.stringify({
+            display_name: displayName,
+            is_private: document.getElementById('publicProfileSwitch')?.getAttribute('aria-checked') !== 'true',
+            twitter_handle: document.getElementById('inputTwitter').value,
+            reddit_handle: document.getElementById('inputReddit').value,
+            instagram_handle: document.getElementById('inputInstagram').value,
+            website_url: document.getElementById('inputWebsite').value,
+            other_url: document.getElementById('inputOther').value
+          })
         });
 
         const data = await res.json();
@@ -1433,6 +1341,12 @@
         saveBtn.disabled = false;
         saveBtnText.textContent = 'Save changes';
       }
+    }
+
+    async function togglePublicProfile(button) {
+      const current = button.getAttribute('aria-checked') === 'true';
+      button.setAttribute('aria-checked', current ? 'false' : 'true');
+      await saveProfile();
     }
 
     document.getElementById('avatarInput').addEventListener('change', async (event) => {

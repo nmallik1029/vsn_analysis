@@ -6,11 +6,11 @@
     <title>New Post | VSN Analysis</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link rel="preload" as="image" href="{{ url_for('static', filename='logo-nav.png', v=static_version('logo-nav.png')) }}" fetchpriority="high">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         (function() {
-            const saved = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', saved);
+            localStorage.removeItem('theme');
+            document.documentElement.setAttribute('data-theme', 'dark');
         })();
     </script>
     <style>
@@ -46,12 +46,13 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
         }
-        .nav {
+        .site-header { display: none !important; }
+        .composer-nav {
             position: sticky;
             top: 0;
             background: var(--bg-secondary);
@@ -87,15 +88,32 @@
             align-items: center;
             gap: 0.5rem;
         }
-        .btn-primary { background: var(--accent-green); color: #000; }
+        .btn-primary { background: var(--text-primary); color: var(--bg-primary); }
         .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .main-container { max-width: 800px; margin: 0 auto; padding: 2rem; }
+        .main-container { max-width: 1220px; margin: 0 auto; padding: 2rem; }
+        .composer-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 1.25rem; align-items: start; }
         .editor-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             overflow: hidden;
+        }
+        .preview-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            position: sticky;
+            top: 96px;
+        }
+        .preview-title { font-weight: 700; margin-bottom: 1rem; }
+        .preview-post-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.6rem; }
+        .preview-post-content { color: var(--text-secondary); line-height: 1.55; white-space: pre-wrap; }
+        .preview-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.85rem; color: var(--accent-blue); font-size: 0.85rem; }
+        @media (max-width: 980px) {
+            .composer-grid { grid-template-columns: 1fr; }
+            .preview-card { position: static; }
         }
         .editor-header {
             padding: 1.25rem;
@@ -141,7 +159,7 @@
             font-size: 1rem;
             transition: border-color 0.2s;
         }
-        .form-input:focus { outline: none; border-color: var(--accent-green); }
+        .form-input:focus { outline: none; border-color: var(--accent-blue); }
         .form-input::placeholder { color: var(--text-tertiary); }
         textarea.form-input {
             min-height: 200px;
@@ -171,7 +189,7 @@
             min-height: 48px;
             cursor: text;
         }
-        .tags-input-container:focus-within { border-color: var(--accent-green); }
+        .tags-input-container:focus-within { border-color: var(--accent-blue); }
         .tag-chip {
             display: flex;
             align-items: center;
@@ -210,8 +228,8 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        .image-upload-area:hover { border-color: var(--accent-green); background: var(--bg-hover); }
-        .image-upload-area.dragover { border-color: var(--accent-green); background: var(--bg-hover); }
+        .image-upload-area:hover { border-color: var(--accent-blue); background: var(--bg-hover); }
+        .image-upload-area.dragover { border-color: var(--accent-blue); background: var(--bg-hover); }
         .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
         .upload-text { color: var(--text-secondary); font-size: 0.9rem; }
         .upload-text span { color: var(--accent-green); }
@@ -308,7 +326,7 @@
             align-items: center;
             gap: 0.75rem;
             text-decoration: none;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         .brand img { width: 36px; height: 36px; object-fit: contain; }
         .brand span {
@@ -330,7 +348,7 @@
             color: var(--text-primary, #f0f0f0);
             font-size: 0.85rem;
             font-weight: 600;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             cursor: pointer;
         }
         .nav-search input::placeholder { color: var(--text-secondary, #888899); font-weight: 500; }
@@ -370,7 +388,7 @@
             color: var(--text-primary);
             font-size: 16px;
             outline: none;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         /* Auth modal for search when user is unauthenticated */
         .auth-modal {
@@ -517,7 +535,7 @@
         .header-spacer { height: 80px; }
             border: 1px solid transparent;
             transition: color 0.2s, border-color 0.2s, background 0.2s;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         .nav-link:hover { color: var(--text-primary, #f0f0f0); }
         .nav-link.active {
@@ -643,6 +661,8 @@
     </style>
 </head>
 <body>
+    {% set active_nav = 'community' %}
+    {% include '_site_nav.html' %}
 
     <!-- ============ STANDARDIZED PERSISTENT HEADER ============ -->
     <header class="site-header">
@@ -773,7 +793,7 @@
     <!-- ============ END HEADER ============ -->
 
 
-    <nav class="nav">
+    <nav class="composer-nav">
         <div class="nav-left">
             <a href="/community" class="back-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -783,18 +803,16 @@
             </a>
             <span class="nav-title">Create Post</span>
         </div>
-        <button class="btn btn-primary" id="publishBtn" onclick="publishPost()" disabled>
-            <span id="publishBtnText">Publish</span>
-        </button>
     </nav>
 
     <div class="main-container">
+      <div class="composer-grid">
         <div class="editor-card">
             <div class="editor-header">
-                <div class="user-avatar" id="userAvatar">U</div>
+                <div class="user-avatar" id="composerUserAvatar">U</div>
                 <div class="user-info">
-                    <div class="user-name" id="userName">Loading...</div>
-                    <div class="user-username" id="userUsername">@...</div>
+                    <div class="user-name" id="composerUserName">Loading...</div>
+                    <div class="user-username" id="composerUserUsername">@...</div>
                 </div>
             </div>
 
@@ -831,9 +849,19 @@
             </div>
 
             <div class="editor-footer">
-                <span class="editor-tips">💡 Tip: Use tags to help others find your post</span>
+                <span class="editor-tips">Use tags to help others find your post</span>
+                <button class="btn btn-primary" id="publishBtn" onclick="publishPost()" disabled>
+                    <span id="publishBtnText">Publish</span>
+                </button>
             </div>
         </div>
+        <aside class="preview-card" aria-label="Post preview">
+            <div class="preview-title">Preview</div>
+            <div class="preview-post-title" id="previewTitle">Untitled post</div>
+            <div class="preview-post-content" id="previewContent">Start writing to preview your post.</div>
+            <div class="preview-tags" id="previewTags"></div>
+        </aside>
+      </div>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -849,8 +877,8 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await loadUser();
             setupEventListeners();
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+            localStorage.removeItem('theme');
+            document.documentElement.setAttribute('data-theme', 'dark');
         });
 
         async function loadUser() {
@@ -863,9 +891,9 @@
                 }
                 currentUser = data.user;
                 const initial = (currentUser.display_name || currentUser.username || 'U')[0].toUpperCase();
-                document.getElementById('userName').textContent = currentUser.display_name || currentUser.username;
-                document.getElementById('userUsername').textContent = '@' + (currentUser.username || '');
-                const avatar = document.getElementById('userAvatar');
+                document.getElementById('composerUserName').textContent = currentUser.display_name || currentUser.username || 'VSN member';
+                document.getElementById('composerUserUsername').textContent = '@' + (currentUser.username || '');
+                const avatar = document.getElementById('composerUserAvatar');
                 if (currentUser.avatar_url) {
                     avatar.innerHTML = `<img src="${currentUser.avatar_url}" alt="Avatar">`;
                 } else {
@@ -885,7 +913,9 @@
 
             contentInput.addEventListener('input', updateWordCount);
             contentInput.addEventListener('input', validateForm);
+            contentInput.addEventListener('input', updatePreview);
             document.getElementById('titleInput').addEventListener('input', validateForm);
+            document.getElementById('titleInput').addEventListener('input', updatePreview);
 
             tagsInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ',') {
@@ -931,11 +961,13 @@
             if (!tag || tag.length < 2 || tags.includes(tag) || tags.length >= MAX_TAGS) return;
             tags.push(tag);
             renderTags();
+            updatePreview();
         }
 
         function removeTag(index) {
             tags.splice(index, 1);
             renderTags();
+            updatePreview();
         }
 
         function renderTags() {
@@ -987,6 +1019,14 @@
                 container.appendChild(preview);
             });
             document.getElementById('uploadArea').style.display = selectedImages.length >= MAX_IMAGES ? 'none' : 'block';
+        }
+
+        function updatePreview() {
+            const title = document.getElementById('titleInput').value.trim();
+            const content = document.getElementById('contentInput').value.trim();
+            document.getElementById('previewTitle').textContent = title || 'Untitled post';
+            document.getElementById('previewContent').textContent = content || 'Start writing to preview your post.';
+            document.getElementById('previewTags').innerHTML = tags.map(tag => `<span>#${tag}</span>`).join('');
         }
 
         async function publishPost() {
@@ -1072,7 +1112,7 @@
                     if (dropdown) {
                         let links = `<a href="/profile">Profile</a>`;
                         if (currentRoles.admin) {
-                            links += `<a href="/admin">Admin Dashboard</a>`;
+                            links += `<a href="https://admin.vsnanalysis.com/">Admin Dashboard</a>`;
                         }
                         if (currentRoles.moderator && !currentRoles.admin) {
                             links += `<a href="/moderator">Moderator Dashboard</a>`;

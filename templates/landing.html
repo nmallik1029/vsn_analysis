@@ -7,11 +7,11 @@
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         (function() {
-            const saved = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', saved);
+            localStorage.removeItem('theme');
+            document.documentElement.setAttribute('data-theme', 'dark');
         })();
     </script>
     <style>
@@ -62,7 +62,7 @@
         }
 
         body {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -133,7 +133,7 @@
             align-items: center;
             gap: 0.6rem;
             text-decoration: none;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             transition: opacity 200ms ease;
         }
 
@@ -169,7 +169,7 @@
             color: var(--text-primary);
             font-size: 0.85rem;
             font-weight: 500;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             transition: border-color 200ms ease, box-shadow 200ms ease;
         }
 
@@ -210,7 +210,7 @@
         .nav-suggestion {
             padding: 8px 12px;
             cursor: pointer;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             color: var(--text-primary);
             white-space: nowrap;
             display: flex;
@@ -260,7 +260,7 @@
             color: var(--text-primary);
             font-size: 16px;
             outline: none;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         /* Auth modal for search when user is unauthenticated (standardized) */
         .auth-modal {
@@ -428,7 +428,7 @@
             color: var(--text-primary);
             font-size: 0.8rem;
             font-weight: 500;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             transition: border-color 200ms ease, background 200ms ease;
         }
 
@@ -527,7 +527,7 @@
             padding: 10px 18px;
             border-radius: 100px;
             transition: color 250ms ease;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             font-size: 0.9rem;
             white-space: nowrap;
         }
@@ -914,7 +914,7 @@
             padding: 1rem 1.5rem;
             font-size: 1.1rem;
             color: var(--text-primary);
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             outline: none;
             transition: border-color 0.2s;
         }
@@ -946,7 +946,7 @@
         .ticker-suggestion {
             padding: 0.75rem 1rem;
             cursor: pointer;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             color: var(--text-primary);
             display: flex;
             align-items: center;
@@ -966,7 +966,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
 
         .hero-btn:hover {
@@ -992,7 +992,7 @@
             border: 1px solid var(--border-color);
             padding: 0.5rem 1rem;
             color: var(--text-secondary);
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.2s;
@@ -1049,12 +1049,12 @@
         .snapshot-price {
             font-size: 1.5rem;
             font-weight: 700;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         .snapshot-change {
             font-size: 0.9rem;
             font-weight: 600;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         .snapshot-change.up { color: var(--accent-green); }
         .snapshot-change.down { color: var(--accent-red); }
@@ -1074,7 +1074,7 @@
         }
 
         .demo-ticker {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--text-primary);
@@ -1085,7 +1085,7 @@
         }
 
         .demo-price-value {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             font-size: 1.25rem;
             font-weight: 600;
             color: var(--accent-green);
@@ -1311,18 +1311,9 @@
         // ========================================
         
         (function applySavedTheme() {
-            const saved = localStorage.getItem('theme');
-            if (saved) {
-                document.documentElement.setAttribute('data-theme', saved);
-            }
+            localStorage.removeItem('theme');
+            document.documentElement.setAttribute('data-theme', 'dark');
         })();
-
-        function toggleTheme() {
-            const current = document.documentElement.getAttribute('data-theme') || 'light';
-            const next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-        }
 
         // ========================================
         // NAV INDICATOR ANIMATION
@@ -1457,7 +1448,7 @@
                     const dropdown = document.getElementById('userDropdown');
                     let links = `<a href="/profile">Profile</a>`;
                     if (currentRoles.admin) {
-                        links += `<a href="/admin">Admin Dashboard</a>`;
+                        links += `<a href="https://admin.vsnanalysis.com/">Admin Dashboard</a>`;
                     }
                     if (currentRoles.moderator && !currentRoles.admin) {
                         links += `<a href="/moderator">Moderator Dashboard</a>`;

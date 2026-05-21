@@ -6,11 +6,11 @@
     <title>Post | VSN Analysis</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link rel="preload" as="image" href="{{ url_for('static', filename='logo-nav.png', v=static_version('logo-nav.png')) }}" fetchpriority="high">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         (function() {
-            const saved = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', saved);
+            localStorage.removeItem('theme');
+            document.documentElement.setAttribute('data-theme', 'dark');
         })();
     </script>
     <style>
@@ -45,10 +45,10 @@
             --accent-blue: #3366ff;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Space Grotesk', sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
-        .nav {
-            position: sticky; top: 0; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);
-            padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1rem; z-index: 100;
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
+        .post-subnav {
+            position: sticky; top: 68px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1rem; z-index: 90;
         }
         .back-btn {
             display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary);
@@ -124,7 +124,7 @@
             padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
             cursor: pointer; transition: all 0.2s; border: none;
         }
-        .btn-primary { background: var(--accent-green); color: #000; }
+        .btn-primary { background: var(--text-primary); color: var(--bg-primary); }
         .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
         .comments-list { }
@@ -208,7 +208,7 @@
             align-items: center;
             gap: 0.75rem;
             text-decoration: none;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         .brand img { width: 36px; height: 36px; object-fit: contain; }
         .brand span {
@@ -230,7 +230,7 @@
             color: var(--text-primary, #f0f0f0);
             font-size: 0.85rem;
             font-weight: 600;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             cursor: pointer;
         }
         .nav-search input::placeholder { color: var(--text-secondary, #888899); font-weight: 500; }
@@ -270,7 +270,7 @@
             color: var(--text-primary);
             font-size: 16px;
             outline: none;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         /* Auth modal for search when user is unauthenticated */
         .auth-modal {
@@ -440,7 +440,7 @@
         .header-spacer { height: 80px; }
             border: 1px solid transparent;
             transition: color 0.2s, border-color 0.2s, background 0.2s;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         .nav-link:hover { color: var(--text-primary, #f0f0f0); }
         .nav-link.active {
@@ -563,9 +563,15 @@
         }
         /* ============ END HEADER STYLES ============ */
 
+        .site-header {
+            display: none !important;
+        }
+
     </style>
 </head>
 <body>
+    {% set active_nav = 'community' %}
+    {% include '_site_nav.html' %}
 
     <!-- ============ STANDARDIZED PERSISTENT HEADER ============ -->
     <header class="site-header">
@@ -696,7 +702,7 @@
     <!-- ============ END HEADER ============ -->
 
 
-    <nav class="nav">
+    <nav class="post-subnav">
         <a href="/community" class="back-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             Back to Feed
@@ -728,8 +734,8 @@
         const postId = window.location.pathname.split('/').pop();
 
         document.addEventListener('DOMContentLoaded', async () => {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', savedTheme);
+            localStorage.removeItem('theme');
+            document.documentElement.setAttribute('data-theme', 'dark');
             await checkAuth();
             await loadPost();
         });
@@ -1155,7 +1161,7 @@
                     if (dropdown) {
                         let links = `<a href="/profile">Profile</a>`;
                         if (currentRoles.admin) {
-                            links += `<a href="/admin">Admin Dashboard</a>`;
+                            links += `<a href="https://admin.vsnanalysis.com/">Admin Dashboard</a>`;
                         }
                         if (currentRoles.moderator && !currentRoles.admin) {
                             links += `<a href="/moderator">Moderator Dashboard</a>`;

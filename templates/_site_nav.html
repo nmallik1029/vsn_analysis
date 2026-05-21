@@ -14,7 +14,7 @@
    ============================================================ #}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="{{ url_for('static', filename='logo-nav.png', v=static_version('logo-nav.png')) }}" fetchpriority="high">
 <style>
     /* Scoped CSS vars — local to the nav so they survive on any page */
@@ -34,8 +34,7 @@
         align-items: center;
         justify-content: space-between;
         padding: 18px 40px;
-        /* Lock font to match design.html so /markets and /community don't inherit
-           the host page's Space Grotesk and end up looking different from /. */
+        /* Lock font to match design.html so every page renders the nav consistently. */
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         font-size: 14px;
         line-height: 1.5;

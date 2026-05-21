@@ -3,6 +3,14 @@ main = "worker/index.ts"
 compatibility_date = "2025-05-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Production host bindings. Cloudflare must also have proxied DNS records for
+# these hostnames in the vsnanalysis.com zone.
+routes = [
+  { pattern = "vsnanalysis.com/*", zone_name = "vsnanalysis.com" },
+  { pattern = "www.vsnanalysis.com/*", zone_name = "vsnanalysis.com" },
+  { pattern = "admin.vsnanalysis.com/*", zone_name = "vsnanalysis.com" },
+]
+
 # Container definition — built from the repo Dockerfile.
 [[containers]]
 class_name = "StockAnalyzerContainer"

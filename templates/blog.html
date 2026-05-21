@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Community | VSN Analysis</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         (function() {
-            const saved = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', saved);
+            localStorage.removeItem('theme');
+            document.documentElement.setAttribute('data-theme', 'dark');
         })();
     </script>
     <style>
@@ -47,7 +47,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -98,7 +98,7 @@
             align-items: center;
             gap: 0.6rem;
             text-decoration: none;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             transition: opacity 200ms ease;
         }
 
@@ -138,7 +138,7 @@
             color: var(--text-primary);
             font-size: 0.85rem;
             font-weight: 500;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             transition: border-color 200ms ease, box-shadow 200ms ease;
         }
 
@@ -183,7 +183,7 @@
         .nav-suggestion {
             padding: 8px 12px;
             cursor: pointer;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             color: var(--text-primary);
             white-space: nowrap;
             display: flex;
@@ -231,7 +231,7 @@
             color: var(--text-primary);
             font-size: 16px;
             outline: none;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         /* Auth modal for search when user is unauthenticated (standardized) */
         .auth-modal {
@@ -372,7 +372,7 @@
             color: var(--text-primary);
             font-size: 0.8rem;
             font-weight: 500;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             transition: border-color 200ms ease, background 200ms ease;
         }
 
@@ -468,7 +468,7 @@
             padding: 10px 18px;
             border-radius: 100px;
             transition: color 250ms ease;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             font-size: 0.9rem;
             white-space: nowrap;
         }
@@ -737,8 +737,8 @@
         }
 
         .btn-primary {
-            background: var(--accent-green);
-            color: #000;
+            background: var(--text-primary);
+            color: var(--bg-primary);
             border: none;
         }
 
@@ -754,8 +754,8 @@
         }
 
         .btn-secondary:hover {
-            border-color: var(--accent-green);
-            color: var(--accent-green);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
         }
 
         .user-avatar-small {
@@ -841,9 +841,9 @@
         }
 
         .feed-tab.active {
-            background: var(--accent-green);
-            border-color: var(--accent-green);
-            color: #000;
+            background: var(--text-primary);
+            border-color: var(--text-primary);
+            color: var(--bg-primary);
         }
 
         /* Public Profile */
@@ -857,10 +857,7 @@
 
         .profile-cover {
             height: 148px;
-            background:
-                radial-gradient(circle at 18% 20%, rgba(0, 255, 156, 0.28), transparent 20rem),
-                radial-gradient(circle at 82% 10%, rgba(79, 140, 255, 0.24), transparent 18rem),
-                linear-gradient(135deg, #070709, #111119);
+            background: var(--profile-cover-bg, linear-gradient(135deg, #070709, #111119));
             border-bottom: 1px solid var(--border-color);
         }
 
@@ -923,6 +920,22 @@
             letter-spacing: -0.03em;
         }
 
+        .profile-name-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .profile-private-badge {
+            border: 1px solid var(--border-light);
+            color: var(--text-secondary);
+            border-radius: 999px;
+            padding: 0.25rem 0.55rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
         .profile-handle {
             color: var(--text-secondary);
             font-size: 0.95rem;
@@ -941,6 +954,95 @@
         .profile-stats strong {
             color: var(--text-primary);
         }
+
+        .profile-stat-link {
+            border: 0;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .profile-stat-link:hover strong,
+        .profile-social-link:hover {
+            text-decoration: underline;
+        }
+
+        .profile-socials {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 0.9rem;
+        }
+
+        .profile-social-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.88rem;
+        }
+
+        .follow-list-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            background: rgba(0,0,0,0.68);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .follow-list-modal.show { display: flex; }
+
+        .follow-list-panel {
+            width: min(420px, 100%);
+            max-height: 70vh;
+            overflow: auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 18px;
+            padding: 1rem;
+        }
+
+        .follow-list-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .follow-list-close {
+            border: 0;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.25rem;
+        }
+
+        .follow-list-user {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 0;
+            color: var(--text-primary);
+            text-decoration: none;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .follow-list-user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--bg-hover);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            flex: 0 0 auto;
+            font-weight: 700;
+        }
+
+        .follow-list-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
         .profile-meta-line {
             display: flex;
@@ -1460,6 +1562,16 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
+    <div class="follow-list-modal" id="followListModal" aria-hidden="true">
+        <div class="follow-list-panel" role="dialog" aria-modal="true" aria-label="Follow list">
+            <div class="follow-list-head">
+                <strong id="followListTitle">Followers</strong>
+                <button class="follow-list-close" type="button" onclick="closeFollowList()">x</button>
+            </div>
+            <div id="followListBody"></div>
+        </div>
+    </div>
+
     <script>
         // State
         let currentUser = null;
@@ -1490,10 +1602,8 @@
             await authReady;
             
             // Apply saved theme
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                document.documentElement.setAttribute('data-theme', savedTheme);
-            }
+            localStorage.removeItem('theme');
+            document.documentElement.setAttribute('data-theme', 'dark');
 
             // Nav indicator (nav pill) behavior
             try {
@@ -1738,7 +1848,7 @@
                 const profileUrl = currentUser.username ? `/community/user/${encodeURIComponent(currentUser.username)}` : '/profile';
                 let links = `<a href="${profileUrl}">Profile</a><a href="/profile">Account Settings</a>`;
                 if (currentRoles.admin) {
-                    links += `<a href="/admin">Admin Dashboard</a>`;
+                    links += `<a href="https://admin.vsnanalysis.com/">Admin Dashboard</a>`;
                 }
                 if (currentRoles.moderator && !currentRoles.admin) {
                     links += `<a href="/moderator">Moderator Dashboard</a>`;
@@ -1795,6 +1905,7 @@
                 document.title = `${data.user.display_name || data.user.username} | Community`;
                 if (profileHeader) {
                     profileHeader.innerHTML = createProfileHeader(data.user);
+                    applyProfileCoverColor(profileHeader.querySelector('.profile-cover'));
                 }
                 await postsReady;
             } catch (e) {
@@ -1812,6 +1923,9 @@
             const displayName = user.display_name || user.username || 'VSN member';
             const username = user.username || 'user';
             const initial = displayName.slice(0, 1).toUpperCase();
+            const cover = user.avatar_url
+                ? `style="--profile-cover-bg: linear-gradient(135deg, ${avatarColor(displayName)} 0%, #08080c 72%)" data-cover-avatar="${escapeAttr(user.avatar_url)}"`
+                : `style="--profile-cover-bg: linear-gradient(135deg, ${avatarColor(displayName)} 0%, #08080c 72%)"`;
             const avatar = user.avatar_url
                 ? `<img src="${escapeAttr(user.avatar_url)}" alt="${escapeAttr(displayName)}">`
                 : initial;
@@ -1819,32 +1933,100 @@
             const followButton = user.is_self
                 ? ''
                 : `<button class="profile-follow-btn ${user.is_following ? 'is-following' : ''}" type="button" data-follow-button data-username="${escapeAttr(username)}" onclick="toggleFollow('${escapeAttr(username)}')">${user.is_following ? 'Following' : 'Follow'}</button>`;
+            const socials = renderProfileSocials(user.social_links || {});
+            const privateBadge = user.is_private ? '<span class="profile-private-badge">Private</span>' : '';
+            const privateNote = user.is_private_view
+                ? `<div class="profile-meta-line"><span>This profile is private. Follow to request access to posts.</span></div>`
+                : user.is_private && user.is_self
+                    ? `<div class="profile-meta-line"><span>Your profile is private. Only followers can view your posts.</span></div>`
+                    : '';
 
             return `
                 <section class="profile-view-card" aria-label="${escapeAttr(displayName)} profile">
-                    <div class="profile-cover"></div>
+                    <div class="profile-cover" ${cover}></div>
                     <div class="profile-body">
                         <div class="profile-topline">
                             <div class="profile-avatar-large">${avatar}</div>
                             ${followButton}
                         </div>
                         <div class="profile-name-block">
-                            <div class="profile-display-name">${escapeHtml(displayName)}</div>
+                            <div class="profile-name-row">
+                                <div class="profile-display-name">${escapeHtml(displayName)}</div>
+                                ${privateBadge}
+                            </div>
                             <div class="profile-handle">@${escapeHtml(username)}</div>
                         </div>
                         <div class="profile-stats">
                             <span><strong>${formatNumber(user.post_count || 0)}</strong> posts</span>
-                            <span><strong data-follower-count>${formatNumber(user.follower_count || 0)}</strong> followers</span>
-                            <span><strong>${formatNumber(user.following_count || 0)}</strong> following</span>
+                            <button class="profile-stat-link" type="button" onclick="openFollowList('${escapeAttr(username)}', 'followers')"><strong data-follower-count>${formatNumber(user.follower_count || 0)}</strong> followers</button>
+                            <button class="profile-stat-link" type="button" onclick="openFollowList('${escapeAttr(username)}', 'following')"><strong>${formatNumber(user.following_count || 0)}</strong> following</button>
                         </div>
                         <div class="profile-meta-line">
                             <span>${escapeHtml(joined)}</span>
                             <span>${formatNumber(user.repost_count || 0)} reposts</span>
                             <span>${formatNumber(user.comment_count || 0)} comments</span>
                         </div>
+                        ${socials}
+                        ${privateNote}
                     </div>
                 </section>
             `;
+        }
+
+        function renderProfileSocials(links) {
+            const items = [];
+            const cleanHandle = (value) => String(value || '').replace(/^@/, '').trim();
+            const twitter = cleanHandle(links.twitter);
+            const reddit = cleanHandle(links.reddit);
+            const instagram = cleanHandle(links.instagram);
+            const website = String(links.website || '').trim();
+            const other = String(links.other || '').trim();
+            if (twitter) items.push(`<a class="profile-social-link" href="https://twitter.com/${encodeURIComponent(twitter)}" target="_blank" rel="noopener">X/Twitter</a>`);
+            if (reddit) items.push(`<a class="profile-social-link" href="https://reddit.com/user/${encodeURIComponent(reddit)}" target="_blank" rel="noopener">Reddit</a>`);
+            if (instagram) items.push(`<a class="profile-social-link" href="https://instagram.com/${encodeURIComponent(instagram)}" target="_blank" rel="noopener">Instagram</a>`);
+            if (website) items.push(`<a class="profile-social-link" href="${escapeAttr(normalizeUrl(website))}" target="_blank" rel="noopener">Website</a>`);
+            if (other) items.push(`<a class="profile-social-link" href="${escapeAttr(normalizeUrl(other))}" target="_blank" rel="noopener">More</a>`);
+            return items.length ? `<div class="profile-socials">${items.join('')}</div>` : '';
+        }
+
+        function normalizeUrl(url) {
+            return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+        }
+
+        function applyProfileCoverColor(coverEl) {
+            if (!coverEl || !coverEl.dataset.coverAvatar) return;
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const size = 24;
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    ctx.drawImage(img, 0, 0, size, size);
+                    const data = ctx.getImageData(0, 0, size, size).data;
+                    const buckets = new Map();
+                    for (let i = 0; i < data.length; i += 16) {
+                        const alpha = data[i + 3];
+                        if (alpha < 120) continue;
+                        const r = Math.round(data[i] / 32) * 32;
+                        const g = Math.round(data[i + 1] / 32) * 32;
+                        const b = Math.round(data[i + 2] / 32) * 32;
+                        const brightness = (r + g + b) / 3;
+                        if (brightness < 24 || brightness > 236) continue;
+                        const key = `${r},${g},${b}`;
+                        buckets.set(key, (buckets.get(key) || 0) + 1);
+                    }
+                    const [color] = [...buckets.entries()].sort((a, b) => b[1] - a[1])[0] || [];
+                    if (color) {
+                        coverEl.style.setProperty('--profile-cover-bg', `linear-gradient(135deg, rgb(${color}) 0%, #08080c 76%)`);
+                    }
+                } catch (e) {
+                    // Storage CORS can block pixel reads; fallback color is already set.
+                }
+            };
+            img.src = coverEl.dataset.coverAvatar;
         }
 
         function createProfileSkeleton() {
@@ -1862,6 +2044,49 @@
                     </div>
                 </section>
             `;
+        }
+
+        async function openFollowList(username, kind) {
+            const modal = document.getElementById('followListModal');
+            const title = document.getElementById('followListTitle');
+            const body = document.getElementById('followListBody');
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden', 'false');
+            title.textContent = kind === 'followers' ? 'Followers' : 'Following';
+            body.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
+            try {
+                const res = await fetch(`/api/users/${encodeURIComponent(username)}/${kind}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Failed to load list');
+                if (data.private) {
+                    body.innerHTML = '<p class="empty-state">This profile is private.</p>';
+                    return;
+                }
+                const users = data.users || [];
+                if (!users.length) {
+                    body.innerHTML = '<p class="empty-state">No users to show.</p>';
+                    return;
+                }
+                body.innerHTML = users.map(user => {
+                    const name = user.display_name || user.username || 'VSN member';
+                    const initial = name.slice(0, 1).toUpperCase();
+                    const avatar = user.avatar_url ? `<img src="${escapeAttr(user.avatar_url)}" alt="${escapeAttr(name)}">` : initial;
+                    return `
+                        <a class="follow-list-user" href="/community/user/${encodeURIComponent(user.username)}">
+                            <span class="follow-list-user-avatar">${avatar}</span>
+                            <span><strong>${escapeHtml(name)}</strong><br><small>@${escapeHtml(user.username || '')}</small></span>
+                        </a>
+                    `;
+                }).join('');
+            } catch (e) {
+                body.innerHTML = `<p class="empty-state">${escapeHtml(e.message || 'Failed to load list')}</p>`;
+            }
+        }
+
+        function closeFollowList() {
+            const modal = document.getElementById('followListModal');
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
         }
 
         // Setup event listeners
@@ -1921,6 +2146,17 @@
                 const data = await res.json();
 
                 if (!data.success) throw new Error(data.error);
+
+                if (data.private) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <p>This profile is private. Follow this user to see their posts.</p>
+                        </div>
+                    `;
+                    hasMore = false;
+                    document.getElementById('loadMore').style.display = 'none';
+                    return;
+                }
 
                 if (data.posts.length === 0 && currentPage === 1) {
                     container.innerHTML = `
@@ -2292,8 +2528,15 @@
             }
 
             try {
+                const card = document.querySelector(`[data-post-id="${cardPostId}"]`);
+                const repostBtn = card?.querySelector('[data-action="repost"]');
+                const alreadyReposted = repostBtn?.classList.contains('reposted');
+                if (alreadyReposted) {
+                    const confirmed = confirm('Remove your repost?');
+                    if (!confirmed) return;
+                }
                 const res = await fetch(`/api/posts/${postId}/repost`, {
-                    method: 'POST'
+                    method: alreadyReposted ? 'DELETE' : 'POST'
                 });
 
                 const data = await res.json();
@@ -2302,16 +2545,15 @@
                     throw new Error(data.error || 'Failed to repost');
                 }
 
-                showToast('Reposted!', 'success');
+                showToast(alreadyReposted ? 'Repost removed' : 'Reposted!', 'success');
                 
                 // Update repost count in UI
-                const card = document.querySelector(`[data-post-id="${cardPostId}"]`);
-                const repostBtn = card?.querySelector('[data-action="repost"]');
                 if (repostBtn) {
                     const countEl = repostBtn.querySelector('span:last-child');
-                    const count = data.repost_count ?? ((parseInt(countEl.textContent, 10) || 0) + 1);
+                    const fallback = (parseInt(countEl.textContent, 10) || 0) + (alreadyReposted ? -1 : 1);
+                    const count = data.repost_count ?? Math.max(0, fallback);
                     countEl.textContent = count;
-                    repostBtn.classList.add('reposted');
+                    repostBtn.classList.toggle('reposted', !alreadyReposted);
                 }
 
             } catch (e) {
