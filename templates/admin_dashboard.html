@@ -3,239 +3,972 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Administrator Dashboard</title>
+  <title>Admin · VSN Analysis</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     :root {
-      --bg: #f7f8fb;
-      --panel: #ffffff;
-      --card: #ffffff;
-      --border: #e5e7ef;
-      --muted: #6c7285;
-      --text: #1a1d2a;
-      --accent: #2563eb;
-      --accent-2: #10b981;
-      --shadow: 0 10px 24px rgba(17,24,39,0.08);
-      --btn-bg: #111827;
-      --btn-text: #f8fafc;
-      --btn-border: #1f2937;
-      --tab-bg: #e5e7ef;
-      --tab-border: #d1d5db;
+      --bg-primary: #000000;
+      --bg-secondary: #070709;
+      --bg-card: #0b0b0f;
+      --bg-elev: #11111a;
+      --border-color: #14141c;
+      --border-strong: #232737;
+      --text-primary: #f0f0f0;
+      --text-secondary: #888899;
+      --text-muted: #5a5a6b;
+      --accent-green: #00ff9c;
+      --accent-red: #ff4d6d;
+      --accent-blue: #4f8cff;
+      --accent-yellow: #ffcc00;
+      --glow-green: rgba(0, 255, 156, 0.18);
+      --glow-red: rgba(255, 77, 109, 0.18);
+      --glow-blue: rgba(79, 140, 255, 0.18);
     }
-    html[data-theme="dark"] {
-      --bg: #0b0c10;
-      --panel: #11131a;
-      --card: #161922;
-      --border: #232737;
-      --muted: #7d8299;
-      --text: #f5f7ff;
-      --accent: #4fb3ff;
-      --accent-2: #8ef6c8;
-      --shadow: 0 8px 24px rgba(0,0,0,0.35);
-      --btn-bg: #161922;
-      --btn-text: #f5f7ff;
-      --btn-border: #232737;
-      --tab-bg: #161922;
-      --tab-border: #232737;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
     }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: "Inter", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
-    .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
-    .sidebar { position: sticky; top: 0; align-self: start; height: 100vh; background: var(--panel); border-right: 1px solid var(--border); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
-    .nav { display: flex; flex-direction: column; gap: 0.5rem; height: 100%; }
-    .nav a { color: var(--text); text-decoration: none; padding: 0.65rem 0.75rem; border-radius: 8px; font-weight: 700; border: 1px solid transparent; }
-    .nav a:hover, .nav a.active { background: var(--tab-bg); border-color: var(--tab-border); }
-    .nav .back { margin-top: auto; border-top: 1px solid var(--border); padding-top: 0.75rem; }
-    .main { padding: 1.5rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
-    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
-    .title { font-size: 1.4rem; font-weight: 700; }
-    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; box-shadow: var(--shadow); }
-    .screen { display: none; opacity: 0; transform: translateY(12px); transition: opacity 200ms ease, transform 200ms ease; }
-    .screen.active { display: block; opacity: 1; transform: translateY(0); }
-    label { display: block; margin: 0.75rem 0 0.35rem; color: var(--muted); font-size: 0.9rem; font-weight: 600; }
-    input { width: 100%; padding: 0.7rem 0.8rem; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 0.95rem; }
-    .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.9rem; border-radius: 10px; border: 1px solid var(--btn-border); background: var(--btn-bg); color: var(--btn-text); cursor: pointer; font-weight: 600; box-shadow: var(--shadow); }
-    .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #0b1021; border: none; }
-    .actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-    .list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; align-items: center; padding: 0.75rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
-    .row .uid { color: var(--muted); font-size: 0.9rem; }
-    .row strong { display: block; margin-bottom: 0.1rem; }
-    .empty { color: var(--muted); font-size: 0.9rem; padding: 0.5rem 0; }
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(68, 136, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(68, 136, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .shell {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 100vh;
+    }
+    /* Sidebar */
+    .sidebar {
+      position: sticky;
+      top: 0;
+      align-self: start;
+      height: 100vh;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.25rem 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .brand .dot {
+      width: 10px; height: 10px;
+      background: var(--accent-blue);
+      box-shadow: 0 0 12px var(--glow-blue);
+    }
+    .brand .name { font-weight: 700; letter-spacing: 0.02em; }
+    .brand .sub { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--text-muted); margin-left: auto; }
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      flex: 1;
+    }
+    .nav a {
+      position: relative;
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 0.6rem 0.75rem 0.6rem 1rem;
+      font-weight: 500;
+      font-size: 0.92rem;
+      border: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .nav a:hover { color: var(--text-primary); background: var(--bg-card); }
+    .nav a.active {
+      color: var(--text-primary);
+      background: var(--bg-card);
+      border-color: var(--border-color);
+    }
+    .nav a.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 8px;
+      bottom: 8px;
+      width: 3px;
+      background: var(--accent-blue);
+    }
+    .nav .back {
+      margin-top: auto;
+      border-top: 1px solid var(--border-color);
+      padding-top: 0.75rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .sidebar-footer {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .sidebar-footer .row { display: flex; justify-content: space-between; }
+    .sidebar-footer .ok { color: var(--accent-green); }
+
+    /* Main */
+    .main {
+      padding: 1.75rem 2rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      max-width: 1400px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .title { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; }
+    .subtitle { color: var(--text-secondary); font-size: 0.92rem; margin-top: 0.25rem; }
+
+    /* Pill buttons */
+    .pills { display: inline-flex; gap: 0.4rem; }
+    .pills button {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.4rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .pills button:hover { color: var(--text-primary); border-color: var(--border-strong); }
+    .pills button.active {
+      background: var(--accent-blue);
+      color: #0a0e1c;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 12px var(--glow-blue);
+    }
+
+    /* Cards / panels */
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1.25rem;
+    }
+    .panel h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .panel h3 .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      padding: 0.15rem 0.5rem;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Screen visibility */
+    .screen { display: none; opacity: 0; transform: translateY(8px); transition: opacity 180ms ease, transform 180ms ease; }
+    .screen.active { display: flex; flex-direction: column; gap: 1.25rem; opacity: 1; transform: translateY(0); }
+
+    /* KPI cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+    .kpi {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1.1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .kpi .label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .kpi .value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--text-primary);
+    }
+    .kpi .delta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .kpi .delta.up { color: var(--accent-green); }
+    .kpi .delta.down { color: var(--accent-red); }
+    .kpi .delta.neutral { color: var(--text-secondary); }
+
+    /* Chart card */
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1.25rem;
+    }
+    .chart-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .chart-head .title-s { font-weight: 600; font-size: 0.95rem; }
+    .chart-canvas-wrap {
+      position: relative;
+      height: 320px;
+    }
+    .lw-chart {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Two-col grid */
+    .two-col { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1rem; }
+
+    /* Table */
+    .ttable {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .ttable th {
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0.5rem 0.6rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .ttable td {
+      padding: 0.65rem 0.6rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+    .ttable tr:last-child td { border-bottom: none; }
+    .ttable .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; }
+    .ttable .num { text-align: right; }
+
+    /* Status pills */
+    .stat-pill {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.15rem 0.55rem;
+      border: 1px solid var(--border-color);
+    }
+    .stat-pill.good { color: var(--accent-green); border-color: rgba(0, 255, 156, 0.35); background: rgba(0, 255, 156, 0.08); }
+    .stat-pill.warn { color: var(--accent-yellow); border-color: rgba(255, 204, 0, 0.35); background: rgba(255, 204, 0, 0.08); }
+    .stat-pill.bad  { color: var(--accent-red); border-color: rgba(255, 77, 109, 0.35); background: rgba(255, 77, 109, 0.08); }
+
+    /* Bar list (countries) */
+    .barlist { display: flex; flex-direction: column; gap: 0.5rem; }
+    .barlist .row {
+      display: grid;
+      grid-template-columns: 90px 1fr 60px;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.85rem;
+    }
+    .barlist .track {
+      height: 8px;
+      background: var(--bg-elev);
+      border: 1px solid var(--border-color);
+      position: relative;
+    }
+    .barlist .fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      background: var(--accent-blue);
+      box-shadow: 0 0 8px var(--glow-blue);
+    }
+    .barlist .num { font-family: 'JetBrains Mono', monospace; text-align: right; }
+
+    /* CWV panel */
+    .cwv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .cwv-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.1rem;
+    }
+    .cwv-card .name { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+    .cwv-card .v { font-family: 'JetBrains Mono', monospace; font-size: 1.6rem; font-weight: 700; margin-top: 0.25rem; }
+    .cwv-card .seg { display: flex; height: 6px; margin-top: 0.75rem; border: 1px solid var(--border-color); }
+    .cwv-card .seg .g { background: var(--accent-green); }
+    .cwv-card .seg .y { background: var(--accent-yellow); }
+    .cwv-card .seg .r { background: var(--accent-red); }
+    .cwv-card .legend {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+
+    /* Forms */
+    label { display: block; margin: 0.85rem 0 0.4rem; color: var(--text-secondary); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.02em; }
+    input {
+      width: 100%;
+      padding: 0.7rem 0.85rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.92rem;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    input:focus { border-color: var(--accent-blue); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-elev);
+      color: var(--text-primary);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+    .btn.primary {
+      background: var(--accent-blue);
+      color: #0a0e1c;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 12px var(--glow-blue);
+    }
+    .btn.primary:hover { background: #6ea4ff; color: #0a0e1c; }
+    .btn.danger {
+      border-color: rgba(255, 77, 109, 0.4);
+      color: var(--accent-red);
+    }
+    .btn.danger:hover { background: rgba(255, 77, 109, 0.08); }
+    .actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+
+    /* Lists (mods/logs) */
+    .list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; }
+    .row-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+    .row-card strong { display: block; font-weight: 600; margin-bottom: 0.15rem; }
+    .row-card .uid { color: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; }
+    .row-card .meta { color: var(--text-secondary); font-size: 0.82rem; text-align: right; }
+    .empty { color: var(--text-muted); font-size: 0.9rem; padding: 0.75rem 0; font-style: italic; }
+    .status { color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem; font-family: 'JetBrains Mono', monospace; }
+    .status.ok { color: var(--accent-green); }
+    .status.err { color: var(--accent-red); }
+
+    /* Responsive */
+    @media (max-width: 1000px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+      .cwv-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 720px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { position: relative; height: auto; }
+      .nav { flex-direction: row; flex-wrap: wrap; }
+      .nav .back { margin-top: 0; border-top: none; padding-top: 0; }
+      .sidebar-footer { display: none; }
+    }
   </style>
 </head>
 <body>
+  <div class="grid-bg"></div>
   <div class="shell">
     <aside class="sidebar">
+      <div class="brand">
+        <span class="dot"></span>
+        <span class="name">VSN</span>
+        <span class="sub">admin</span>
+      </div>
       <nav class="nav">
-        <a href="#welcome" data-target="welcome">Welcome</a>
+        <a href="#traffic" data-target="traffic" class="active">Traffic</a>
         <a href="#mods" data-target="mods">Moderators</a>
         <a href="#actions" data-target="actions">Actions</a>
         <a href="#logs" data-target="logs">Logs</a>
-        <a class="back" href="/">Back to Home</a>
+        <a class="back" href="/">← Back to Home</a>
       </nav>
+      <div class="sidebar-footer">
+        <div class="row"><span>STATUS</span><span class="ok" id="cfStatus">● live</span></div>
+        <div class="row"><span>LAST SYNC</span><span id="lastSync">—</span></div>
+      </div>
     </aside>
+
     <main class="main">
       <div class="topbar">
         <div>
-          <div class="title" id="pageTitle">Administrator Dashboard</div>
-          <div style="color:var(--muted);" id="pageSubtitle">Welcome to the admin dashboard. Use the bar on the left to navigate.</div>
+          <div class="title" id="pageTitle">Traffic</div>
+          <div class="subtitle" id="pageSubtitle">Real-time analytics powered by Cloudflare RUM</div>
         </div>
-        <div class="actions"></div>
+        <div class="pills" id="rangePills" data-section="traffic">
+          <button data-range="24h" class="active">24h</button>
+          <button data-range="7d">7d</button>
+          <button data-range="30d">30d</button>
+          <button data-range="90d">90d</button>
+        </div>
       </div>
 
-      <div id="welcome" class="screen active">
+      <!-- =============== TRAFFIC =============== -->
+      <div id="traffic" class="screen active">
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="label">Page views</div>
+            <div class="value" id="kpiPageviews">—</div>
+            <div class="delta neutral" id="kpiPageviewsDelta">—</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Visits</div>
+            <div class="value" id="kpiVisits">—</div>
+            <div class="delta neutral" id="kpiVisitsDelta">—</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Unique visitors</div>
+            <div class="value" id="kpiVisitors">—</div>
+            <div class="delta neutral" id="kpiVisitorsDelta">—</div>
+          </div>
+          <div class="kpi">
+            <div class="label">LCP p75</div>
+            <div class="value" id="kpiLcp">—</div>
+            <div class="delta neutral" id="kpiLcpStatus">—</div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-head">
+            <div class="title-s">Traffic over time</div>
+            <div class="pills" id="metricPills">
+              <button data-metric="pageviews" class="active">Page views</button>
+              <button data-metric="visits">Visits</button>
+              <button data-metric="visitors">Unique visitors</button>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <div id="trafficChart" class="lw-chart"></div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <h3>Top paths <span class="badge" id="topPathsRange">last 24h</span></h3>
+            <table class="ttable" id="topPathsTable">
+              <thead>
+                <tr>
+                  <th>Path</th>
+                  <th class="num">Views</th>
+                  <th class="num">LCP p75</th>
+                  <th>CWV</th>
+                </tr>
+              </thead>
+              <tbody id="topPathsBody">
+                <tr><td colspan="4" class="empty">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="panel">
+            <h3>Visitors by country <span class="badge" id="countriesRange">last 24h</span></h3>
+            <div class="barlist" id="countriesList">
+              <div class="empty">Loading…</div>
+            </div>
+          </div>
+        </div>
+
         <div class="panel">
-          <h3>Welcome</h3>
-          <p style="color:var(--muted); margin-top:0.5rem;">Welcome to the admin dashboard. Use the navigation on the left to manage moderators, bans, or review logs.</p>
+          <h3>Core Web Vitals <span class="badge">p75 · last 24h</span></h3>
+          <div class="cwv-grid">
+            <div class="cwv-card">
+              <div class="name">LCP</div>
+              <div class="v" id="cwvLcp">—</div>
+              <div class="seg">
+                <div class="g" id="cwvLcpG" style="flex:1"></div>
+                <div class="y" id="cwvLcpY" style="flex:0"></div>
+                <div class="r" id="cwvLcpR" style="flex:0"></div>
+              </div>
+              <div class="legend"><span id="cwvLcpGT">—% good</span><span id="cwvLcpYT">—%</span><span id="cwvLcpRT">—%</span></div>
+            </div>
+            <div class="cwv-card">
+              <div class="name">INP</div>
+              <div class="v" id="cwvInp">—</div>
+              <div class="seg">
+                <div class="g" id="cwvInpG" style="flex:1"></div>
+                <div class="y" id="cwvInpY" style="flex:0"></div>
+                <div class="r" id="cwvInpR" style="flex:0"></div>
+              </div>
+              <div class="legend"><span id="cwvInpGT">—% good</span><span id="cwvInpYT">—%</span><span id="cwvInpRT">—%</span></div>
+            </div>
+            <div class="cwv-card">
+              <div class="name">CLS</div>
+              <div class="v" id="cwvCls">—</div>
+              <div class="seg">
+                <div class="g" id="cwvClsG" style="flex:1"></div>
+                <div class="y" id="cwvClsY" style="flex:0"></div>
+                <div class="r" id="cwvClsR" style="flex:0"></div>
+              </div>
+              <div class="legend"><span id="cwvClsGT">—% good</span><span id="cwvClsYT">—%</span><span id="cwvClsRT">—%</span></div>
+            </div>
+          </div>
         </div>
       </div>
 
+      <!-- =============== MODERATORS =============== -->
       <div id="mods" class="screen">
         <div class="panel">
-          <h3>Add Moderator</h3>
+          <h3>Add moderator</h3>
           <label for="modUsername">Username</label>
           <input id="modUsername" type="text" placeholder="Enter username" />
-          <div class="actions" style="margin-top:0.75rem;">
-            <button class="btn primary" onclick="addModerator()">Add Moderator</button>
+          <div class="actions">
+            <button class="btn primary" onclick="addModerator()">Add moderator</button>
           </div>
-          <div id="status" class="status" style="color:var(--muted);"></div>
-          <h3 style="margin-top:1.2rem;">Current Moderators</h3>
-          <div id="modsList" class="list"></div>
+          <div id="status" class="status"></div>
         </div>
-        <div class="panel" style="margin-top:1rem;">
-          <h3>Remove Moderator</h3>
+        <div class="panel">
+          <h3>Current moderators</h3>
+          <div id="modsList" class="list"><div class="empty">Loading…</div></div>
+        </div>
+        <div class="panel">
+          <h3>Remove moderator</h3>
           <label for="removeUsername">Username</label>
           <input id="removeUsername" type="text" placeholder="Enter username" />
-          <div class="actions" style="margin-top:0.75rem;">
-            <button class="btn" onclick="removeModerator()">Remove Moderator</button>
+          <div class="actions">
+            <button class="btn danger" onclick="removeModerator()">Remove moderator</button>
           </div>
-          <div id="removeStatus" class="status" style="color:var(--muted);"></div>
+          <div id="removeStatus" class="status"></div>
         </div>
       </div>
 
+      <!-- =============== ACTIONS =============== -->
       <div id="actions" class="screen">
         <div class="panel">
-          <h3>Ban a User</h3>
+          <h3>Ban a user</h3>
           <label for="banUsername">Username</label>
           <input id="banUsername" placeholder="username" />
-          <label for="banReason" style="margin-top:0.5rem;">Reason</label>
+          <label for="banReason">Reason</label>
           <input id="banReason" placeholder="Reason for ban" />
-          <div class="actions" style="margin-top:0.75rem;">
-            <button class="btn primary" onclick="banUser()">Ban User</button>
+          <div class="actions">
+            <button class="btn primary" onclick="banUser()">Ban user</button>
           </div>
-          <div id="banStatus" style="margin-top:0.5rem;color:var(--muted);"></div>
+          <div id="banStatus" class="status"></div>
         </div>
-        <div class="panel" style="margin-top:1rem;">
-          <h3>Unban a User</h3>
+        <div class="panel">
+          <h3>Unban a user</h3>
           <label for="unbanUsername">Username</label>
           <input id="unbanUsername" placeholder="username" />
-          <label for="unbanReason" style="margin-top:0.5rem;">Reason</label>
+          <label for="unbanReason">Reason</label>
           <input id="unbanReason" placeholder="Reason for unban" />
-          <div class="actions" style="margin-top:0.75rem;">
-            <button class="btn" onclick="unbanUser()">Unban User</button>
+          <div class="actions">
+            <button class="btn" onclick="unbanUser()">Unban user</button>
           </div>
-          <div id="unbanStatus" style="margin-top:0.5rem;color:var(--muted);"></div>
+          <div id="unbanStatus" class="status"></div>
         </div>
       </div>
 
+      <!-- =============== LOGS =============== -->
       <div id="logs" class="screen">
         <div class="panel">
-          <div style="margin-top:0.5rem; font-weight:700;">Banned / Unbanned Users</div>
-          <div id="bans" class="list"></div>
-          <div style="margin-top:1rem; font-weight:700;">Deleted Posts</div>
-          <div id="deletes" class="list"></div>
+          <h3>Bans / Unbans</h3>
+          <div id="bans" class="list"><div class="empty">Loading…</div></div>
+        </div>
+        <div class="panel">
+          <h3>Deleted posts</h3>
+          <div id="deletes" class="list"><div class="empty">Loading…</div></div>
         </div>
       </div>
     </main>
   </div>
 
   <script>
+    // ============================================================
+    // STATE
+    // ============================================================
+    let currentRange = '24h';
+    let currentMetric = 'pageviews';
+    let trafficChart = null;
+    let trafficSeries = null;
+    let trafficResizeObserver = null;
+    let lastTraffic = null;
+
     document.addEventListener('DOMContentLoaded', () => {
-      applySavedTheme();
       setupNav();
+      setupRangePills();
+      setupMetricPills();
+      const initial = (location.hash || '#traffic').replace('#', '');
+      activate(initial in sectionTitles ? initial : 'traffic');
       loadMods();
       loadLogs();
+      loadTraffic(currentRange);
     });
 
-    function applySavedTheme() {
-      const saved = localStorage.getItem('theme') || 'light';
-      document.documentElement.setAttribute('data-theme', saved);
+    // ============================================================
+    // NAV
+    // ============================================================
+    const sectionTitles = {
+      traffic:  { title: 'Traffic',     subtitle: 'Real-time analytics powered by Cloudflare RUM', showRange: true },
+      mods:     { title: 'Moderators',  subtitle: 'Grant or revoke moderator access.',             showRange: false },
+      actions:  { title: 'Actions',     subtitle: 'Ban, unban, and cleanup.',                       showRange: false },
+      logs:     { title: 'Logs',        subtitle: 'Recent moderation activity.',                    showRange: false },
+    };
+
+    function activate(target) {
+      document.querySelectorAll('.screen').forEach(el => {
+        el.classList.toggle('active', el.id === target);
+      });
+      document.querySelectorAll('.nav a[data-target]').forEach(a => {
+        a.classList.toggle('active', a.dataset.target === target);
+      });
+      const meta = sectionTitles[target] || sectionTitles.traffic;
+      document.getElementById('pageTitle').textContent = meta.title;
+      document.getElementById('pageSubtitle').textContent = meta.subtitle;
+      document.getElementById('rangePills').style.display = meta.showRange ? 'inline-flex' : 'none';
     }
 
     function setupNav() {
-      const links = document.querySelectorAll('.nav a[data-target]');
-      const sections = {
-        welcome: document.getElementById('welcome'),
-        mods: document.getElementById('mods'),
-        actions: document.getElementById('actions'),
-        logs: document.getElementById('logs')
-      };
-      function activate(target) {
-        Object.keys(sections).forEach(key => {
-          const isActive = key === target;
-          sections[key].style.display = isActive ? 'block' : 'none';
-          sections[key].classList.toggle('active', isActive);
-        });
-        links.forEach(l => l.classList.toggle('active', l.dataset.target === target));
-        const title = document.getElementById('pageTitle');
-        const subtitle = document.getElementById('pageSubtitle');
-        if (target === 'welcome') {
-          title.textContent = 'Administrator Dashboard';
-          subtitle.textContent = 'Welcome to the admin dashboard. Use the bar on the left to navigate.';
-        } else if (target === 'mods') {
-          title.textContent = 'Moderators';
-          subtitle.textContent = 'Manage moderator access.';
-        } else if (target === 'actions') {
-          title.textContent = 'Actions';
-          subtitle.textContent = 'Ban, unban, and clean up.';
-        } else {
-          title.textContent = 'Logs';
-          subtitle.textContent = 'Review recent moderation actions.';
-        }
-      }
-      links.forEach(link => {
+      document.querySelectorAll('.nav a[data-target]').forEach(link => {
         link.addEventListener('click', (e) => {
-          if (!link.dataset.target) return; // allow Back to Home default behavior
           e.preventDefault();
           const target = link.dataset.target;
           activate(target);
           history.replaceState(null, '', `#${target}`);
         });
       });
-      const initial = (location.hash || '#welcome').replace('#', '');
-      activate(sections[initial] ? initial : 'welcome');
     }
 
-    function renderMod(mod) {
-      return `
-        <div class="row">
-          <div>
-            <strong>${mod.display_name || mod.username || 'Unknown'}</strong>
-            <div class="uid">@${mod.username || 'unknown'}</div>
-          </div>
-          <div class="uid">${mod.id || ''}</div>
+    function setupRangePills() {
+      document.querySelectorAll('#rangePills button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#rangePills button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentRange = btn.dataset.range;
+          loadTraffic(currentRange);
+        });
+      });
+    }
+
+    function setupMetricPills() {
+      document.querySelectorAll('#metricPills button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#metricPills button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentMetric = btn.dataset.metric;
+          if (lastTraffic) renderChart(lastTraffic);
+        });
+      });
+    }
+
+    // ============================================================
+    // TRAFFIC
+    // ============================================================
+    async function loadTraffic(range) {
+      const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+      setText('topPathsRange', `last ${range}`);
+      setText('countriesRange', `last ${range}`);
+      try {
+        const res = await fetch(`/api/admin/traffic?range=${encodeURIComponent(range)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed');
+        lastTraffic = data;
+        renderKPIs(data);
+        renderChart(data);
+        renderTopPaths(data);
+        renderCountries(data);
+        renderCWV(data);
+        setText('lastSync', formatLastSync(data.generated_at));
+        document.getElementById('cfStatus').textContent = '● live';
+        document.getElementById('cfStatus').classList.add('ok');
+      } catch (e) {
+        document.getElementById('cfStatus').textContent = '● offline';
+        document.getElementById('cfStatus').classList.remove('ok');
+        setText('lastSync', 'unavailable');
+        // Leave placeholder dashes in metrics so the layout still reads.
+        console.warn('Traffic load failed:', e.message);
+      }
+    }
+
+    function formatNum(n) {
+      if (n == null) return '—';
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+      return String(n);
+    }
+    function formatDelta(d) {
+      if (d == null) return { text: '—', cls: 'neutral' };
+      const sign = d > 0 ? '+' : '';
+      const cls = d > 0 ? 'up' : d < 0 ? 'down' : 'neutral';
+      return { text: `${sign}${d.toFixed(1)}% vs prev`, cls };
+    }
+    function formatLastSync(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+      if (diff < 60) return `${diff}s ago`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      return `${Math.floor(diff / 3600)}h ago`;
+    }
+
+    function renderKPIs(d) {
+      const k = d.kpis || {};
+      const setVal = (id, val) => document.getElementById(id).textContent = val;
+      const setDelta = (id, delta) => {
+        const el = document.getElementById(id);
+        const f = formatDelta(delta);
+        el.textContent = f.text;
+        el.className = 'delta ' + f.cls;
+      };
+      setVal('kpiPageviews', formatNum(k.pageviews));
+      setDelta('kpiPageviewsDelta', k.pageviews_delta);
+      setVal('kpiVisits', formatNum(k.visits));
+      setDelta('kpiVisitsDelta', k.visits_delta);
+      setVal('kpiVisitors', formatNum(k.visitors));
+      setDelta('kpiVisitorsDelta', k.visitors_delta);
+      setVal('kpiLcp', k.lcp_p75 != null ? Math.round(k.lcp_p75) + 'ms' : '—');
+      const status = document.getElementById('kpiLcpStatus');
+      const lcp = k.lcp_p75;
+      if (lcp == null) { status.textContent = '—'; status.className = 'delta neutral'; }
+      else if (lcp <= 2500) { status.textContent = 'Good'; status.className = 'delta up'; }
+      else if (lcp <= 4000) { status.textContent = 'Needs improvement'; status.className = 'delta neutral'; }
+      else { status.textContent = 'Poor'; status.className = 'delta down'; }
+    }
+
+    function renderChart(d) {
+      const ts = (d.timeseries || []);
+      const container = document.getElementById('trafficChart');
+      if (!container) return;
+
+      if (trafficChart) {
+        try { trafficResizeObserver?.disconnect(); } catch (e) {}
+        try { trafficChart.remove(); } catch (e) {}
+      }
+
+      trafficChart = LightweightCharts.createChart(container, {
+        autoSize: true,
+        layout: {
+          background: { type: 'solid', color: '#0b0b0f' },
+          textColor: '#5a5a6b'
+        },
+        grid: {
+          vertLines: { color: 'rgba(20,20,28,0.6)' },
+          horzLines: { color: 'rgba(20,20,28,0.6)' }
+        },
+        crosshair: {
+          mode: LightweightCharts.CrosshairMode.Normal,
+          vertLine: {
+            color: 'rgba(255,255,255,0.18)',
+            width: 1,
+            style: LightweightCharts.LineStyle.Dashed,
+            labelBackgroundColor: '#14141c'
+          },
+          horzLine: {
+            color: 'rgba(255,255,255,0.18)',
+            width: 1,
+            style: LightweightCharts.LineStyle.Dashed,
+            labelBackgroundColor: '#14141c'
+          }
+        },
+        rightPriceScale: {
+          borderColor: '#14141c',
+          scaleMargins: { top: 0.12, bottom: 0.12 }
+        },
+        timeScale: {
+          borderColor: '#14141c',
+          timeVisible: true,
+          secondsVisible: false,
+          rightOffset: 8,
+          barSpacing: 8,
+          minBarSpacing: 2
+        }
+      });
+      trafficSeries = trafficChart.addAreaSeries({
+        lineColor: '#4f8cff',
+        topColor: 'rgba(79, 140, 255, 0.35)',
+        bottomColor: 'rgba(79, 140, 255, 0)',
+        lineWidth: 2,
+        priceLineVisible: false,
+        lastValueVisible: true
+      });
+      const points = ts
+        .map(p => ({
+          time: Math.floor(new Date(p.t).getTime() / 1000),
+          value: Number(p[currentMetric] || 0)
+        }))
+        .filter(p => Number.isFinite(p.time) && Number.isFinite(p.value));
+      trafficSeries.setData(points);
+      trafficChart.timeScale().fitContent();
+
+      const resize = () => {
+        const rect = container.getBoundingClientRect();
+        trafficChart.applyOptions({
+          width: Math.max(1, Math.floor(rect.width)),
+          height: Math.max(1, Math.floor(rect.height))
+        });
+      };
+      trafficResizeObserver = new ResizeObserver(resize);
+      trafficResizeObserver.observe(container);
+      requestAnimationFrame(resize);
+    }
+
+    function cwvClass(metric, p75) {
+      // thresholds per web.dev
+      if (p75 == null) return 'neutral';
+      if (metric === 'lcp') return p75 <= 2500 ? 'good' : p75 <= 4000 ? 'warn' : 'bad';
+      if (metric === 'inp') return p75 <= 200  ? 'good' : p75 <= 500  ? 'warn' : 'bad';
+      if (metric === 'cls') return p75 <= 0.1  ? 'good' : p75 <= 0.25 ? 'warn' : 'bad';
+      return 'neutral';
+    }
+
+    function renderTopPaths(d) {
+      const body = document.getElementById('topPathsBody');
+      const rows = d.top_paths || [];
+      if (!rows.length) { body.innerHTML = '<tr><td colspan="4" class="empty">No data.</td></tr>'; return; }
+      body.innerHTML = rows.map(r => {
+        const cls = cwvClass('lcp', r.lcp_p75);
+        const label = cls === 'good' ? 'Good' : cls === 'warn' ? 'Needs improvement' : cls === 'bad' ? 'Poor' : '—';
+        const pillCls = cls === 'good' ? 'good' : cls === 'warn' ? 'warn' : cls === 'bad' ? 'bad' : '';
+        return `<tr>
+          <td class="mono">${escapeHtml(r.path)}</td>
+          <td class="mono num">${formatNum(r.views)}</td>
+          <td class="mono num">${r.lcp_p75 != null ? Math.round(r.lcp_p75) + 'ms' : '—'}</td>
+          <td><span class="stat-pill ${pillCls}">${label}</span></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderCountries(d) {
+      const list = document.getElementById('countriesList');
+      const rows = d.countries || [];
+      if (!rows.length) { list.innerHTML = '<div class="empty">No data.</div>'; return; }
+      const max = Math.max(...rows.map(r => r.views));
+      list.innerHTML = rows.map(r => {
+        const pct = max > 0 ? (r.views / max * 100) : 0;
+        return `<div class="row">
+          <div>${escapeHtml(r.country || 'Unknown')}</div>
+          <div class="track"><div class="fill" style="width:${pct.toFixed(1)}%"></div></div>
+          <div class="num mono">${formatNum(r.views)}</div>
         </div>`;
+      }).join('');
+    }
+
+    function renderCWV(d) {
+      const c = d.cwv || {};
+      const render = (key, val, unit) => {
+        const el = document.getElementById('cwv' + key);
+        if (!el) return;
+        if (val == null) { el.textContent = '—'; return; }
+        if (key === 'Cls') el.textContent = val.toFixed(2);
+        else el.textContent = Math.round(val) + unit;
+      };
+      render('Lcp', c.lcp_p75, 'ms');
+      render('Inp', c.inp_p75, 'ms');
+      render('Cls', c.cls_p75, '');
+
+      const setSeg = (prefix, dist) => {
+        const g = (dist && dist.good != null) ? dist.good : null;
+        const y = (dist && dist.ni != null)   ? dist.ni   : null;
+        const r = (dist && dist.poor != null) ? dist.poor : null;
+        document.getElementById('cwv' + prefix + 'G').style.flex = g != null ? g : 0;
+        document.getElementById('cwv' + prefix + 'Y').style.flex = y != null ? y : 0;
+        document.getElementById('cwv' + prefix + 'R').style.flex = r != null ? r : 0;
+        document.getElementById('cwv' + prefix + 'GT').textContent = g != null ? Math.round(g * 100) + '% good' : '—';
+        document.getElementById('cwv' + prefix + 'YT').textContent = y != null ? Math.round(y * 100) + '%' : '—';
+        document.getElementById('cwv' + prefix + 'RT').textContent = r != null ? Math.round(r * 100) + '%' : '—';
+      };
+      setSeg('Lcp', c.lcp_dist);
+      setSeg('Inp', c.inp_dist);
+      setSeg('Cls', c.cls_dist);
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // ============================================================
+    // MODERATORS (preserved API surface)
+    // ============================================================
+    function renderMod(mod) {
+      return `<div class="row-card">
+        <div>
+          <strong>${escapeHtml(mod.display_name || mod.username || 'Unknown')}</strong>
+          <div class="uid">@${escapeHtml(mod.username || 'unknown')}</div>
+        </div>
+        <div class="uid">${escapeHtml(mod.id || '')}</div>
+      </div>`;
     }
 
     async function loadMods() {
-      const res = await fetch('/api/admin/moderators');
-      const data = await res.json();
-      const list = document.getElementById('modsList');
-      if (!data.success || !data.moderators.length) {
-        list.innerHTML = '<div class="empty">No moderators found.</div>';
-        return;
+      try {
+        const res = await fetch('/api/admin/moderators');
+        const data = await res.json();
+        const list = document.getElementById('modsList');
+        if (!data.success || !data.moderators.length) {
+          list.innerHTML = '<div class="empty">No moderators found.</div>';
+          return;
+        }
+        list.innerHTML = data.moderators.map(renderMod).join('');
+      } catch (e) {
+        document.getElementById('modsList').innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
       }
-      list.innerHTML = data.moderators.map(renderMod).join('');
     }
 
     async function addModerator() {
       const status = document.getElementById('status');
       const username = document.getElementById('modUsername').value.trim();
-      if (!username) { status.textContent = 'Please enter a username.'; return; }
-      status.textContent = 'Adding moderator...';
+      if (!username) { status.textContent = 'Please enter a username.'; status.className = 'status err'; return; }
+      status.textContent = 'Adding moderator…'; status.className = 'status';
       try {
         const res = await fetch('/api/admin/moderators', {
           method: 'POST',
@@ -244,19 +977,19 @@
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.error);
-        status.textContent = 'Moderator added.';
+        status.textContent = 'Moderator added.'; status.className = 'status ok';
         document.getElementById('modUsername').value = '';
         loadMods();
       } catch (e) {
-        status.textContent = `Error: ${e.message}`;
+        status.textContent = `Error: ${e.message}`; status.className = 'status err';
       }
     }
 
     async function removeModerator() {
       const status = document.getElementById('removeStatus');
       const username = document.getElementById('removeUsername').value.trim();
-      if (!username) { status.textContent = 'Enter a username.'; return; }
-      status.textContent = 'Processing...';
+      if (!username) { status.textContent = 'Enter a username.'; status.className = 'status err'; return; }
+      status.textContent = 'Processing…'; status.className = 'status';
       try {
         const res = await fetch('/api/admin/moderators/remove', {
           method: 'POST',
@@ -265,20 +998,23 @@
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.error);
-        status.textContent = 'Moderator removed.';
+        status.textContent = 'Moderator removed.'; status.className = 'status ok';
         document.getElementById('removeUsername').value = '';
         loadMods();
       } catch (e) {
-        status.textContent = e.message || 'Failed to remove moderator';
+        status.textContent = e.message || 'Failed to remove moderator'; status.className = 'status err';
       }
     }
 
+    // ============================================================
+    // ACTIONS (preserved API surface)
+    // ============================================================
     async function banUser() {
       const status = document.getElementById('banStatus');
       const username = document.getElementById('banUsername').value.trim();
       const reason = document.getElementById('banReason').value.trim() || 'Not provided';
-      if (!username) { status.textContent = 'Enter a username.'; return; }
-      status.textContent = 'Processing...';
+      if (!username) { status.textContent = 'Enter a username.'; status.className = 'status err'; return; }
+      status.textContent = 'Processing…'; status.className = 'status';
       try {
         const lookup = await fetch(`/api/users/${encodeURIComponent(username)}`);
         const lookupData = await lookup.json();
@@ -291,10 +1027,10 @@
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Failed to ban');
-        status.textContent = 'User banned';
+        status.textContent = 'User banned.'; status.className = 'status ok';
         loadLogs();
       } catch (e) {
-        status.textContent = e.message || 'Failed to ban user';
+        status.textContent = e.message || 'Failed to ban user'; status.className = 'status err';
       }
     }
 
@@ -302,8 +1038,8 @@
       const status = document.getElementById('unbanStatus');
       const username = document.getElementById('unbanUsername').value.trim();
       const reason = document.getElementById('unbanReason').value.trim() || 'Not provided';
-      if (!username) { status.textContent = 'Enter a username.'; return; }
-      status.textContent = 'Processing...';
+      if (!username) { status.textContent = 'Enter a username.'; status.className = 'status err'; return; }
+      status.textContent = 'Processing…'; status.className = 'status';
       try {
         const lookup = await fetch(`/api/users/${encodeURIComponent(username)}`);
         const lookupData = await lookup.json();
@@ -316,34 +1052,35 @@
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Failed to unban');
-        status.textContent = 'User unbanned';
+        status.textContent = 'User unbanned.'; status.className = 'status ok';
         loadLogs();
       } catch (e) {
-        status.textContent = e.message || 'Failed to unban user';
+        status.textContent = e.message || 'Failed to unban user'; status.className = 'status err';
       }
     }
 
+    // ============================================================
+    // LOGS (preserved API surface)
+    // ============================================================
     function renderBan(entry) {
       const action = entry.type === 'unban_user' ? 'Unbanned' : 'Banned';
-      return `
-        <div class="row">
-          <div>
-            <strong>${action}</strong>
-            <div class="uid">${entry.target_username || 'unknown'} (${entry.target_user_id || ''})</div>
-          </div>
-          <div class="uid">${entry.reason || 'Not provided'}<br>${entry.actor_username || entry.actor_id || ''}<br>${entry.timestamp}</div>
-        </div>`;
+      return `<div class="row-card">
+        <div>
+          <strong>${action}</strong>
+          <div class="uid">${escapeHtml(entry.target_username || 'unknown')} (${escapeHtml(entry.target_user_id || '')})</div>
+        </div>
+        <div class="meta">${escapeHtml(entry.reason || 'Not provided')}<br>${escapeHtml(entry.actor_username || entry.actor_id || '')}<br>${escapeHtml(entry.timestamp || '')}</div>
+      </div>`;
     }
 
     function renderDelete(entry) {
-      return `
-        <div class="row">
-          <div>
-            <strong>Post ${entry.post_id}</strong>
-            <div class="uid">Owner: ${entry.target_user_id || ''}</div>
-          </div>
-          <div class="uid">${entry.reason || 'Not provided'}<br>${entry.actor_username || entry.actor_id || ''}<br>${entry.timestamp}</div>
-        </div>`;
+      return `<div class="row-card">
+        <div>
+          <strong>Post ${escapeHtml(entry.post_id)}</strong>
+          <div class="uid">Owner: ${escapeHtml(entry.target_user_id || '')}</div>
+        </div>
+        <div class="meta">${escapeHtml(entry.reason || 'Not provided')}<br>${escapeHtml(entry.actor_username || entry.actor_id || '')}<br>${escapeHtml(entry.timestamp || '')}</div>
+      </div>`;
     }
 
     async function loadLogs() {
@@ -356,7 +1093,7 @@
         document.getElementById('bans').innerHTML = bans.length ? bans.map(renderBan).join('') : '<div class="empty">No recent bans.</div>';
         document.getElementById('deletes').innerHTML = deletes.length ? deletes.map(renderDelete).join('') : '<div class="empty">No recent deletions.</div>';
       } catch (e) {
-        document.getElementById('bans').innerHTML = e.message || 'Failed to load logs';
+        document.getElementById('bans').innerHTML = `<div class="empty">${escapeHtml(e.message || 'Failed to load logs')}</div>`;
       }
     }
   </script>

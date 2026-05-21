@@ -233,7 +233,16 @@
             font-weight: 700;
             color: var(--accent-green);
             border: 1px solid var(--border-color);
+            overflow: hidden;
         }
+        .symbol-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+        .symbol-icon.has-logo img { display: block; }
+        .symbol-icon.has-logo span { display: none; }
         .symbol-text {
             display: flex;
             flex-direction: column;
@@ -279,6 +288,21 @@
         #chart {
             width: 100%;
             height: 100%;
+            position: relative;
+            cursor: crosshair;
+        }
+
+        #chart.is-dragging {
+            cursor: grabbing;
+        }
+
+        .gradient-line-overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
         }
         
         /* Data overlay in chart - top left */
@@ -408,7 +432,17 @@
             font-size: 12px;
             color: var(--accent-green);
             border: 1px solid var(--border-color);
+            overflow: hidden;
+            flex-shrink: 0;
         }
+        .search-result-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+        .search-result-icon.has-logo img { display: block; }
+        .search-result-icon.has-logo span { display: none; }
         .search-result-info { flex: 1; }
         .search-result-ticker {
             font-weight: 700;
@@ -522,7 +556,7 @@
         <!-- Chart Info Bar -->
         <div class="chart-info-bar">
             <div class="symbol-info">
-                <div class="symbol-icon" id="symbolIcon">●</div>
+                <div class="symbol-icon" id="symbolIcon"><img alt=""><span>●</span></div>
                 <div class="symbol-text">
                     <span class="symbol-ticker" id="symbolTicker">{{ ticker }}</span>
                     <span class="symbol-name" id="symbolName">Loading...</span>
@@ -586,8 +620,11 @@
         const ticker = '{{ ticker }}'.toUpperCase() || 'AAPL';
         let chart = null;
         let mainSeries = null;
-        let lineSeries = []; // Array to hold multiple line segments for coloring
+        let lineSeries = null;
         let volumeSeries = null;
+        let gradientCanvas = null;
+        let gradientCtx = null;
+        let gradientDrawFrame = null;
         let currentRange = '6m';
         let currentChartType = 'line'; // 'candle' or 'line'
         let priceData = [];
@@ -640,11 +677,118 @@
                 timeScale: { borderColor: colors.borderColor },
             });
         }
+
+        function initGradientOverlay(container) {
+            gradientCanvas = document.createElement('canvas');
+            gradientCanvas.className = 'gradient-line-overlay';
+            gradientCanvas.setAttribute('aria-hidden', 'true');
+            container.appendChild(gradientCanvas);
+            gradientCtx = gradientCanvas.getContext('2d');
+        }
+
+        function resizeGradientOverlay() {
+            if (!gradientCanvas || !gradientCtx) return;
+            const rect = gradientCanvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const width = Math.max(1, Math.floor(rect.width));
+            const height = Math.max(1, Math.floor(rect.height));
+            const pixelWidth = Math.floor(width * dpr);
+            const pixelHeight = Math.floor(height * dpr);
+            if (gradientCanvas.width !== pixelWidth || gradientCanvas.height !== pixelHeight) {
+                gradientCanvas.width = pixelWidth;
+                gradientCanvas.height = pixelHeight;
+            }
+            gradientCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function clearGradientLine() {
+            if (!gradientCanvas || !gradientCtx) return;
+            const rect = gradientCanvas.getBoundingClientRect();
+            gradientCtx.clearRect(0, 0, rect.width, rect.height);
+        }
+
+        function scheduleGradientLineDraw() {
+            if (gradientDrawFrame) return;
+            gradientDrawFrame = requestAnimationFrame(() => {
+                gradientDrawFrame = null;
+                drawGradientLine();
+            });
+        }
+
+        function drawGradientLine() {
+            if (!gradientCanvas || !gradientCtx) return;
+            resizeGradientOverlay();
+            clearGradientLine();
+            if (currentChartType !== 'line' || !lineSeries || priceData.length < 2) return;
+
+            const rect = gradientCanvas.getBoundingClientRect();
+            const points = [];
+            for (const point of priceData) {
+                const x = chart.timeScale().timeToCoordinate(point.time);
+                const y = lineSeries.priceToCoordinate(point.close);
+                if (x == null || y == null || !Number.isFinite(x) || !Number.isFinite(y)) continue;
+                if (x < -80 || x > rect.width + 80) continue;
+                points.push({ x, y });
+            }
+            if (points.length < 2) return;
+
+            const gradient = gradientCtx.createLinearGradient(0, 0, rect.width, 0);
+            gradient.addColorStop(0, '#6fdcff');
+            gradient.addColorStop(0.48, '#ff6eb8');
+            gradient.addColorStop(1, '#ffb36b');
+
+            gradientCtx.save();
+            gradientCtx.lineWidth = 2.35;
+            gradientCtx.lineJoin = 'round';
+            gradientCtx.lineCap = 'round';
+            gradientCtx.strokeStyle = gradient;
+            gradientCtx.beginPath();
+            gradientCtx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                gradientCtx.lineTo(points[i].x, points[i].y);
+            }
+            gradientCtx.stroke();
+            gradientCtx.restore();
+        }
         
+        // ============ LOGO LOADING ============
+        const logoCache = new Map();
+        function loadLogo(symbol, iconEl) {
+            if (!symbol || !iconEl) return;
+            const cached = logoCache.get(symbol);
+            if (cached === null) return;
+            if (cached) {
+                const img = iconEl.querySelector('img');
+                if (img) img.src = cached;
+                iconEl.classList.add('has-logo');
+                return;
+            }
+            fetch(`/api/logo/${encodeURIComponent(symbol)}`)
+                .then((res) => res.json())
+                .then((data) => {
+                    if (!data.success || !data.logo_url) {
+                        logoCache.set(symbol, null);
+                        return;
+                    }
+                    const img = iconEl.querySelector('img');
+                    if (!img) return;
+                    img.onload = () => {
+                        logoCache.set(symbol, data.logo_url);
+                        iconEl.classList.add('has-logo');
+                    };
+                    img.onerror = () => logoCache.set(symbol, null);
+                    img.src = data.logo_url;
+                })
+                .catch(() => logoCache.set(symbol, null));
+        }
+
         // ============ INITIALIZATION ============
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('symbolTicker').textContent = ticker;
-            document.getElementById('symbolIcon').textContent = ticker.slice(0, 2);
+            const symbolIconEl = document.getElementById('symbolIcon');
+            const symbolIconSpan = symbolIconEl.querySelector('span');
+            if (symbolIconSpan) symbolIconSpan.textContent = ticker.slice(0, 2);
+            loadLogo(ticker, symbolIconEl);
             
             initChart();
             loadChartData(currentRange);
@@ -656,6 +800,7 @@
         function initChart() {
             const container = document.getElementById('chart');
             const colors = getChartColors();
+            initGradientOverlay(container);
             
             chart = LightweightCharts.createChart(container, {
                 layout: {
@@ -714,23 +859,13 @@
             // Handle crosshair move for data display
             chart.subscribeCrosshairMove(param => {
                 if (param.time) {
-                    // Try to get data from any of the line series or main series
                     let mainData = null;
                     let volData = null;
                     
-                    if (mainSeries) {
+                    if (currentChartType === 'line' && lineSeries) {
+                        mainData = param.seriesData.get(lineSeries);
+                    } else if (mainSeries) {
                         mainData = param.seriesData.get(mainSeries);
-                    }
-                    
-                    // If line chart, check all line series
-                    if (!mainData && lineSeries.length > 0) {
-                        for (const series of lineSeries) {
-                            const data = param.seriesData.get(series);
-                            if (data) {
-                                mainData = data;
-                                break;
-                            }
-                        }
                     }
                     
                     if (volumeSeries) {
@@ -764,13 +899,23 @@
             container.addEventListener('dblclick', () => {
                 chart.timeScale().fitContent();
             });
+
+            container.addEventListener('pointerdown', () => {
+                container.classList.add('is-dragging');
+            });
+            window.addEventListener('pointerup', () => {
+                container.classList.remove('is-dragging');
+            });
+            window.addEventListener('pointercancel', () => {
+                container.classList.remove('is-dragging');
+            });
             
-            // Infinite scroll - detect when user scrolls to left edge
+            // Infinite scroll - prefetch before the user actually hits the edge.
             chart.timeScale().subscribeVisibleLogicalRangeChange((logicalRange) => {
                 if (!logicalRange || isLoadingMore || !hasMoreData) return;
+                scheduleGradientLineDraw();
                 
-                // If user has scrolled to show the first ~10% of data, load more
-                if (logicalRange.from < 10) {
+                if (logicalRange.from < 80) {
                     loadMoreHistory();
                 }
             });
@@ -780,6 +925,7 @@
                 if (entries.length === 0 || entries[0].target !== container) return;
                 const { width, height } = entries[0].contentRect;
                 chart.applyOptions({ width, height });
+                scheduleGradientLineDraw();
             });
             resizeObserver.observe(container);
         }
@@ -790,11 +936,8 @@
                 chart.removeSeries(mainSeries);
                 mainSeries = null;
             }
-            // Remove all line segments
-            lineSeries.forEach(s => {
-                try { chart.removeSeries(s); } catch(e) {}
-            });
-            lineSeries = [];
+            lineSeries = null;
+            clearGradientLine();
             
             if (volumeSeries) {
                 chart.removeSeries(volumeSeries);
@@ -811,8 +954,18 @@
                     wickDownColor: colors.accentRed,
                     wickUpColor: colors.accentGreen,
                 });
+            } else {
+                mainSeries = chart.addLineSeries({
+                    color: 'rgba(0, 0, 0, 0)',
+                    lineWidth: 1,
+                    priceLineColor: '#ffb36b',
+                    priceLineWidth: 1,
+                    lastValueVisible: true,
+                    priceLineVisible: true,
+                    crosshairMarkerVisible: false,
+                });
+                lineSeries = mainSeries;
             }
-            // For line chart, we'll create series in applyDataToChart
             
             volumeSeries = chart.addHistogramSeries({
                 color: colors.accentGreen,
@@ -850,70 +1003,13 @@
                 }));
                 mainSeries.setData(candleData);
             } else {
-                // For line chart, create separate series for each color segment
-                // First, remove any existing line series
-                lineSeries.forEach(s => {
-                    try { chart.removeSeries(s); } catch(e) {}
-                });
-                lineSeries = [];
-                
-                // Build segments based on direction changes
-                const segments = [];
-                let currentSegment = null;
-                
-                for (let i = 0; i < priceData.length; i++) {
-                    const p = priceData[i];
-                    const prevP = i > 0 ? priceData[i-1] : p;
-                    const isUp = p.close >= prevP.close;
-                    const color = isUp ? colors.accentGreen : colors.accentRed;
-                    
-                    if (!currentSegment || currentSegment.color !== color) {
-                        // Start new segment, but include the last point from previous segment for continuity
-                        if (currentSegment && currentSegment.data.length > 0) {
-                            segments.push(currentSegment);
-                        }
-                        currentSegment = {
-                            color: color,
-                            data: []
-                        };
-                        // Add previous point to connect segments smoothly
-                        if (i > 0) {
-                            currentSegment.data.push({
-                                time: prevP.time,
-                                value: prevP.close
-                            });
-                        }
-                    }
-                    
-                    currentSegment.data.push({
-                        time: p.time,
-                        value: p.close
-                    });
-                }
-                
-                // Don't forget the last segment
-                if (currentSegment && currentSegment.data.length > 0) {
-                    segments.push(currentSegment);
-                }
-                
-                // Create a line series for each segment
-                segments.forEach((seg, idx) => {
-                    const series = chart.addLineSeries({
-                        color: seg.color,
-                        lineWidth: 2,
-                        lastValueVisible: idx === segments.length - 1, // Only show on last segment
-                        priceLineVisible: idx === segments.length - 1,
-                        crosshairMarkerVisible: true,
-                        crosshairMarkerRadius: 4,
-                    });
-                    series.setData(seg.data);
-                    lineSeries.push(series);
-                });
-                
-                // Set mainSeries to the last one for crosshair tracking
-                if (lineSeries.length > 0) {
-                    mainSeries = lineSeries[lineSeries.length - 1];
-                }
+                const lineData = priceData.map(p => ({
+                    time: p.time,
+                    value: p.close,
+                }));
+                mainSeries.setData(lineData);
+                lineSeries = mainSeries;
+                scheduleGradientLineDraw();
             }
             
             const volumeData = priceData.map((p, i) => ({
@@ -1000,7 +1096,8 @@
             document.getElementById('loadingIndicator').classList.add('show');
             
             try {
-                const res = await fetch(`/api/price-history/${ticker}?before=${earliestDate}&count=100`);
+                const visibleRange = chart.timeScale().getVisibleLogicalRange();
+                const res = await fetch(`/api/price-history/${ticker}?before=${earliestDate}&count=400`);
                 const data = await res.json();
                 
                 if (!res.ok || !data.success) {
@@ -1032,6 +1129,7 @@
                     return;
                 }
                 
+                const addedBars = uniqueNewData.length;
                 priceData = [...uniqueNewData, ...priceData];
                 earliestDate = priceData[0].time;
                 
@@ -1039,6 +1137,14 @@
                 basePrice = priceData[0].close;
                 
                 applyDataToChart();
+
+                if (visibleRange && Number.isFinite(visibleRange.from) && Number.isFinite(visibleRange.to)) {
+                    chart.timeScale().setVisibleLogicalRange({
+                        from: visibleRange.from + addedBars,
+                        to: visibleRange.to + addedBars,
+                    });
+                }
+                scheduleGradientLineDraw();
                 
             } catch (e) {
                 console.error('Failed to load more history:', e);
@@ -1087,6 +1193,7 @@
                     btn.classList.add('active');
                     currentChartType = btn.dataset.type;
                     createSeries();
+                    scheduleGradientLineDraw();
                 });
             });
             
@@ -1184,7 +1291,10 @@
                     const el = document.createElement('div');
                     el.className = 'search-result';
                     el.innerHTML = `
-                        <div class="search-result-icon">${(t.symbol || '').slice(0, 2)}</div>
+                        <div class="search-result-icon">
+                            <img alt="">
+                            <span>${(t.symbol || '').slice(0, 2)}</span>
+                        </div>
                         <div class="search-result-info">
                             <div class="search-result-ticker">${t.symbol}</div>
                             <div class="search-result-name">${t.name || 'Symbol'}${t.exchange ? ` - ${t.exchange}` : ''}</div>
@@ -1192,6 +1302,7 @@
                     `;
                     el.onclick = () => navigateToTicker(t.symbol);
                     resultsEl.appendChild(el);
+                    if (t.symbol) loadLogo(t.symbol, el.querySelector('.search-result-icon'));
                 });
             } catch (e) {
                 if (e.name !== 'AbortError') console.error(e);

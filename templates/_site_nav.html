@@ -1,0 +1,500 @@
+{# ============================================================
+   SITE NAV — copied from design.html so every page shares the
+   same nav HTML / CSS / JS / transitions / underline logic.
+   Drop-in: just {% include '_site_nav.html' %} at top of <body>.
+
+   - CSS variables are scoped to .nav so they don't fight the host
+     page's :root.
+   - The scroll trigger uses window.scrollY > 80 (design.html uses
+     an IntersectionObserver on .hero, which other pages don't have).
+   - data-auth-link redirects to /auth when logged out, no-ops when
+     logged in (placeholders for Watchlist/Screener/News).
+   - Loads Inter from Google Fonts (design.html's body font) so the
+     nav looks identical even on hosts that don't already load Inter.
+   ============================================================ #}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="{{ url_for('static', filename='logo-nav.png', v=static_version('logo-nav.png')) }}" fetchpriority="high">
+<style>
+    /* Scoped CSS vars — local to the nav so they survive on any page */
+    .nav {
+        --snav-bg-0: #000000;
+        --snav-bg-1: #08080c;
+        --snav-bg-2: #0e0e14;
+        --snav-line: #1c1c28;
+        --snav-line-2: #2a2a3a;
+        --snav-ink-1: #f4f4f6;
+        --snav-ink-2: #9a9aae;
+
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 40px;
+        /* Lock font to match design.html so /markets and /community don't inherit
+           the host page's Space Grotesk and end up looking different from /. */
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        background: linear-gradient(180deg, rgba(0,0,0,0.6), transparent);
+        border-bottom: 1px solid transparent;
+        transition:
+            background 220ms ease,
+            border-bottom-color 400ms ease 80ms,
+            backdrop-filter 220ms ease;
+    }
+    .nav.scrolled {
+        background: var(--snav-bg-0);
+        border-bottom-color: var(--snav-line);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    .nav .nav-left,
+    .nav .nav-right { display: flex; align-items: center; gap: 28px; }
+
+    .nav .nav-left { position: relative; }
+    .nav .nav-left::before {
+        content: "";
+        position: absolute;
+        left: -600px;
+        width: 684px;
+        top: 50%;
+        transform: translateY(-50%);
+        height: 48px;
+        background: linear-gradient(to right,
+            var(--snav-bg-0) 0%,
+            var(--snav-bg-0) calc(100% - 16px),
+            transparent 100%);
+        z-index: 2;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 180ms ease 380ms;
+    }
+    .nav.scrolled .nav-left::before {
+        opacity: 1;
+        transition: opacity 180ms ease 0ms;
+    }
+
+    .nav .nav-logo {
+        position: relative;
+        z-index: 3;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: inherit;
+        font-weight: 700;
+        font-size: 14px;
+        letter-spacing: 0.02em;
+        color: var(--snav-ink-1);
+        text-decoration: none;
+    }
+    .nav .nav-logo .glyph {
+        width: 26px; height: 26px;
+        display: inline-block;
+        object-fit: contain;
+    }
+
+    .nav .nav-logo .brand-underline {
+        position: absolute;
+        left: 0; right: 0;
+        bottom: -6px;
+        height: 2px;
+        background: var(--snav-ink-1);
+        border-radius: 2px;
+        transform: scaleX(0);
+        transform-origin: right center;
+        transition: transform 450ms cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: none;
+        will-change: transform;
+    }
+    .nav.scrolled .nav-logo .brand-underline { transform: scaleX(1); }
+    .nav.scrolled .nav-left:hover .nav-logo .brand-underline { transform: scaleX(0); }
+
+    .nav .nav-links {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        transform: translateX(0);
+        transition: transform 380ms cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+    }
+    .nav.scrolled .nav-links {
+        transform: translateX(var(--nav-dock-offset, -200px));
+        pointer-events: none;
+    }
+    .nav.scrolled .nav-left:hover .nav-links {
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+
+    .nav .nav-links-underline {
+        position: absolute;
+        left: 0; right: 0;
+        bottom: -10px;
+        height: 2px;
+        background: var(--snav-ink-1);
+        border-radius: 2px;
+        transform: scaleX(0);
+        transform-origin: left center;
+        transition: transform 450ms cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: none;
+        will-change: transform;
+    }
+    .nav.scrolled .nav-left:hover .nav-links-underline { transform: scaleX(1); }
+
+    .nav .nav-link {
+        display: inline-block;
+        padding: 0;
+        margin: 0;
+        background: transparent;
+        border: none;
+        color: var(--snav-ink-2);
+        text-decoration: none;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1;
+        transition: color 150ms ease;
+    }
+    .nav .nav-link:hover,
+    .nav .nav-link.active { color: var(--snav-ink-1); }
+
+    .nav .nav-cta {
+        background: var(--snav-ink-1);
+        color: var(--snav-bg-0);
+        padding: 9px 16px;
+        font-family: inherit;
+        font-weight: 600;
+        font-size: 12px;
+        border: 1px solid var(--snav-ink-1);
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 150ms ease, border-color 150ms ease;
+    }
+    .nav .nav-cta:hover { background: #ffffff; border-color: #ffffff; }
+
+    .nav .nav-right { position: relative; }
+    .nav .nav-user {
+        position: relative;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        transform: translateX(0);
+        transition: transform 420ms cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+    }
+    .nav .nav-user.show { display: inline-flex; }
+    .nav.scrolled .nav-user { transform: translateX(var(--user-dock-offset, 70px)); }
+    .nav.scrolled .nav-right:hover .nav-user { transform: translateX(0); }
+
+    .nav .nav-user-name {
+        opacity: 1;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--snav-ink-1);
+        white-space: nowrap;
+        transition: opacity 260ms ease;
+    }
+    .nav.scrolled .nav-user-name { opacity: 0; pointer-events: none; }
+    .nav.scrolled .nav-right:hover .nav-user-name { opacity: 1; pointer-events: auto; }
+
+    .nav .nav-user-pic {
+        position: relative;
+        z-index: 4;
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        border-radius: 50%;
+        background: var(--snav-bg-2);
+        border: 1px solid var(--snav-line-2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 12px;
+        color: var(--snav-ink-1);
+        overflow: hidden;
+        letter-spacing: 0;
+    }
+    .nav .nav-user-pic img { width: 100%; height: 100%; object-fit: cover; }
+
+    .nav .nav-user-menu {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        min-width: 180px;
+        background: var(--snav-bg-1);
+        border: 1px solid var(--snav-line);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        z-index: 50;
+        opacity: 0;
+        transform: translateY(-4px);
+        pointer-events: none;
+        transition: opacity 160ms ease, transform 160ms ease;
+    }
+    .nav .nav-user-menu.open {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+    .nav .nav-user-menu a,
+    .nav .nav-user-menu button {
+        display: block;
+        width: 100%;
+        padding: 12px 16px;
+        background: transparent;
+        border: none;
+        text-align: left;
+        color: var(--snav-ink-1);
+        text-decoration: none;
+        font-family: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 120ms ease;
+    }
+    .nav .nav-user-menu a:hover,
+    .nav .nav-user-menu button:hover { background: var(--snav-bg-2); }
+
+    .nav-dev-popover {
+        position: fixed;
+        z-index: 1000;
+        padding: 10px 12px;
+        background: var(--snav-bg-1);
+        border: 1px solid var(--snav-line);
+        color: var(--snav-ink-1);
+        box-shadow: 0 16px 40px rgba(0,0,0,0.42);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1;
+        opacity: 0;
+        transform: translateY(-4px);
+        pointer-events: none;
+        transition: opacity 140ms ease, transform 140ms ease;
+    }
+
+    .nav-dev-popover.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    @media (max-width: 720px) {
+        .nav { padding: 14px 20px; }
+    }
+</style>
+
+<nav class="nav" id="siteNav">
+    <div class="nav-left">
+        <a href="/" class="nav-logo" id="navLogo">
+            <img src="{{ url_for('static', filename='logo-nav.png', v=static_version('logo-nav.png')) }}" class="glyph" alt="VSN" width="26" height="26" loading="eager" decoding="sync" fetchpriority="high">
+            <span>VSN</span>
+            <span class="brand-underline" aria-hidden="true"></span>
+        </a>
+        <div class="nav-links" id="navLinks">
+            <a href="/markets" class="nav-link{% if active_nav == 'markets' %} active{% endif %}">Markets</a>
+            <a href="#" class="nav-link" data-auth-link>Watchlist</a>
+            <a href="#" class="nav-link" data-auth-link>Screener</a>
+            <a href="#" class="nav-link" data-auth-link>News</a>
+            <a href="/community" class="nav-link{% if active_nav == 'community' %} active{% endif %}">Community</a>
+            <span class="nav-links-underline" aria-hidden="true"></span>
+        </div>
+    </div>
+    <div class="nav-right" id="navRight" style="visibility: hidden;">
+        <a href="/auth?signup=1" class="nav-cta" id="joinCta">Join VSN</a>
+        <div class="nav-user" id="navUser">
+            <div class="nav-user-pic" id="navUserPic"></div>
+            <span class="nav-user-name" id="navUserName"></span>
+            <div class="nav-user-menu" id="navUserMenu">
+                <a href="/profile" id="navProfileLink">Profile</a>
+                <a href="/profile">Account Settings</a>
+                <button type="button" id="navUserLogout">Sign out</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function() {
+    // ----- 1. Scroll → .scrolled class on nav -----
+    const nav = document.getElementById('siteNav');
+    if (!nav) return;
+    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 80);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    // ----- 2. Compute dock offset for the nav-links translateX -----
+    const logo = document.getElementById('navLogo');
+    const links = document.getElementById('navLinks');
+    function updateDockOffset() {
+        if (!logo || !links) return;
+        const wasScrolled = nav.classList.contains('scrolled');
+        if (wasScrolled) nav.classList.remove('scrolled');
+        const logoRect = logo.getBoundingClientRect();
+        const linksRect = links.getBoundingClientRect();
+        if (wasScrolled) nav.classList.add('scrolled');
+        const offset = (logoRect.right - linksRect.left) - linksRect.width;
+        document.documentElement.style.setProperty('--nav-dock-offset', `${offset}px`);
+    }
+    updateDockOffset();
+    window.addEventListener('resize', updateDockOffset);
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(updateDockOffset);
+    }
+
+    // ----- 3. Auth state + user widget + dropdown + logout -----
+    let isAuthenticated = false;
+    const navRight = document.getElementById('navRight');
+    const joinCta = document.getElementById('joinCta');
+    const navUser = document.getElementById('navUser');
+    const navUserPic = document.getElementById('navUserPic');
+    const navUserName = document.getElementById('navUserName');
+    const navUserMenu = document.getElementById('navUserMenu');
+    const navUserLogout = document.getElementById('navUserLogout');
+    const navProfileLink = document.getElementById('navProfileLink');
+
+    // Optimistic restore from localStorage — if the user was logged in on the
+    // last page they visited, render that state immediately, then fetch in
+    // the background to confirm. Eliminates the "Join VSN" flash on repeat
+    // visits. Cleared on logout.
+    const AUTH_CACHE_KEY = 'vsn-nav-auth-cache';
+    function readCachedAuth() {
+        try {
+            const raw = localStorage.getItem(AUTH_CACHE_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch (_) { return null; }
+    }
+    function writeCachedAuth(state, user) {
+        try {
+            if (state === 'in') localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({ state: 'in', user }));
+            else localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({ state: 'out' }));
+        } catch (_) { /* private mode, no big deal */ }
+    }
+
+    function initials(name) {
+        return (name || '').split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+    }
+
+    function applyUserDockOffset() {
+        if (!navUser || !navUserName) return;
+        const cs = getComputedStyle(navUser);
+        const gap = parseFloat(cs.columnGap || cs.gap || '0') || 0;
+        const nameRect = navUserName.getBoundingClientRect();
+        const offset = nameRect.width + gap;
+        document.documentElement.style.setProperty('--user-dock-offset', `${offset}px`);
+    }
+
+    function reveal() {
+        if (navRight) navRight.style.visibility = 'visible';
+    }
+
+    function showLoggedIn(user) {
+        isAuthenticated = true;
+        const displayName = user.display_name || (user.email || '').split('@')[0] || 'You';
+        navUserName.textContent = displayName;
+        navUserPic.innerHTML = '';
+        if (user.avatar_url) {
+            const img = document.createElement('img');
+            img.src = user.avatar_url;
+            img.alt = displayName;
+            navUserPic.appendChild(img);
+        } else {
+            navUserPic.textContent = initials(displayName);
+        }
+        if (joinCta) joinCta.style.display = 'none';
+        if (navProfileLink && user.username) {
+            navProfileLink.href = `/community/user/${encodeURIComponent(user.username)}`;
+        }
+        navUser.classList.add('show');
+        reveal();
+        requestAnimationFrame(applyUserDockOffset);
+    }
+
+    function showLoggedOut() {
+        isAuthenticated = false;
+        navUser.classList.remove('show');
+        if (joinCta) joinCta.style.display = 'inline-block';
+        reveal();
+    }
+
+    window.addEventListener('resize', applyUserDockOffset);
+
+    // 1. Optimistic render from cache (instant on repeat visits)
+    const cached = readCachedAuth();
+    if (cached && cached.state === 'in' && cached.user) {
+        showLoggedIn(cached.user);
+    } else if (cached && cached.state === 'out') {
+        showLoggedOut();
+    }
+
+    // 2. Fetch the real state and correct if it changed
+    fetch('/api/auth/user')
+        .then(r => r.json())
+        .then(d => {
+            if (d && (d.authenticated || d.success) && d.user) {
+                showLoggedIn(d.user);
+                writeCachedAuth('in', d.user);
+            } else {
+                showLoggedOut();
+                writeCachedAuth('out');
+            }
+        })
+        .catch(() => {
+            // Don't blow away a cached "in" on a transient network blip —
+            // only fall back to logged-out if we had no cache to begin with.
+            if (!cached) showLoggedOut();
+        });
+
+    if (navUser && navUserMenu) {
+        navUser.addEventListener('click', (e) => {
+            if (navUserMenu.contains(e.target)) return;
+            e.stopPropagation();
+            navUserMenu.classList.toggle('open');
+        });
+        document.addEventListener('click', () => navUserMenu.classList.remove('open'));
+    }
+    if (navUserLogout) {
+        navUserLogout.addEventListener('click', async () => {
+            try { await fetch('/api/logout', { method: 'POST' }); } catch (_) {}
+            // Clear the cached auth state so the next page load doesn't briefly
+            // show the avatar before the new logged-out fetch resolves.
+            try { localStorage.removeItem(AUTH_CACHE_KEY); } catch (_) {}
+            window.location.href = '/';
+        });
+    }
+
+    function showDevPopover(anchor) {
+        let popover = document.getElementById('navDevPopover');
+        if (!popover) {
+            popover = document.createElement('div');
+            popover.id = 'navDevPopover';
+            popover.className = 'nav-dev-popover';
+            popover.textContent = 'In development!';
+            document.body.appendChild(popover);
+        }
+        const rect = anchor.getBoundingClientRect();
+        popover.classList.add('show');
+        const popRect = popover.getBoundingClientRect();
+        const left = Math.min(Math.max(12, rect.left + rect.width / 2 - popRect.width / 2), window.innerWidth - popRect.width - 12);
+        popover.style.left = `${left}px`;
+        popover.style.top = `${rect.bottom + 12}px`;
+        clearTimeout(showDevPopover.timer);
+        showDevPopover.timer = setTimeout(() => popover.classList.remove('show'), 1700);
+    }
+
+    // ----- 4. In-development nav links -----
+    document.querySelectorAll('[data-auth-link]').forEach(a => {
+        a.addEventListener('click', (e) => {
+            e.preventDefault();
+            showDevPopover(a);
+        });
+    });
+})();
+</script>

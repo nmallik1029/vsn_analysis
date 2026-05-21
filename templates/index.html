@@ -72,7 +72,7 @@
             document.documentElement.setAttribute('data-theme', saved);
         })();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -208,9 +208,10 @@
         .chart-card .chart-canvas {
             width: 100% !important;
             height: 380px !important;
+            display: block;
             transition: opacity 0.18s ease, height 0.25s ease;
         }
-        .chart-card.full canvas {
+        .chart-card.full .chart-canvas {
             height: calc(100vh - 220px) !important;
         }
         .chart-card.loading .chart-canvas {
@@ -1817,7 +1818,7 @@
                         <div class="nav-dropdown-group">
                             <span class="nav-dropdown-title">Explore</span>
                             <a href="/markets">Market overview</a>
-                            <a href="/blog">Community feed</a>
+                            <a href="/community">Community feed</a>
                         </div>
                         <div class="nav-dropdown-meta">
                             <span>Signal: score + trend</span>
@@ -1845,18 +1846,18 @@
                     </div>
                 </div>
                 <div class="nav-item" data-nav-item>
-                    <a href="/blog" class="nav-link">Community</a>
+                    <a href="/community" class="nav-link">Community</a>
                     <div class="nav-dropdown">
                         <div class="nav-dropdown-group">
                             <span class="nav-dropdown-title">Community</span>
-                            <a href="/blog">Latest posts</a>
-                            <a href="/blog#trending">Trending tags</a>
-                            <a href="/blog/new">Create a post</a>
+                            <a href="/community">Latest posts</a>
+                            <a href="/community#trending">Trending tags</a>
+                            <a href="/community/new">Create a post</a>
                         </div>
                         <div class="nav-dropdown-group">
                             <span class="nav-dropdown-title">You</span>
                             <a href="/profile">Your profile</a>
-                            <a href="/blog#community-feed">Live feed</a>
+                            <a href="/community#community-feed">Live feed</a>
                         </div>
                         <div class="nav-dropdown-meta">
                             <span>Share: charts, notes, screenshots</span>
@@ -1963,7 +1964,7 @@
                         </div>
                     </div>
                 </div>
-                <canvas id="priceChart" class="chart-canvas" height="140"></canvas>
+                <div id="priceChart" class="chart-canvas"></div>
             </div>
 
             <!-- Score Section -->
@@ -2085,6 +2086,8 @@
 
     // Price chart logic
     let priceChart = null;
+    let priceSeries = null;
+    let priceResizeObserver = null;
 
     function generateSyntheticData(days) {
         const labels = [];
@@ -2102,6 +2105,44 @@
 
     const rangeDays = { '1d': 5, '5d': 10, '1m': 30, '6m': 180, '1y': 365, '5y': 365 * 5 };
 
+    function parseLightweightTime(value) {
+        if (typeof value === 'number') return value;
+        if (!value) return undefined;
+        const raw = String(value);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+        const parsed = Date.parse(raw.includes('T') ? raw : raw.replace(' ', 'T'));
+        return Number.isNaN(parsed) ? raw.slice(0, 10) : Math.floor(parsed / 1000);
+    }
+
+    function sortPriceRows(rows) {
+        return [...rows].sort((a, b) => {
+            const aVal = typeof a.date === 'number' ? a.date * 1000 : Date.parse(a.date);
+            const bVal = typeof b.date === 'number' ? b.date * 1000 : Date.parse(b.date);
+            return aVal - bVal;
+        });
+    }
+
+    function getPriceChartTheme() {
+        const styles = getComputedStyle(document.documentElement);
+        return {
+            background: styles.getPropertyValue('--bg-card').trim() || '#0b0b0f',
+            text: styles.getPropertyValue('--text-secondary').trim() || '#888899',
+            grid: 'rgba(255,255,255,0.05)',
+            border: styles.getPropertyValue('--border-color').trim() || '#14141c',
+            blue: styles.getPropertyValue('--accent-blue').trim() || '#4f8cff'
+        };
+    }
+
+    function resizePriceChart() {
+        const container = document.getElementById('priceChart');
+        if (!priceChart || !container) return;
+        const rect = container.getBoundingClientRect();
+        priceChart.applyOptions({
+            width: Math.max(1, Math.floor(rect.width)),
+            height: Math.max(1, Math.floor(rect.height))
+        });
+    }
+
     async function getRangeData(rangeKey) {
         if (!window.currentTicker) return generateSyntheticData(180);
         try {
@@ -2110,7 +2151,7 @@
             if (!res.ok || !data.success || !data.prices || !data.prices.length) {
                 throw new Error('No price data');
             }
-            const sorted = [...data.prices].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const sorted = sortPriceRows(data.prices);
             return { labels: sorted.map(p => p.date), data: sorted.map(p => p.close) };
         } catch (e) {
             return generateSyntheticData(rangeDays[rangeKey] || 180);
@@ -2118,48 +2159,70 @@
     }
 
     function initPriceChart() {
-        const ctx = document.getElementById('priceChart').getContext('2d');
-        const crosshair = {
-            id: 'vline',
-            afterDatasetsDraw(chart) {
-                const {ctx} = chart;
-                const active = chart.tooltip?.getActiveElements?.();
-                if (!active || !active.length) return;
-                const x = active[0].element.x;
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(x, chart.chartArea.top);
-                ctx.lineTo(x, chart.chartArea.bottom);
-                ctx.lineWidth = 1;
-                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-                ctx.stroke();
-                ctx.restore();
-            }
-        };
-        priceChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: [], datasets: [{ label: 'Price', data: [], borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-blue'), backgroundColor: 'transparent', tension: 0.2, pointRadius: 2, pointHoverRadius: 5, fill: true }] },
-            options: {
-                responsive: true,
-                interaction: { mode: 'nearest', intersect: false, axis: 'x' },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { 
-                        enabled: true, 
-                        mode: 'nearest',
-                        intersect: false,
-                        callbacks: { 
-                            label: ctx => `$${ctx.parsed.y.toFixed(2)}` 
-                        } 
-                    }
+        document.getElementById('chartCard').style.display = 'block';
+        const container = document.getElementById('priceChart');
+        const colors = getPriceChartTheme();
+        priceChart = LightweightCharts.createChart(container, {
+            autoSize: true,
+            layout: {
+                background: { type: 'solid', color: colors.background },
+                textColor: colors.text
+            },
+            grid: {
+                vertLines: { color: colors.grid },
+                horzLines: { color: colors.grid }
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+                vertLine: {
+                    color: 'rgba(255,255,255,0.22)',
+                    width: 1,
+                    style: LightweightCharts.LineStyle.Dashed,
+                    labelBackgroundColor: colors.border
                 },
-                scales: {
-                    x: { display: true, ticks: { maxTicksLimit: 8, color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    y: { display: true, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                horzLine: {
+                    color: 'rgba(255,255,255,0.22)',
+                    width: 1,
+                    style: LightweightCharts.LineStyle.Dashed,
+                    labelBackgroundColor: colors.border
                 }
             },
-            plugins: [crosshair]
+            rightPriceScale: {
+                borderColor: colors.border,
+                scaleMargins: { top: 0.12, bottom: 0.12 }
+            },
+            timeScale: {
+                borderColor: colors.border,
+                timeVisible: true,
+                secondsVisible: false,
+                rightOffset: 8,
+                barSpacing: 6,
+                minBarSpacing: 2
+            },
+            handleScroll: {
+                mouseWheel: true,
+                pressedMouseMove: true,
+                horzTouchDrag: true,
+                vertTouchDrag: false
+            },
+            handleScale: {
+                axisPressedMouseMove: true,
+                mouseWheel: true,
+                pinch: true
+            }
         });
+        priceSeries = priceChart.addAreaSeries({
+            lineColor: colors.blue,
+            topColor: 'rgba(68,136,255,0.25)',
+            bottomColor: 'rgba(68,136,255,0)',
+            lineWidth: 2,
+            priceLineVisible: false,
+            lastValueVisible: true,
+            crosshairMarkerRadius: 4
+        });
+        priceResizeObserver?.disconnect();
+        priceResizeObserver = new ResizeObserver(resizePriceChart);
+        priceResizeObserver.observe(container);
 
         const rangeButtons = document.querySelectorAll('.range-buttons button[data-range]');
         rangeButtons.forEach(btn => {
@@ -2176,27 +2239,24 @@
                 card.classList.toggle('full');
                 expandBtn.textContent = card.classList.contains('full') ? 'Shrink' : 'Expand';
                 document.body.style.overflow = card.classList.contains('full') ? 'hidden' : '';
-                priceChart?.resize();
+                requestAnimationFrame(resizePriceChart);
             });
         }
 
         updateChart('1m');
-        document.getElementById('chartCard').style.display = 'block';
     }
 
     async function updateChart(rangeKey) {
         const card = document.getElementById('chartCard');
         card?.classList.add('loading');
         const { labels, data } = await getRangeData(rangeKey);
-        if (!priceChart) return;
-        const ctx = priceChart.ctx;
-        const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
-        gradient.addColorStop(0, 'rgba(68,136,255,0.25)');
-        gradient.addColorStop(1, 'rgba(10,10,15,0)');
-        priceChart.data.labels = labels;
-        priceChart.data.datasets[0].data = data;
-        priceChart.data.datasets[0].backgroundColor = gradient;
-        priceChart.update();
+        if (!priceChart || !priceSeries) return;
+        const points = data
+            .map((value, index) => ({ time: parseLightweightTime(labels[index]), value: Number(value) }))
+            .filter(point => point.time !== undefined && Number.isFinite(point.value));
+        priceSeries.setData(points);
+        resizePriceChart();
+        priceChart.timeScale().fitContent();
 
         // overlay
         if (data && data.length > 1) {

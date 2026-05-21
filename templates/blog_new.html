@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>New Post | VSN Analysis</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="preload" as="image" href="{{ url_for('static', filename='logo-nav.png', v=static_version('logo-nav.png')) }}" fetchpriority="high">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         (function() {
@@ -647,7 +648,7 @@
     <header class="site-header">
         <div class="header-left">
             <a href="/" class="brand">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="VSN Logo">
+                <img src="{{ url_for('static', filename='logo-nav.png', v=static_version('logo-nav.png')) }}" alt="VSN Logo" width="36" height="36" loading="eager" decoding="sync" fetchpriority="high">
                 <span>VSN Analysis</span>
             </a>
             <form class="nav-search" id="navSearchForm" onsubmit="return handleNavSearch(event)">
@@ -668,7 +669,7 @@
                     <div class="nav-dropdown-group">
                         <span class="nav-dropdown-title">Explore</span>
                         <a href="/markets">Market overview</a>
-                        <a href="/blog">Community feed</a>
+                        <a href="/community">Community feed</a>
                     </div>
                     <div class="nav-dropdown-meta">
                         <span>Signal: score + trend</span>
@@ -696,18 +697,18 @@
                 </div>
             </div>
             <div class="nav-item">
-                <a href="/blog" class="nav-link active">Community</a>
+                <a href="/community" class="nav-link active">Community</a>
                 <div class="nav-dropdown">
                     <div class="nav-dropdown-group">
                         <span class="nav-dropdown-title">Community</span>
-                        <a href="/blog">Latest posts</a>
-                        <a href="/blog#trending">Trending tags</a>
-                        <a href="/blog/new">Create a post</a>
+                        <a href="/community">Latest posts</a>
+                        <a href="/community#trending">Trending tags</a>
+                        <a href="/community/new">Create a post</a>
                     </div>
                     <div class="nav-dropdown-group">
                         <span class="nav-dropdown-title">You</span>
                         <a href="/profile">Your profile</a>
-                        <a href="/blog#community-feed">Live feed</a>
+                        <a href="/community#community-feed">Live feed</a>
                     </div>
                     <div class="nav-dropdown-meta">
                         <span>Share: charts, notes, screenshots</span>
@@ -717,7 +718,7 @@
             </div>
         </nav>
         <div class="nav-actions">
-            <a href="/blog/new" id="newPostBtn" class="btn btn-primary" style="display:none;">
+            <a href="/community/new" id="newPostBtn" class="btn btn-primary" style="display:none;">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -774,7 +775,7 @@
 
     <nav class="nav">
         <div class="nav-left">
-            <a href="/blog" class="back-btn">
+            <a href="/community" class="back-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
@@ -1005,7 +1006,7 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Failed to create post');
                 showToast('Post published!', 'success');
-                setTimeout(() => window.location.href = '/blog/post/' + data.post.id, 1000);
+                setTimeout(() => window.location.href = '/community/post/' + data.post.id, 1000);
             } catch (e) {
                 console.error('Publish failed:', e);
                 showToast(e.message, 'error');

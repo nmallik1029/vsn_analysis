@@ -4,7 +4,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PORT=8080
+    PORT=8080 \
+    BUILD_BUMP=2
 
 # Runtime libs for Pillow and matplotlib. All Python deps ship manylinux
 # wheels, so no compiler / -dev packages are needed.

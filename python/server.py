@@ -22,7 +22,7 @@ from supabase import create_client
 from PIL import Image
 from io import BytesIO
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Set
 
 
@@ -41,6 +41,8 @@ SEARCH_CACHE = {}
 SEARCH_CACHE_TTL = 30
 LOGO_CACHE = {}
 LOGO_CACHE_TTL = 60 * 60 * 6
+NAME_CACHE = {}
+NAME_CACHE_TTL = 60 * 60 * 24 * 7
 YAHOO_SESSION = requests.Session()
 YAHOO_SESSION.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
@@ -79,6 +81,21 @@ CORS(app)  # Allow cross-origin requests
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.jinja_env.auto_reload = True
 
+def static_version(filename: str) -> int:
+    """Return a stable cache-busting version for static assets."""
+    try:
+        return int(os.path.getmtime(os.path.join(app.static_folder, filename)))
+    except OSError:
+        return 0
+
+app.jinja_env.globals['static_version'] = static_version
+
+@app.after_request
+def cache_versioned_static_assets(response):
+    if request.path.startswith('/static/') and request.args.get('v'):
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    return response
+
 # ============================================
 # CONFIGURATION
 # ============================================
@@ -92,9 +109,19 @@ SUPABASE_SERVICE_ROLE_KEY = os.environ.get(
     'SUPABASE_SERVICE_ROLE_KEY',  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0eHhuaGprbmp3bWxzcXhkb3Z2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTk1NjYwNCwiZXhwIjoyMDgxNTMyNjA0fQ.dNzVNFHniymLC1__--0-l7q4pQrALwbqRzCZXZWup10'
 )
 
+# Cloudflare Web Analytics (RUM) — powers /api/admin/traffic.
+# CLOUDFLARE_API_TOKEN: API token with Account Analytics:Read + Zone Analytics:Read.
+# CLOUDFLARE_ACCOUNT_ID: account tag (32-char hex) from the dash URL.
+# CLOUDFLARE_SITE_TAG: Web Analytics site tag from /web-analytics/edit/<tag>.
+CLOUDFLARE_API_TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN', '')
+CLOUDFLARE_ACCOUNT_ID = os.environ.get('CLOUDFLARE_ACCOUNT_ID', '')
+CLOUDFLARE_SITE_TAG = os.environ.get('CLOUDFLARE_SITE_TAG', '')
+
 DATA_DIR = os.path.dirname(__file__)
 ADMIN_FILE = os.path.join(DATA_DIR, 'admin.json')
 MODERATOR_FILE = os.path.join(DATA_DIR, 'moderators.json')
+FOLLOWS_FILE = os.path.join(DATA_DIR, 'follows.json')
+FOLLOWS_TABLE_AVAILABLE = None
 
 MODERATOR_EMAILS = {
     e.strip().lower() for e in os.environ.get('MODERATOR_EMAILS', '').split(',') if e.strip()
@@ -125,6 +152,28 @@ def _save_id_file(path: str, key: str, values: Set[str]):
             json.dump({key: sorted(values)}, f, indent=2)
     except Exception as e:
         print(f"Failed to save id file {path}: {e}")
+
+
+def _load_follow_rows() -> list[dict]:
+    try:
+        if not os.path.exists(FOLLOWS_FILE):
+            return []
+        with open(FOLLOWS_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        rows = data.get('follows') if isinstance(data, dict) else data
+        if isinstance(rows, list):
+            return [row for row in rows if row.get('follower_id') and row.get('following_id')]
+    except Exception as e:
+        print(f"Failed to load follows file: {e}")
+    return []
+
+
+def _save_follow_rows(rows: list[dict]):
+    try:
+        with open(FOLLOWS_FILE, 'w', encoding='utf-8') as f:
+            json.dump({'follows': rows}, f, indent=2)
+    except Exception as e:
+        print(f"Failed to save follows file: {e}")
 
 
 ADMIN_IDS = _load_id_file(ADMIN_FILE, 'admins')
@@ -461,6 +510,21 @@ def require_auth_page(f):
 # ============================================
 @app.route('/')
 def home():
+    return render_template('design.html')
+
+
+@app.route('/design')
+def design_system():
+    return render_template('design.html')
+
+
+@app.route('/demo')
+def demo_page():
+    return render_template('demo.html')
+
+
+@app.route('/landing-legacy')
+def landing_legacy():
     user = None
     avatar_url = None
     display_name = None
@@ -586,7 +650,7 @@ def get_current_user():
         return jsonify({'authenticated': False}), 200
 
     res = supabase.table('usernames') \
-        .select('display_name, avatar_url') \
+        .select('username, display_name, avatar_url') \
         .eq('user_id', user['id']) \
         .single() \
         .execute()
@@ -605,6 +669,7 @@ def get_current_user():
             'id': user.get('id'),
             'email': user.get('email'),
             'created_at': user.get('created_at'),
+            'username': data.get('username'),
             'display_name': data.get('display_name'),
             'avatar_url': avatar_url
         },
@@ -626,15 +691,194 @@ def logout():
 # ============================================
 # STOCK API ROUTES
 # ============================================
+# Cache for Yahoo's "most actives" screen (top tickers by volume).
+# Refreshed at most once every 5 minutes. A background thread (started at
+# the bottom of this module) keeps it warm so the first user click on
+# "Open the markets" doesn't pay the cold-fetch tax.
+_VOLUME_CACHE = {"symbols": [], "ts": 0.0}
+_VOLUME_CACHE_TTL = 300  # seconds
+
+
+def _fetch_most_active(limit: int = 100) -> list[str]:
+    """Return ticker symbols ordered by current trading volume (highest first).
+
+    Backed by Yahoo's `most_actives` predefined screener. Cached in-process
+    to avoid hammering Yahoo when many users hit the search. The same call
+    also populates NAME_CACHE so subsequent name lookups are free.
+    """
+    now = time.time()
+    if _VOLUME_CACHE["symbols"] and now - _VOLUME_CACHE["ts"] < _VOLUME_CACHE_TTL:
+        return _VOLUME_CACHE["symbols"]
+    try:
+        url = "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved"
+        params = {
+            "scrIds": "most_actives",
+            "count": limit,
+            "start": 0,
+            "formatted": "false",
+            "lang": "en-US",
+            "region": "US",
+        }
+        res = requests.get(url, params=params, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+        if res.status_code != 200:
+            return _VOLUME_CACHE["symbols"]
+        payload = res.json()
+        quotes = payload.get("finance", {}).get("result", [{}])[0].get("quotes", []) or []
+        ordered = sorted(
+            (q for q in quotes if q.get("symbol")),
+            key=lambda q: q.get("regularMarketVolume", 0) or 0,
+            reverse=True,
+        )
+        symbols = []
+        for q in ordered:
+            sym = q["symbol"]
+            symbols.append(sym)
+            # Piggy-back: warm the name cache so the search response can
+            # return names without a second round-trip.
+            NAME_CACHE[sym] = {
+                "name": q.get("shortName") or q.get("longName") or sym,
+                "exchange": q.get("fullExchangeName") or q.get("exchange") or "",
+                "type": q.get("quoteType") or "EQUITY",
+                "ts": now,
+            }
+        _VOLUME_CACHE["symbols"] = symbols
+        _VOLUME_CACHE["ts"] = now
+        return symbols
+    except Exception as e:
+        print(f"fetch most_active failed: {e}")
+        return _VOLUME_CACHE["symbols"]
+
+
+# Cache full search results per query so pagination doesn't re-hit Yahoo.
+# Keyed by uppercase query string -> {"results": [...], "ts": float}
+_TYPED_SEARCH_CACHE = {}
+_TYPED_SEARCH_CACHE_TTL = 60 * 5  # 5 minutes
+
+
+# Quote types our chart pipeline can actually serve (yfinance / our pricing
+# code only handles US equities, ETFs, and indices reliably). Mutual funds,
+# futures, options, crypto, forex etc. would show in search but 404 on the
+# chart page, so we filter them out.
+_CHARTABLE_QUOTE_TYPES = {"EQUITY", "ETF", "INDEX"}
+
+
+def _yahoo_search_full(q: str) -> list[dict]:
+    """Hit Yahoo's `/v1/finance/search`, which returns rich quote data
+    (symbol, name, type, exchange) WITHOUT needing auth crumbs.
+
+    Filtered to quote types our chart endpoint can actually load.
+    Cached per-query; also warms NAME_CACHE so other code paths benefit.
+    """
+    key = q.upper()
+    now = time.time()
+    cached = _TYPED_SEARCH_CACHE.get(key)
+    if cached and now - cached['ts'] < _TYPED_SEARCH_CACHE_TTL:
+        return cached['results']
+
+    results = []
+    try:
+        payload = _fetch_yahoo_search(q, limit=50)
+        for yq in payload.get('quotes', []):
+            sym = yq.get('symbol')
+            if not sym:
+                continue
+            qtype = (yq.get('quoteType') or 'EQUITY').upper()
+            if qtype not in _CHARTABLE_QUOTE_TYPES:
+                continue
+            name = yq.get('shortname') or yq.get('longname') or sym
+            results.append({"symbol": sym, "name": name})
+            NAME_CACHE[sym] = {
+                "name": name,
+                "exchange": yq.get('exchDisp') or yq.get('exchange') or '',
+                "type": qtype,
+                "ts": now,
+            }
+    except Exception as e:
+        print(f"yahoo search failed for {q!r}: {e}")
+
+    # Supplement with local ALL_TICKERS prefix matches Yahoo didn't return
+    # (these are all US equities/ETFs from tickers.json, so chartable).
+    seen = {r['symbol'] for r in results}
+    for t in ALL_TICKERS:
+        if t.startswith(key) and t not in seen:
+            cached_name = NAME_CACHE.get(t, {}).get('name')
+            results.append({"symbol": t, "name": cached_name or t})
+
+    _TYPED_SEARCH_CACHE[key] = {"results": results, "ts": now}
+    return results
+
+
 @app.route('/api/search-tickers')
 def search_tickers():
-    """Search for ticker symbols."""
-    q = request.args.get('q', '').upper()
-    if not q:
-        return jsonify([])
+    """Paginated ticker search.
 
-    matches = [t for t in ALL_TICKERS if t.startswith(q)]
-    return jsonify(matches[:10])
+    Query params:
+      q       — prefix (uppercase). Empty returns top-by-volume.
+      offset  — page start (default 0)
+      limit   — page size (default 20, max 50)
+
+    Returns `[{ "symbol": ..., "name": ... }]`.
+    """
+    q = request.args.get('q', '').upper().strip()
+    try:
+        offset = max(0, int(request.args.get('offset', 0)))
+    except (TypeError, ValueError):
+        offset = 0
+    try:
+        limit = max(1, min(50, int(request.args.get('limit', 20))))
+    except (TypeError, ValueError):
+        limit = 20
+
+    if not q:
+        # Empty query -> top by volume (cached, warmed at boot)
+        by_volume = _fetch_most_active(limit=200)
+        page = by_volume[offset:offset + limit]
+        info = _enrich_with_names(page) if page else {}
+        return jsonify([
+            {"symbol": s, "name": (info.get(s) or {}).get("name", s)}
+            for s in page
+        ])
+
+    # Non-empty query -> Yahoo search, which returns names alongside symbols
+    # and covers stocks/funds/futures/indices like TradingView does.
+    full = _yahoo_search_full(q)
+    return jsonify(full[offset:offset + limit])
+
+
+def _enrich_with_names(symbols: list[str]) -> dict:
+    """Look up name + exchange for a batch of tickers, with long-lived cache."""
+    now = time.time()
+    info_by_symbol = {}
+    to_fetch = []
+    for s in symbols:
+        cached = NAME_CACHE.get(s)
+        if cached and now - cached['ts'] < NAME_CACHE_TTL:
+            info_by_symbol[s] = cached
+        else:
+            to_fetch.append(s)
+
+    if to_fetch:
+        try:
+            url = 'https://query2.finance.yahoo.com/v7/finance/quote'
+            resp = YAHOO_SESSION.get(url, params={'symbols': ','.join(to_fetch)}, timeout=5)
+            resp.raise_for_status()
+            quotes = resp.json().get('quoteResponse', {}).get('result', []) or []
+            for q in quotes:
+                sym = q.get('symbol')
+                if not sym:
+                    continue
+                info = {
+                    'name': q.get('shortName') or q.get('longName') or sym,
+                    'exchange': q.get('fullExchangeName') or q.get('exchange') or '',
+                    'type': q.get('quoteType') or 'EQUITY',
+                    'ts': now,
+                }
+                NAME_CACHE[sym] = info
+                info_by_symbol[sym] = info
+        except Exception as e:
+            print(f"Name enrichment failed: {e}")
+
+    return info_by_symbol
 
 
 def _fetch_yahoo_search(query: str, limit: int = 12) -> dict:
@@ -661,8 +905,31 @@ def _fetch_yahoo_trending(region: str = 'US') -> list[dict]:
     return results[0].get('quotes', [])
 
 
-def _filter_quotes(quotes: list[dict], mode: str) -> list[dict]:
-    results = []
+def _score_quote(symbol: str, name: str, query: str) -> int:
+    if not query:
+        return 50
+    q = query.upper()
+    s = (symbol or '').upper()
+    n = (name or '').upper()
+    if s == q:
+        return 100
+    if s.startswith(q):
+        # shorter completions rank higher (AA before AAPL when query is 'A')
+        return 90 - min(len(s) - len(q), 20)
+    # Word-boundary match in company name
+    for word in n.split():
+        if word.startswith(q):
+            return 50
+    if q in s:
+        return 40
+    if q in n:
+        return 25
+    return 0
+
+
+def _filter_quotes(quotes: list[dict], mode: str, query: str = '', yahoo_known: set = None) -> list[dict]:
+    yahoo_known = yahoo_known or set()
+    scored = []
     for quote in quotes:
         quote_type = quote.get('quoteType', '')
         if mode == 'indices':
@@ -674,37 +941,34 @@ def _filter_quotes(quotes: list[dict], mode: str) -> list[dict]:
         symbol = quote.get('symbol') or ''
         name = quote.get('shortname') or quote.get('longname') or symbol
         exchange = quote.get('exchDisp') or quote.get('exchange') or ''
-        results.append({
+
+        relevance = _score_quote(symbol, name, query)
+        # Below this threshold the match is too tenuous to show
+        if query and relevance < 25:
+            continue
+        # Bonus for tickers Yahoo also surfaced (popularity signal)
+        if symbol in yahoo_known:
+            relevance += 15
+        # Bonus for tickers we already know have a logo
+        cached = LOGO_CACHE.get(symbol.upper())
+        if cached and cached.get('url'):
+            relevance += 10
+
+        scored.append((relevance, {
             'symbol': symbol,
             'name': name,
             'exchange': exchange,
             'type': quote_type
-        })
-    return results[:10]
+        }))
+
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+    return [r for _, r in scored[:10]]
 
 
-def _domain_from_url(value: str) -> str | None:
-    try:
-        parsed = urlparse(value)
-        host = parsed.netloc or parsed.path
-        if host.startswith('www.'):
-            host = host[4:]
-        return host or None
-    except Exception:
-        return None
-
-
-def _fetch_company_website(symbol: str) -> str | None:
-    url = f'https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}'
-    params = {'modules': 'assetProfile'}
-    resp = YAHOO_SESSION.get(url, params=params, timeout=5)
-    resp.raise_for_status()
-    payload = resp.json()
-    result = payload.get('quoteSummary', {}).get('result') or []
-    if not result:
-        return None
-    profile = result[0].get('assetProfile') or {}
-    return profile.get('website')
+LOGO_SOURCES = (
+    lambda s: f'https://financialmodelingprep.com/image-stock/{s}.png',
+    lambda s: f'https://assets.parqet.com/logos/symbol/{s}',
+)
 
 
 @app.route('/api/logo/<symbol>')
@@ -716,63 +980,22 @@ def get_logo(symbol):
     now = time.time()
     cached = LOGO_CACHE.get(symbol)
     if cached and now - cached['ts'] < LOGO_CACHE_TTL:
-        return jsonify({'success': True, 'logo_url': cached['url']})
+        if cached['url']:
+            return jsonify({'success': True, 'logo_url': cached['url']})
+        return jsonify({'success': False})
 
-    try:
-        # Try to discover company website via Yahoo first
-        website = None
+    for build_url in LOGO_SOURCES:
+        url = build_url(symbol)
         try:
-            website = _fetch_company_website(symbol)
+            r = requests.head(url, timeout=3, allow_redirects=True)
+            if r.status_code == 200 and r.headers.get('Content-Type', '').startswith('image'):
+                LOGO_CACHE[symbol] = {'ts': now, 'url': url}
+                return jsonify({'success': True, 'logo_url': url})
         except Exception:
-            # Yahoo may block requests (401); continue to fallback heuristics
-            website = None
+            continue
 
-        domain = _domain_from_url(website or '')
-
-        # Helper to test a Clearbit URL quickly and cache if valid
-        def _test_and_cache(domain_candidate: str):
-            if not domain_candidate:
-                return None
-            logo_url = f'https://logo.clearbit.com/{domain_candidate}'
-            try:
-                r = requests.get(logo_url, timeout=4, stream=True)
-                if r.status_code == 200 and r.headers.get('Content-Type', '').startswith('image'):
-                    LOGO_CACHE[symbol] = {'ts': now, 'url': logo_url}
-                    return logo_url
-            except Exception:
-                return None
-            return None
-
-        # 1) If yahoo returned a website, try its domain
-        if domain:
-            ok = _test_and_cache(domain)
-            if ok:
-                return jsonify({'success': True, 'logo_url': ok})
-
-        # 2) Fallback: try a few guessed domains
-        guesses = []
-        # prefer lowercased symbol.com
-        guesses.append(f"{symbol.lower()}.com")
-        guesses.append(f"{symbol}.com")
-
-        # 3) If we have a small watchlist name, try name -> domain
-        name = WATCHLIST.get(symbol)
-        if name:
-            # turn 'Apple Inc' -> 'apple.com'
-            slug = re.sub(r"[^a-z0-9]+", '', name.lower())
-            if slug:
-                guesses.append(f"{slug}.com")
-
-        for g in guesses:
-            ok = _test_and_cache(g)
-            if ok:
-                return jsonify({'success': True, 'logo_url': ok})
-
-        # nothing found
-        return jsonify({'success': False})
-    except Exception as e:
-        print(f"Logo fetch error for {symbol}: {e}")
-        return jsonify({'success': False})
+    LOGO_CACHE[symbol] = {'ts': now, 'url': None}
+    return jsonify({'success': False})
 
 
 @app.route('/api/search')
@@ -789,7 +1012,38 @@ def search_symbols():
         return jsonify({'success': True, 'results': cached['data']})
 
     try:
-        if query:
+        quotes = []
+        yahoo_known = set()  # symbols Yahoo returned for this query — popularity signal
+        if query and mode == 'symbols':
+            # Hit Yahoo first to learn which tickers it considers relevant
+            try:
+                payload = _fetch_yahoo_search(query)
+                for yq in payload.get('quotes', []):
+                    sym = yq.get('symbol')
+                    if sym:
+                        yahoo_known.add(sym)
+                        quotes.append(yq)
+            except Exception:
+                pass
+
+            # Prefix-match locally against the full ticker universe — surfaces
+            # obvious results (AAPL, AMD, AMZN for 'A') that Yahoo misses on
+            # short queries. Enrich with names from Yahoo's batch quote endpoint.
+            q_upper = query.upper()
+            local_matches = [t for t in ALL_TICKERS if t.startswith(q_upper)][:15]
+            seen = {q.get('symbol') for q in quotes}
+            new_matches = [s for s in local_matches if s not in seen]
+            if new_matches:
+                info_by_symbol = _enrich_with_names(new_matches)
+                for sym in new_matches:
+                    info = info_by_symbol.get(sym, {})
+                    quotes.append({
+                        'symbol': sym,
+                        'shortname': info.get('name', sym),
+                        'exchDisp': info.get('exchange', ''),
+                        'quoteType': info.get('type', 'EQUITY'),
+                    })
+        elif query:
             payload = _fetch_yahoo_search(query)
             quotes = payload.get('quotes', [])
         else:
@@ -799,7 +1053,7 @@ def search_symbols():
             else:
                 quotes = _fetch_yahoo_trending('US')
 
-        results = _filter_quotes(quotes, mode)
+        results = _filter_quotes(quotes, mode, query, yahoo_known)
         SEARCH_CACHE[cache_key] = {'ts': now, 'data': results}
         return jsonify({'success': True, 'results': results})
     except Exception as e:
@@ -1014,6 +1268,7 @@ def markets_movers():
     if not gainers and not losers:
         return jsonify({'success': False, 'error': 'No movers data'}), 500
     return jsonify({'success': True, 'gainers': gainers, 'losers': losers})
+
 
 @app.route('/api/username_available')
 def username_available():
@@ -1474,11 +1729,158 @@ def sanitize_tag(tag):
     return tag
 
 
+def count_table_rows(table_name: str, **filters) -> int:
+    """Count rows without making profile rendering depend on optional tables."""
+    try:
+        query = supabase.table(table_name).select('id', count='exact')
+        for key, value in filters.items():
+            if value is None:
+                query = query.is_(key, 'null')
+            else:
+                query = query.eq(key, value)
+        result = query.execute()
+        if result.count is not None:
+            return result.count
+        return len(result.data or [])
+    except Exception as e:
+        if table_name != 'follows' or 'PGRST205' not in str(e):
+            print(f"Count failed for {table_name}: {e}")
+        return 0
+
+
+def _mark_follows_unavailable(error: Exception):
+    global FOLLOWS_TABLE_AVAILABLE
+    if 'PGRST205' in str(error) or 'Could not find the table' in str(error):
+        FOLLOWS_TABLE_AVAILABLE = False
+
+
+def get_follow_counts(user_id: str) -> tuple[int, int]:
+    """Return follower/following counts, using Supabase when available."""
+    global FOLLOWS_TABLE_AVAILABLE
+    if FOLLOWS_TABLE_AVAILABLE is not False:
+        try:
+            followers_result = supabase.table('follows') \
+                .select('id', count='exact') \
+                .eq('following_id', user_id) \
+                .execute()
+            following_result = supabase.table('follows') \
+                .select('id', count='exact') \
+                .eq('follower_id', user_id) \
+                .execute()
+            FOLLOWS_TABLE_AVAILABLE = True
+            followers = followers_result.count if followers_result.count is not None else len(followers_result.data or [])
+            following = following_result.count if following_result.count is not None else len(following_result.data or [])
+            return followers, following
+        except Exception as e:
+            _mark_follows_unavailable(e)
+            if FOLLOWS_TABLE_AVAILABLE is not False:
+                print(f"Follow count failed: {e}")
+
+    rows = _load_follow_rows()
+    followers = sum(1 for row in rows if row.get('following_id') == user_id)
+    following = sum(1 for row in rows if row.get('follower_id') == user_id)
+    return followers, following
+
+
+def get_public_user_stats(user_id: str) -> dict:
+    """Fetch profile counters concurrently so public profiles feel immediate."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        post_future = executor.submit(count_table_rows, 'posts', user_id=user_id, deleted_at=None)
+        repost_future = executor.submit(count_table_rows, 'posts', user_id=user_id, is_repost=True)
+        comment_future = executor.submit(count_table_rows, 'comments', user_id=user_id)
+        follow_future = executor.submit(get_follow_counts, user_id)
+
+        follower_count, following_count = follow_future.result()
+        return {
+            'post_count': post_future.result(),
+            'repost_count': repost_future.result(),
+            'comment_count': comment_future.result(),
+            'follower_count': follower_count,
+            'following_count': following_count
+        }
+
+
+def is_following_user(follower_id: str | None, following_id: str | None) -> bool:
+    if not follower_id or not following_id:
+        return False
+    if FOLLOWS_TABLE_AVAILABLE is not False:
+        try:
+            result = supabase.table('follows') \
+                .select('id') \
+                .eq('follower_id', follower_id) \
+                .eq('following_id', following_id) \
+                .limit(1) \
+                .execute()
+            return bool(result.data)
+        except Exception as e:
+            _mark_follows_unavailable(e)
+
+    return any(
+        row.get('follower_id') == follower_id and row.get('following_id') == following_id
+        for row in _load_follow_rows()
+    )
+
+
+def follow_user(follower_id: str, following_id: str) -> bool:
+    global FOLLOWS_TABLE_AVAILABLE
+    if follower_id == following_id:
+        return False
+    if is_following_user(follower_id, following_id):
+        return True
+    if FOLLOWS_TABLE_AVAILABLE is not False:
+        try:
+            supabase.table('follows').insert({
+                'follower_id': follower_id,
+                'following_id': following_id
+            }).execute()
+            FOLLOWS_TABLE_AVAILABLE = True
+            return True
+        except Exception as e:
+            _mark_follows_unavailable(e)
+            if FOLLOWS_TABLE_AVAILABLE is not False:
+                print(f"Follow insert failed: {e}")
+
+    rows = _load_follow_rows()
+    rows.append({
+        'follower_id': follower_id,
+        'following_id': following_id,
+        'created_at': datetime.utcnow().isoformat()
+    })
+    _save_follow_rows(rows)
+    return True
+
+
+def unfollow_user(follower_id: str, following_id: str) -> bool:
+    global FOLLOWS_TABLE_AVAILABLE
+    if FOLLOWS_TABLE_AVAILABLE is not False:
+        try:
+            supabase.table('follows') \
+                .delete() \
+                .eq('follower_id', follower_id) \
+                .eq('following_id', following_id) \
+                .execute()
+            FOLLOWS_TABLE_AVAILABLE = True
+            return True
+        except Exception as e:
+            _mark_follows_unavailable(e)
+            if FOLLOWS_TABLE_AVAILABLE is not False:
+                print(f"Follow delete failed: {e}")
+
+    rows = [
+        row for row in _load_follow_rows()
+        if not (row.get('follower_id') == follower_id and row.get('following_id') == following_id)
+    ]
+    _save_follow_rows(rows)
+    return True
+
+
 def get_user_profile_by_username(username: str):
     """Fetch user profile data by username, including public avatar URL."""
     try:
         res = supabase.table('usernames') \
-            .select('user_id, username, display_name, avatar_url') \
+            .select('*') \
             .eq('username', username) \
             .single() \
             .execute()
@@ -1491,12 +1893,15 @@ def get_user_profile_by_username(username: str):
             avatar_url = supabase.storage.from_('avatars').get_public_url(
                 res.data['avatar_url']
             )
+        stats = get_public_user_stats(res.data['user_id'])
         
         return {
             'id': res.data['user_id'],
             'username': res.data.get('username'),
             'display_name': res.data.get('display_name'),
-            'avatar_url': avatar_url
+            'avatar_url': avatar_url,
+            'created_at': res.data.get('created_at'),
+            **stats
         }
     except Exception as e:
         print(f"Error fetching user by username: {e}")
@@ -1510,10 +1915,21 @@ def get_posts():
     limit = min(request.args.get('limit', 20, type=int), 50)
     tag = request.args.get('tag', '').strip()
     user_id_filter = request.args.get('user_id', '').strip()
+    username_filter = request.args.get('username', '').strip()
     sort = request.args.get('sort', 'recent')
     offset = (page - 1) * limit
     
     try:
+        if username_filter and not user_id_filter:
+            user_result = supabase.table('usernames') \
+                .select('user_id') \
+                .eq('username', username_filter) \
+                .single() \
+                .execute()
+            if not user_result.data:
+                return jsonify({'success': True, 'posts': [], 'page': page, 'limit': limit, 'has_more': False})
+            user_id_filter = user_result.data['user_id']
+
         query = supabase.table('posts') \
             .select('*, usernames!inner(username, display_name, avatar_url), post_images(id, image_path, display_order), post_tags(tags(id, name))') \
             .is_('deleted_at', 'null')
@@ -1538,11 +1954,14 @@ def get_posts():
             )]
         
         user_votes = {}
+        user_reposts = set()
         access_token = session.get('supabase_access_token')
         if access_token:
             user = get_user_from_token(access_token)
             if user:
                 post_ids = [p['id'] for p in posts]
+                original_ids = [p.get('original_post_id') for p in posts if p.get('original_post_id')]
+                repost_target_ids = list(set(post_ids + original_ids))
                 if post_ids:
                     votes_result = supabase.table('post_votes') \
                         .select('post_id, vote_type') \
@@ -1550,6 +1969,13 @@ def get_posts():
                         .in_('post_id', post_ids) \
                         .execute()
                     user_votes = {v['post_id']: v['vote_type'] for v in (votes_result.data or [])}
+                if repost_target_ids:
+                    reposts_result = supabase.table('reposts') \
+                        .select('original_post_id') \
+                        .eq('user_id', user['id']) \
+                        .in_('original_post_id', repost_target_ids) \
+                        .execute()
+                    user_reposts = {r['original_post_id'] for r in (reposts_result.data or [])}
         
         formatted_posts = []
         for post in posts:
@@ -1584,7 +2010,8 @@ def get_posts():
                 },
                 'images': images,
                 'tags': tags,
-                'user_vote': user_votes.get(post['id'])
+                'user_vote': user_votes.get(post['id']),
+                'user_reposted': (post.get('original_post_id') or post['id']) in user_reposts
             })
         
         return jsonify({
@@ -1605,8 +2032,43 @@ def get_user_by_username(username):
     profile = get_user_profile_by_username(username)
     if not profile:
         return jsonify({'error': 'User not found'}), 404
+
+    access_token = session.get('supabase_access_token')
+    current_user = get_user_from_token(access_token) if access_token else None
+    current_user_id = current_user.get('id') if current_user else None
+    profile['is_self'] = current_user_id == profile['id']
+    profile['is_following'] = is_following_user(current_user_id, profile['id'])
     
     return jsonify({'success': True, 'user': profile})
+
+
+@app.route('/api/users/<username>/follow', methods=['POST', 'DELETE'])
+@require_auth
+def follow_user_by_username(username):
+    """Follow or unfollow another public profile."""
+    profile = get_user_profile_by_username(username)
+    if not profile:
+        return jsonify({'error': 'User not found'}), 404
+
+    follower_id = request.user['id']
+    following_id = profile['id']
+    if follower_id == following_id:
+        return jsonify({'error': 'You cannot follow yourself'}), 400
+
+    if request.method == 'DELETE':
+        unfollow_user(follower_id, following_id)
+        is_following = False
+    else:
+        follow_user(follower_id, following_id)
+        is_following = True
+
+    follower_count, following_count = get_follow_counts(following_id)
+    return jsonify({
+        'success': True,
+        'is_following': is_following,
+        'follower_count': follower_count,
+        'following_count': following_count
+    })
 
 
 @app.route('/api/admin/moderators', methods=['GET', 'POST'])
@@ -1679,6 +2141,365 @@ def remove_moderator():
     except Exception as e:
         print(f"Error removing moderator: {e}")
         return jsonify({'error': 'Failed to remove moderator'}), 500
+
+
+# ============================================
+# /api/admin/traffic — Cloudflare RUM analytics
+# ============================================
+
+_CF_GRAPHQL_URL = 'https://api.cloudflare.com/client/v4/graphql'
+_CF_TRAFFIC_CACHE: dict = {}   # range -> (epoch_seconds, payload)
+_CF_TRAFFIC_CACHE_TTL = 60     # seconds
+
+
+def _cf_range_window(range_str: str):
+    """Translate '24h' / '7d' / '30d' / '90d' into a CF query window.
+
+    Returns (start, end, prev_start, prev_end, bucket_dim) where
+    bucket_dim is the GraphQL dimension to group by for the timeseries.
+    """
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    if range_str == '7d':
+        delta = timedelta(days=7)
+        bucket = 'datetimeHour'
+    elif range_str == '30d':
+        delta = timedelta(days=30)
+        bucket = 'datetimeDay'
+    elif range_str == '90d':
+        delta = timedelta(days=90)
+        bucket = 'datetimeDay'
+    else:  # 24h default
+        delta = timedelta(hours=24)
+        bucket = 'datetimeFifteenMinutes'
+    start = now - delta
+    prev_end = start
+    prev_start = start - delta
+    iso = lambda d: d.strftime('%Y-%m-%dT%H:%M:%SZ')
+    return iso(start), iso(now), iso(prev_start), iso(prev_end), bucket
+
+
+def _cf_graphql(query: str, variables: dict) -> dict:
+    """POST a GraphQL query to Cloudflare. Returns parsed `data` block or {}."""
+    if not CLOUDFLARE_API_TOKEN:
+        raise RuntimeError('CLOUDFLARE_API_TOKEN not configured')
+    headers = {
+        'Authorization': f'Bearer {CLOUDFLARE_API_TOKEN}',
+        'Content-Type': 'application/json',
+    }
+    resp = requests.post(
+        _CF_GRAPHQL_URL,
+        headers=headers,
+        json={'query': query, 'variables': variables},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    body = resp.json()
+    if body.get('errors'):
+        # Log but do not crash; partial data may still be usable.
+        print(f"Cloudflare GraphQL errors: {body['errors']}")
+    return body.get('data') or {}
+
+
+def _safe(fn, default=None):
+    """Run fn(); return default on any exception (and log)."""
+    try:
+        return fn()
+    except Exception as e:
+        print(f"[/api/admin/traffic] sub-query failed: {e}")
+        return default
+
+
+def _delta_pct(curr, prev):
+    """Percent change current vs previous. Returns None if previous is 0/None."""
+    if not prev:
+        return None
+    try:
+        return ((curr - prev) / prev) * 100.0
+    except Exception:
+        return None
+
+
+def _fetch_cf_traffic(range_str: str) -> dict:
+    """Fetch + shape Cloudflare RUM data for the dashboard.
+
+    Returns a dict matching what templates/admin_dashboard.html's
+    renderKPIs / renderChart / renderTopPaths / renderCountries / renderCWV
+    expect. Sub-queries degrade independently — a single failure does not
+    blank the whole dashboard.
+    """
+    start, end, prev_start, prev_end, bucket = _cf_range_window(range_str)
+    vars_common = {
+        'accountTag': CLOUDFLARE_ACCOUNT_ID,
+        'siteTag': CLOUDFLARE_SITE_TAG,
+        'start': start,
+        'end': end,
+    }
+
+    # --- 1. Totals (current + previous) for KPI deltas ----------------
+    # NOTE: rumPageloadEventsAdaptiveGroups exposes `count` reliably; the
+    # `sum { visits }` / `uniq { uniques }` fields aren't part of the public
+    # RUM schema, so we use `count` for all three metrics. Pageviews/Visits/
+    # Unique visitors therefore all reflect the same pageload-event count
+    # until we add separate visitor/session segmentation (TODO).
+    totals_query = '''
+      query Totals($accountTag: String!, $siteTag: String!, $start: Time!, $end: Time!, $prevStart: Time!, $prevEnd: Time!) {
+        viewer {
+          accounts(filter: {accountTag: $accountTag}) {
+            current: rumPageloadEventsAdaptiveGroups(
+              limit: 1,
+              filter: {siteTag: $siteTag, datetime_geq: $start, datetime_leq: $end}
+            ) {
+              count
+            }
+            previous: rumPageloadEventsAdaptiveGroups(
+              limit: 1,
+              filter: {siteTag: $siteTag, datetime_geq: $prevStart, datetime_leq: $prevEnd}
+            ) {
+              count
+            }
+          }
+        }
+      }
+    '''
+    totals_data = _safe(lambda: _cf_graphql(totals_query, {**vars_common, 'prevStart': prev_start, 'prevEnd': prev_end}), {}) or {}
+    accounts = ((totals_data.get('viewer') or {}).get('accounts') or [])
+    curr_bucket = (accounts[0].get('current') if accounts else None) or [{}]
+    prev_bucket = (accounts[0].get('previous') if accounts else None) or [{}]
+    curr = curr_bucket[0] if curr_bucket else {}
+    prev = prev_bucket[0] if prev_bucket else {}
+
+    def _pick(b, *path):
+        cur = b
+        for p in path:
+            if cur is None:
+                return None
+            cur = cur.get(p) if isinstance(cur, dict) else None
+        return cur
+
+    curr_pv = _pick(curr, 'count') or 0
+    prev_pv = _pick(prev, 'count') or 0
+    # Visits / unique visitors fall back to the pageview count until we
+    # wire separate session/user dimensions.
+    curr_vis = curr_pv
+    curr_uniq = curr_pv
+    prev_vis = prev_pv
+    prev_uniq = prev_pv
+
+    # --- 2. Timeseries -----------------------------------------------
+    # Same simplification as totals: only `count` is reliably exposed.
+    series_query = f'''
+      query Series($accountTag: String!, $siteTag: String!, $start: Time!, $end: Time!) {{
+        viewer {{
+          accounts(filter: {{accountTag: $accountTag}}) {{
+            series: rumPageloadEventsAdaptiveGroups(
+              limit: 500,
+              orderBy: [{bucket}_ASC],
+              filter: {{siteTag: $siteTag, datetime_geq: $start, datetime_leq: $end}}
+            ) {{
+              dimensions {{ {bucket} }}
+              count
+            }}
+          }}
+        }}
+      }}
+    '''
+    series_data = _safe(lambda: _cf_graphql(series_query, vars_common), {}) or {}
+    series_rows = ((((series_data.get('viewer') or {}).get('accounts') or [{}])[0]).get('series') or [])
+    timeseries = []
+    for row in series_rows:
+        dims = row.get('dimensions') or {}
+        t_raw = dims.get(bucket) or ''
+        c = row.get('count') or 0
+        timeseries.append({
+            't': t_raw,
+            'pageviews': c,
+            'visits': c,
+            'visitors': c,
+        })
+
+    # --- 3. Top paths -------------------------------------------------
+    paths_query = '''
+      query Paths($accountTag: String!, $siteTag: String!, $start: Time!, $end: Time!) {
+        viewer {
+          accounts(filter: {accountTag: $accountTag}) {
+            paths: rumPageloadEventsAdaptiveGroups(
+              limit: 10,
+              orderBy: [count_DESC],
+              filter: {siteTag: $siteTag, datetime_geq: $start, datetime_leq: $end, bot: 0}
+            ) {
+              dimensions { requestPath }
+              count
+            }
+          }
+        }
+      }
+    '''
+    paths_data = _safe(lambda: _cf_graphql(paths_query, vars_common), {}) or {}
+    paths_rows = ((((paths_data.get('viewer') or {}).get('accounts') or [{}])[0]).get('paths') or [])
+    top_paths = []
+    for row in paths_rows:
+        dims = row.get('dimensions') or {}
+        top_paths.append({
+            'path': dims.get('requestPath') or '(unknown)',
+            'views': row.get('count') or 0,
+            'lcp_p75': None,  # joined in below from CWV per-path query if available
+        })
+
+    # --- 4. Countries -------------------------------------------------
+    countries_query = '''
+      query Countries($accountTag: String!, $siteTag: String!, $start: Time!, $end: Time!) {
+        viewer {
+          accounts(filter: {accountTag: $accountTag}) {
+            countries: rumPageloadEventsAdaptiveGroups(
+              limit: 10,
+              orderBy: [count_DESC],
+              filter: {siteTag: $siteTag, datetime_geq: $start, datetime_leq: $end, bot: 0}
+            ) {
+              dimensions { countryName }
+              count
+            }
+          }
+        }
+      }
+    '''
+    countries_data = _safe(lambda: _cf_graphql(countries_query, vars_common), {}) or {}
+    countries_rows = ((((countries_data.get('viewer') or {}).get('accounts') or [{}])[0]).get('countries') or [])
+    countries = [
+        {'country': (r.get('dimensions') or {}).get('countryName') or 'Unknown', 'views': r.get('count') or 0}
+        for r in countries_rows
+    ]
+
+    # --- 5. Core Web Vitals (p75 + distributions) ---------------------
+    # CF's rumWebVitalsEventsAdaptiveGroups appears to use a long-format
+    # schema where each row carries `metric` (LCP/INP/CLS) and `metricRating`
+    # dimensions. We split by metric via aliased sub-queries.
+    cwv_query = '''
+      query CWV($accountTag: String!, $siteTag: String!, $start: Time!, $end: Time!) {
+        viewer {
+          accounts(filter: {accountTag: $accountTag}) {
+            lcpQ: rumWebVitalsEventsAdaptiveGroups(
+              limit: 1,
+              filter: {siteTag: $siteTag, datetime_geq: $start, datetime_leq: $end, metric: "LCP"}
+            ) { quantiles { metricValueP75 } }
+            inpQ: rumWebVitalsEventsAdaptiveGroups(
+              limit: 1,
+              filter: {siteTag: $siteTag, datetime_geq: $start, datetime_leq: $end, metric: "INP"}
+            ) { quantiles { metricValueP75 } }
+            clsQ: rumWebVitalsEventsAdaptiveGroups(
+              limit: 1,
+              filter: {siteTag: $siteTag, datetime_geq: $start, datetime_leq: $end, metric: "CLS"}
+            ) { quantiles { metricValueP75 } }
+            lcpDist: rumWebVitalsEventsAdaptiveGroups(
+              limit: 10,
+              filter: {siteTag: $siteTag, datetime_geq: $start, datetime_leq: $end, metric: "LCP"}
+            ) {
+              dimensions { metricRating }
+              count
+            }
+            inpDist: rumWebVitalsEventsAdaptiveGroups(
+              limit: 10,
+              filter: {siteTag: $siteTag, datetime_geq: $start, datetime_leq: $end, metric: "INP"}
+            ) {
+              dimensions { metricRating }
+              count
+            }
+            clsDist: rumWebVitalsEventsAdaptiveGroups(
+              limit: 10,
+              filter: {siteTag: $siteTag, datetime_geq: $start, datetime_leq: $end, metric: "CLS"}
+            ) {
+              dimensions { metricRating }
+              count
+            }
+          }
+        }
+      }
+    '''
+    cwv_data = _safe(lambda: _cf_graphql(cwv_query, vars_common), {}) or {}
+    cwv_acct = (((cwv_data.get('viewer') or {}).get('accounts') or [{}])[0]) if cwv_data else {}
+
+    def _p75(node_list):
+        if not node_list:
+            return None
+        row = node_list[0] if node_list else {}
+        return ((row.get('quantiles') or {}).get('metricValueP75'))
+
+    def _rating_dist(rows):
+        # rows: [{dimensions: {metricRating: 'good'|'needsImprovement'|'poor'}, count: N}, ...]
+        buckets = {'good': 0, 'needsImprovement': 0, 'poor': 0}
+        total = 0
+        for r in rows or []:
+            rating = (r.get('dimensions') or {}).get('metricRating')
+            c = r.get('count') or 0
+            if rating in buckets:
+                buckets[rating] += c
+            total += c
+        if total <= 0:
+            return None
+        return {
+            'good': buckets['good'] / total,
+            'ni':   buckets['needsImprovement'] / total,
+            'poor': buckets['poor'] / total,
+        }
+
+    cwv = {
+        'lcp_p75': _p75(cwv_acct.get('lcpQ')),
+        'inp_p75': _p75(cwv_acct.get('inpQ')),
+        'cls_p75': _p75(cwv_acct.get('clsQ')),
+        'lcp_dist': _rating_dist(cwv_acct.get('lcpDist')),
+        'inp_dist': _rating_dist(cwv_acct.get('inpDist')),
+        'cls_dist': _rating_dist(cwv_acct.get('clsDist')),
+    }
+
+    return {
+        'success': True,
+        'range': range_str,
+        'generated_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'kpis': {
+            'pageviews': curr_pv,
+            'pageviews_delta': _delta_pct(curr_pv, prev_pv),
+            'visits': curr_vis,
+            'visits_delta': _delta_pct(curr_vis, prev_vis),
+            'visitors': curr_uniq,
+            'visitors_delta': _delta_pct(curr_uniq, prev_uniq),
+            'lcp_p75': cwv['lcp_p75'],
+        },
+        'timeseries': timeseries,
+        'top_paths': top_paths,
+        'countries': countries,
+        'cwv': cwv,
+    }
+
+
+@app.route('/api/admin/traffic')
+@require_auth
+def admin_traffic():
+    """Cloudflare Web Analytics (RUM) aggregates for the admin dashboard."""
+    user = request.user
+    if not is_admin(user):
+        return jsonify({'error': 'Admin access required'}), 403
+
+    if not (CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_SITE_TAG):
+        return jsonify({
+            'error': 'Cloudflare analytics not configured. Set CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_SITE_TAG.'
+        }), 503
+
+    range_str = (request.args.get('range') or '24h').lower()
+    if range_str not in {'24h', '7d', '30d', '90d'}:
+        range_str = '24h'
+
+    # Tiny in-process cache keyed by range to avoid hammering CF on every poll.
+    now_s = time.time()
+    cached = _CF_TRAFFIC_CACHE.get(range_str)
+    if cached and (now_s - cached[0]) < _CF_TRAFFIC_CACHE_TTL:
+        return jsonify(cached[1])
+
+    try:
+        payload = _fetch_cf_traffic(range_str)
+        _CF_TRAFFIC_CACHE[range_str] = (now_s, payload)
+        return jsonify(payload)
+    except Exception as e:
+        print(f"[/api/admin/traffic] fatal: {e}")
+        return jsonify({'error': 'Failed to fetch Cloudflare analytics', 'detail': str(e)}), 502
 
 
 @app.route('/api/users/<username>/comments')
@@ -1889,6 +2710,7 @@ def get_post(post_id):
         tags = [pt.get('tags', {}).get('name') for pt in post.get('post_tags', []) if pt.get('tags')]
         
         user_vote = None
+        user_reposted = False
         access_token = session.get('supabase_access_token')
         if access_token:
             user = get_user_from_token(access_token)
@@ -1900,6 +2722,13 @@ def get_post(post_id):
                     .execute()
                 if vote_result.data:
                     user_vote = vote_result.data[0]['vote_type']
+                repost_target_id = post.get('original_post_id') or post_id
+                repost_result = supabase.table('reposts') \
+                    .select('original_post_id') \
+                    .eq('user_id', user['id']) \
+                    .eq('original_post_id', repost_target_id) \
+                    .execute()
+                user_reposted = bool(repost_result.data)
         
         formatted_post = {
             'id': post['id'],
@@ -1920,7 +2749,8 @@ def get_post(post_id):
             },
             'images': images,
             'tags': tags,
-            'user_vote': user_vote
+            'user_vote': user_vote,
+            'user_reposted': user_reposted
         }
         
         return jsonify({'success': True, 'post': formatted_post})
@@ -2314,8 +3144,20 @@ def repost(post_id):
             'original_post_id': post_id,
             'repost_id': repost_post['id']
         }).execute()
+
+        repost_count_result = supabase.table('reposts') \
+            .select('repost_id', count='exact') \
+            .eq('original_post_id', post_id) \
+            .execute()
+        repost_count = repost_count_result.count
+        if repost_count is None:
+            repost_count = len(repost_count_result.data or [])
+        supabase.table('posts') \
+            .update({'repost_count': repost_count}) \
+            .eq('id', post_id) \
+            .execute()
         
-        return jsonify({'success': True, 'repost_id': repost_post['id']}), 201
+        return jsonify({'success': True, 'repost_id': repost_post['id'], 'repost_count': repost_count}), 201
     except Exception as e:
         print(f"Error reposting: {e}")
         return jsonify({'error': 'Failed to repost'}), 500
@@ -2367,8 +3209,11 @@ def price_history(ticker):
         if before_date:
             try:
                 end_dt = datetime.fromisoformat(before_date.replace('Z', '+00:00').split('T')[0])
-                # Fetch ~6 months before that date
-                start_dt = end_dt - timedelta(days=180)
+                # Fetch a generous window before the visible edge so horizontal
+                # panning can populate history in one smooth prepend instead
+                # of many small, jumpy fetches.
+                lookback_days = max(220, min(1400, count * 3))
+                start_dt = end_dt - timedelta(days=lookback_days)
                 
                 df = yf.download(
                     ticker, 
@@ -2429,6 +3274,11 @@ def price_history(ticker):
 
             df = df.tail(400).sort_index()
 
+        # yfinance returns MultiIndex columns like ('Close', 'AAPL') even for a
+        # single ticker — flatten to just 'Close' so row['Close'] is a scalar.
+        if getattr(df.columns, 'nlevels', 1) > 1:
+            df.columns = df.columns.get_level_values(0)
+
         prices = []
         for ts, row in df.iterrows():
             try:
@@ -2463,7 +3313,7 @@ def price_history(ticker):
         
     except Exception as e:
         print(f"Price history error for {ticker}: {e}")
-        return jsonify({'error': 'Failed to fetch price history'}), 500
+        return jsonify({'error': 'Failed to fetch price history', 'detail': f'{type(e).__name__}: {e}'}), 500
 @app.route('/api/mod/logs')
 @require_auth
 def get_mod_logs():
@@ -2475,27 +3325,36 @@ def get_mod_logs():
     return jsonify({'success': True, 'logs': list(reversed(logs[-limit:]))})
 
 
-# Blog page routes
-@app.route('/blog')
-def blog_feed():
+# Community page routes (was /blog — kept as redirects below for back-compat)
+@app.route('/community')
+def community_feed():
     return render_template('blog.html')
 
-@app.route('/blog/new')
+@app.route('/community/new')
 @require_auth_page
 def new_post_page():
     return render_template('blog_new.html')
 
-@app.route('/blog/post/<post_id>')
+@app.route('/community/post/<post_id>')
 def view_post_page(post_id):
     return render_template('blog_post.html', post_id=post_id)
 
-@app.route('/blog/tag/<tag>')
+@app.route('/community/tag/<tag>')
 def tag_posts_page(tag):
     return render_template('blog.html')
 
-@app.route('/blog/user/<username>')
+@app.route('/community/user/<username>')
 def user_posts_page(username):
     return render_template('blog.html')
+
+# Backwards-compat: redirect old /blog/* URLs to /community/*.
+@app.route('/blog')
+def blog_redirect_root():
+    return redirect('/community', code=301)
+
+@app.route('/blog/<path:rest>')
+def blog_redirect(rest):
+    return redirect(f'/community/{rest}', code=301)
 
 @app.route('/admin')
 @require_auth_page
@@ -2515,6 +3374,23 @@ def moderator_dashboard():
 # ============================================
 # MAIN
 # ============================================
+def _prewarm_caches():
+    """Background warm-up so the first user request to /api/search-tickers
+    doesn't pay the Yahoo round-trip. Re-runs periodically so the cache
+    never expires for a logged-in user mid-session."""
+    while True:
+        try:
+            _fetch_most_active(limit=200)
+        except Exception as e:
+            print(f"prewarm failed: {e}")
+        # Refresh slightly before the TTL expires
+        time.sleep(max(60, _VOLUME_CACHE_TTL - 30))
+
+
+import threading as _threading
+_threading.Thread(target=_prewarm_caches, daemon=True).start()
+
+
 if __name__ == '__main__':
     print("\n" + "="*50)
     print("  STOCK ANALYZER API SERVER")
@@ -2531,5 +3407,5 @@ if __name__ == '__main__':
     print("  DELETE /api/account         - Delete account")
     print("  GET  /api/health            - Health check")
     print("\nPress Ctrl+C to stop the server.\n")
-    
+
     app.run(debug=True, port=5000)

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo / VSN Analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-0: #000000;
+            --bg-1: #08080c;
+            --bg-2: #0e0e14;
+            --line: #1c1c28;
+            --line-2: #2a2a3a;
+            --ink-1: #f4f4f6;
+            --ink-2: #9a9aae;
+            --ink-3: #5a5a6e;
+            --up: #00ff9c;
+            --down: #ff4d6d;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg-0);
+            color: var(--ink-1);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---- Top bar ---- */
+        .bar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 40px;
+            background: var(--bg-0);
+            border-bottom: 1px solid var(--line);
+        }
+        .bar-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .bar-logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--ink-1);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: 0.02em;
+        }
+        .bar-logo img { width: 26px; height: 26px; object-fit: contain; }
+        .bar-back {
+            color: var(--ink-2);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: color 150ms ease;
+        }
+        .bar-back:hover { color: var(--ink-1); }
+        .bar-tag {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.22em;
+            color: var(--ink-3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .bar-tag .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--up);
+            box-shadow: 0 0 12px var(--up);
+            animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50%      { opacity: 1; }
+        }
+
+        /* ---- Page ---- */
+        .wrap {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 64px 40px 96px;
+        }
+        .eyebrow {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.22em;
+            color: var(--ink-3);
+            margin-bottom: 18px;
+        }
+        h1 {
+            font-size: clamp(36px, 4vw, 56px);
+            font-weight: 700;
+            letter-spacing: -0.035em;
+            line-height: 1.02;
+            margin-bottom: 18px;
+        }
+        h1 .accent {
+            color: var(--up);
+            font-style: italic;
+            font-weight: 600;
+        }
+        .lede {
+            font-size: 17px;
+            line-height: 1.55;
+            color: var(--ink-2);
+            max-width: 620px;
+            margin-bottom: 48px;
+        }
+
+        /* ---- Steps ---- */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: var(--line);
+            border: 1px solid var(--line);
+            margin-bottom: 64px;
+        }
+        .step {
+            background: var(--bg-1);
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .step-num {
+            font-size: 11px;
+            color: var(--ink-3);
+            letter-spacing: 0.2em;
+        }
+        .step-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--ink-1);
+        }
+        .step-body {
+            color: var(--ink-2);
+            font-size: 14px;
+            line-height: 1.55;
+        }
+
+        /* ---- Mock chart ---- */
+        .mock {
+            border: 1px solid var(--line);
+            background: var(--bg-1);
+            padding: 28px;
+            margin-bottom: 48px;
+        }
+        .mock-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+        .mock-sym {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+        .mock-name {
+            color: var(--ink-3);
+            font-size: 13px;
+            margin-left: 8px;
+        }
+        .mock-price {
+            font-size: 28px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .mock-delta {
+            color: var(--up);
+            font-size: 14px;
+            font-variant-numeric: tabular-nums;
+            margin-left: 8px;
+        }
+        .mock-chart {
+            width: 100%;
+            height: 220px;
+            display: block;
+        }
+        .mock-bar {
+            display: flex;
+            gap: 28px;
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid var(--line);
+        }
+        .mock-stat .k {
+            font-size: 10px;
+            color: var(--ink-3);
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+        .mock-stat .v {
+            font-size: 15px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            margin-top: 4px;
+        }
+
+        /* ---- CTA ---- */
+        .cta-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-top: 24px;
+        }
+        .btn-primary {
+            background: var(--ink-1);
+            color: var(--bg-0);
+            font-weight: 600;
+            font-size: 14px;
+            padding: 14px 24px;
+            border: 1px solid var(--ink-1);
+            cursor: pointer;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            transition: background 180ms ease, border-color 180ms ease;
+        }
+        .btn-primary:hover { background: #ffffff; border-color: #ffffff; }
+        .btn-secondary {
+            background: transparent;
+            color: var(--ink-1);
+            font-weight: 500;
+            font-size: 14px;
+            padding: 14px 22px;
+            border: 1px solid var(--line-2);
+            cursor: pointer;
+            font-family: inherit;
+            text-decoration: none;
+            transition: border-color 150ms ease, background 150ms ease;
+        }
+        .btn-secondary:hover { border-color: var(--ink-3); background: var(--bg-2); }
+
+        @media (max-width: 700px) {
+            .steps { grid-template-columns: 1fr; }
+            .wrap { padding: 48px 24px 72px; }
+            .bar { padding: 16px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bar">
+        <div class="bar-left">
+            <a href="/" class="bar-logo">
+                <img src="/static/logo.png" alt="VSN">
+                <span>VSN</span>
+            </a>
+            <a href="/" class="bar-back">← Back</a>
+        </div>
+        <div class="bar-tag">
+            <span class="dot"></span>
+            <span>Live demo</span>
+        </div>
+    </div>
+
+    <main class="wrap">
+        <div class="eyebrow">DEMO / 01</div>
+        <h1>See it <span class="accent">in action.</span></h1>
+        <p class="lede">A walk-through of what VSN Analysis actually does — clean charts, transparent scoring, and a search that resolves as you type. Below is a static preview of the chart view you'll land on after picking a ticker.</p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">01</div>
+                <div class="step-title">Search a ticker</div>
+                <div class="step-body">Hit the markets button or use the search bar — type a symbol like AAPL, MSFT, or NVDA and we resolve it instantly.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">02</div>
+                <div class="step-title">Read the chart</div>
+                <div class="step-body">Interactive price chart with volume, range selectors, and clean overlays. No flashing colors, no popups.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">03</div>
+                <div class="step-title">Get the score</div>
+                <div class="step-body">A transparent VSN score with the factors that drove it — analyst targets, momentum, and fundamentals.</div>
+            </div>
+        </div>
+
+        <div class="mock">
+            <div class="mock-head">
+                <div>
+                    <span class="mock-sym">AAPL</span>
+                    <span class="mock-name">Apple Inc.</span>
+                </div>
+                <div>
+                    <span class="mock-price">$214.83</span>
+                    <span class="mock-delta">+1.42 (+0.67%)</span>
+                </div>
+            </div>
+            <svg class="mock-chart" viewBox="0 0 800 220" preserveAspectRatio="none" aria-hidden="true">
+                <defs>
+                    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#00ff9c" stop-opacity="0.35"/>
+                        <stop offset="100%" stop-color="#00ff9c" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <!-- grid -->
+                <g stroke="#1c1c28" stroke-width="1">
+                    <line x1="0" y1="44" x2="800" y2="44"/>
+                    <line x1="0" y1="88" x2="800" y2="88"/>
+                    <line x1="0" y1="132" x2="800" y2="132"/>
+                    <line x1="0" y1="176" x2="800" y2="176"/>
+                </g>
+                <!-- area -->
+                <path d="M0 160 L40 150 L80 158 L120 140 L160 130 L200 142 L240 118 L280 124 L320 100 L360 110 L400 88 L440 96 L480 72 L520 84 L560 60 L600 70 L640 52 L680 64 L720 44 L760 56 L800 40 L800 220 L0 220 Z"
+                      fill="url(#g1)"/>
+                <!-- line -->
+                <path d="M0 160 L40 150 L80 158 L120 140 L160 130 L200 142 L240 118 L280 124 L320 100 L360 110 L400 88 L440 96 L480 72 L520 84 L560 60 L600 70 L640 52 L680 64 L720 44 L760 56 L800 40"
+                      fill="none" stroke="#00ff9c" stroke-width="2"/>
+            </svg>
+            <div class="mock-bar">
+                <div class="mock-stat"><div class="k">Open</div><div class="v">213.41</div></div>
+                <div class="mock-stat"><div class="k">High</div><div class="v">215.92</div></div>
+                <div class="mock-stat"><div class="k">Low</div><div class="v">212.88</div></div>
+                <div class="mock-stat"><div class="k">Volume</div><div class="v">48.2M</div></div>
+                <div class="mock-stat"><div class="k">VSN Score</div><div class="v" style="color:var(--up)">8.4</div></div>
+            </div>
+        </div>
+
+        <h2 style="font-size:24px;font-weight:600;margin-bottom:10px;">Ready to try the real thing?</h2>
+        <p style="color:var(--ink-2);">Free forever for individuals. No credit card. No newsletter spam.</p>
+        <div class="cta-row">
+            <a href="/auth?signup=1" class="btn-primary">Create your account →</a>
+            <a href="/" class="btn-secondary">Back to home</a>
+        </div>
+    </main>
+
+</body>
+</html>

@@ -14,7 +14,7 @@
             document.documentElement.setAttribute('data-theme', saved);
         })();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         :root {
             --bg-primary: #000000;
@@ -902,7 +902,7 @@
         .watch-nav.left { left: -46px; }
         .watch-nav.right { right: -46px; }
         .watch-nav.hidden { display: none; }
-        canvas {
+        .lw-chart {
             width: 100% !important;
             height: 460px !important;
             display: block;
@@ -928,88 +928,8 @@
     </style>
 </head>
 <body>
-    <header class="site-header" id="siteHeader">
-        <div class="header-inner">
-            <!-- Left: Brand + Search - HIDES on scroll -->
-            <div class="header-left">
-                <a href="/" class="brand">
-                    <img src="{{ url_for('static', filename='logo.png') }}" alt="VSN Logo">
-                    <span>VSN Analysis</span>
-                </a>
-                <form class="nav-search" id="navSearchForm" onsubmit="return handleNavSearch(event)">
-                    <input id="navSearchInput" type="search" placeholder="Search ticker..." autocomplete="off" spellcheck="false">
-                    <div id="navSuggestions" class="nav-suggestions"></div>
-                </form>
-            </div>
-            
-            <!-- Center: The Nav Pill - always visible, expands on scroll -->
-            <div class="nav-pill">
-                <!-- Logo slides in on scroll -->
-                <div class="nav-pill-logo" id="navPillLogo">
-                    <img src="{{ url_for('static', filename='logo.png') }}" alt="VSN">
-                </div>
-                
-                <!-- Search slides in on scroll -->
-                <div class="nav-pill-search" id="navPillSearch">
-                    <input id="navPillSearchInput" type="search" placeholder="Search..." autocomplete="off" spellcheck="false">
-                    <div id="navPillSuggestions" class="nav-suggestions nav-pill-suggestions"></div>
-                </div>
-                
-                <!-- Divider -->
-                <div class="nav-pill-divider"></div>
-                
-                <!-- Nav links - always visible -->
-                <nav class="site-nav" id="siteNav">
-                    <div class="nav-indicator" id="navIndicator"></div>
-                    
-                    <div class="nav-item" data-nav-item>
-                        <a href="/" class="nav-link">Home</a>
-                    </div>
-                    
-                    <div class="nav-item" data-nav-item>
-                        <a href="/markets" class="nav-link active">Markets</a>
-                    </div>
-                    
-                    <div class="nav-item" data-nav-item>
-                        <a href="/blog" class="nav-link">Community</a>
-                    </div>
-                </nav>
-                
-                <!-- Right divider -->
-                <div class="nav-pill-divider-right"></div>
-                
-                <!-- Sign-in slides in on scroll (shown when logged out) -->
-                <div class="nav-pill-signin" id="navPillSignin">
-                    <a href="/auth">Sign In</a>
-                </div>
-                
-                <!-- User avatar slides in on scroll (shown when logged in) -->
-                <div class="nav-pill-user" id="navPillUser">
-                    <div class="nav-pill-avatar" id="navPillAvatar"></div>
-                </div>
-            </div>
-            
-            <!-- Right: Sign In / User Menu - HIDES on scroll -->
-            <div class="header-right">
-                <div class="nav-actions">
-                    <span id="authLinks">
-                        <a href="/auth" class="nav-signin">Sign In</a>
-                    </span>
-                    <div id="userMenu" class="user-menu" style="display:none;">
-                        <div class="user-trigger" onclick="toggleUserMenu(event)">
-                            <div class="user-avatar" id="userAvatar"></div>
-                            <span class="user-name" id="userName"></span>
-                        </div>
-                        <div id="userDropdown" class="user-dropdown">
-                            <a href="/profile">Profile</a>
-                            <a href="/settings">Settings</a>
-                            <button onclick="handleLogout()">Sign Out</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </header>
+    {% set active_nav = 'markets' %}
+    {% include '_site_nav.html' %}
 
     <div id="searchOverlay" class="search-overlay" aria-hidden="true">
         <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search symbols and indices">
@@ -1077,7 +997,7 @@
                 </div>
             </div>
             <div class="chart-wrap">
-                <canvas id="marketChart"></canvas>
+                <div id="marketChart" class="lw-chart"></div>
             </div>
         </section>
 
@@ -1122,7 +1042,7 @@
                     <button id="openWatchChartBtn" class="btn" title="Open fullscreen chart">Open Fullscreen</button>
                 </div>
                 <div class="chart-wrap">
-                    <canvas id="watchChart"></canvas>
+                    <div id="watchChart" class="lw-chart"></div>
                 </div>
             </div>
         </section>
@@ -1132,14 +1052,139 @@
         let indices = [];
         let activeSymbol = null;
         let marketChart = null;
+        let marketSeries = null;
         let activeRange = '5d';
         let gainers = [];
         let losers = [];
         let watchChart = null;
+        let watchSeries = null;
         let watchRange = '1d';
         const indexCache = new Map(); // key: range -> {ts, data}
         const priceCache = new Map(); // key: symbol:range -> {labels, prices, meta}
         const INDEX_CACHE_MS = 60 * 1000;
+
+        const marketNumberFmt = new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        function getChartTheme() {
+            const styles = getComputedStyle(document.documentElement);
+            return {
+                background: styles.getPropertyValue('--chart-canvas-top').trim() || '#050505',
+                text: styles.getPropertyValue('--text-secondary').trim() || '#888899',
+                grid: styles.getPropertyValue('--chart-grid').trim() || 'rgba(255,255,255,0.05)',
+                border: styles.getPropertyValue('--border-color').trim() || '#14141c',
+                blue: styles.getPropertyValue('--accent-blue').trim() || '#4f8cff',
+                green: styles.getPropertyValue('--accent-green').trim() || '#00ff9c',
+                red: styles.getPropertyValue('--accent-red').trim() || '#ff4d6d'
+            };
+        }
+
+        function parseChartTime(value) {
+            if (typeof value === 'number') return value;
+            if (!value) return undefined;
+            const raw = String(value);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+            const parsed = Date.parse(raw.includes('T') ? raw : raw.replace(' ', 'T'));
+            return Number.isNaN(parsed) ? raw.slice(0, 10) : Math.floor(parsed / 1000);
+        }
+
+        function normalizeLineData(labels, prices) {
+            return (prices || [])
+                .map((value, index) => ({
+                    time: parseChartTime((labels || [])[index]),
+                    value: Number(value)
+                }))
+                .filter(point => point.time !== undefined && Number.isFinite(point.value));
+        }
+
+        function resizeLightweightChart(chart, container) {
+            if (!chart || !container) return;
+            const rect = container.getBoundingClientRect();
+            chart.applyOptions({
+                width: Math.max(1, Math.floor(rect.width)),
+                height: Math.max(1, Math.floor(rect.height))
+            });
+        }
+
+        function createLineChart(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return { chart: null, series: null };
+
+            const colors = getChartTheme();
+            const chart = LightweightCharts.createChart(container, {
+                autoSize: true,
+                layout: {
+                    background: { type: 'solid', color: colors.background },
+                    textColor: colors.text
+                },
+                grid: {
+                    vertLines: { color: colors.grid },
+                    horzLines: { color: colors.grid }
+                },
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                    vertLine: {
+                        color: 'rgba(255,255,255,0.22)',
+                        width: 1,
+                        style: LightweightCharts.LineStyle.Dashed,
+                        labelBackgroundColor: colors.border
+                    },
+                    horzLine: {
+                        color: 'rgba(255,255,255,0.22)',
+                        width: 1,
+                        style: LightweightCharts.LineStyle.Dashed,
+                        labelBackgroundColor: colors.border
+                    }
+                },
+                rightPriceScale: {
+                    borderColor: colors.border,
+                    scaleMargins: { top: 0.12, bottom: 0.12 }
+                },
+                timeScale: {
+                    borderColor: colors.border,
+                    timeVisible: true,
+                    secondsVisible: false,
+                    rightOffset: 8,
+                    barSpacing: 6,
+                    minBarSpacing: 2
+                },
+                handleScroll: {
+                    mouseWheel: true,
+                    pressedMouseMove: true,
+                    horzTouchDrag: true,
+                    vertTouchDrag: false
+                },
+                handleScale: {
+                    axisPressedMouseMove: true,
+                    mouseWheel: true,
+                    pinch: true
+                }
+            });
+
+            const series = chart.addAreaSeries({
+                lineColor: colors.blue,
+                topColor: 'rgba(79, 140, 255, 0.24)',
+                bottomColor: 'rgba(79, 140, 255, 0)',
+                lineWidth: 2,
+                priceLineVisible: false,
+                lastValueVisible: true,
+                crosshairMarkerRadius: 4
+            });
+
+            requestAnimationFrame(() => resizeLightweightChart(chart, container));
+            const observer = new ResizeObserver(() => resizeLightweightChart(chart, container));
+            observer.observe(container);
+            chart.__resizeObserver = observer;
+            return { chart, series };
+        }
+
+        function disposeLightweightChart(chart) {
+            if (!chart) return;
+            try { chart.__resizeObserver?.disconnect(); } catch (e) {}
+            try { chart.remove(); } catch (e) {}
+        }
         document.addEventListener('DOMContentLoaded', () => {
             wireRanges();
             loadIndices();
@@ -1387,79 +1432,19 @@
             deltaEl.className = `delta ${changeClass}`;
             deltaEl.textContent = `${data.change >= 0 ? '+' : ''}${data.change.toFixed(2)} (${data.change_pct >= 0 ? '+' : ''}${data.change_pct.toFixed(2)}%)`;
 
-            const ctx = document.getElementById('marketChart').getContext('2d');
-            const wrap = ctx.canvas.parentElement;
+            const container = document.getElementById('marketChart');
+            const wrap = container.parentElement;
             wrap.classList.add('fade');
-            if (marketChart) marketChart.destroy();
-            const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
-            gradient.addColorStop(0, 'rgba(79, 140, 255, 0.25)');
-            // use transparent gradient end so the canvas background shows through consistently
-            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-            const gradientEnd = isLight ? 'rgba(255,255,255,0)' : 'rgba(0,0,0,0)';
-            gradient.addColorStop(1, gradientEnd);
-            const crosshair = {
-                id: 'vline',
-                afterDatasetsDraw(chart, args, pluginOptions) {
-                    const {ctx} = chart;
-                    const active = chart.tooltip?.getActiveElements?.();
-                    if (!active || !active.length) return;
-                    const x = active[0].element.x;
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.moveTo(x, chart.chartArea.top);
-                    ctx.lineTo(x, chart.chartArea.bottom);
-                    ctx.lineWidth = 1;
-                    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-                    ctx.stroke();
-                    ctx.restore();
-                }
-            };
+            disposeLightweightChart(marketChart);
+            const created = createLineChart('marketChart');
+            marketChart = created.chart;
+            marketSeries = created.series;
+            const lineData = normalizeLineData(data.labels, data.prices);
+            if (marketSeries && lineData.length) {
+                marketSeries.setData(lineData);
+                marketChart.timeScale().fitContent();
+            }
 
-            const chartGridColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-grid') || 'rgba(255,255,255,0.05)';
-            marketChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label: data.name,
-                        data: data.prices,
-                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-blue'),
-                        backgroundColor: gradient,
-                        tension: 0.25,
-                        pointRadius: 2,
-                        pointHoverRadius: 5,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'nearest', intersect: false, axis: 'x' },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            enabled: true,
-                            position: 'nearest',
-                            displayColors: false,
-                            callbacks: {
-                                title(items) {
-                                    const raw = items[0]?.raw;
-                                    const label = items[0]?.label;
-                                    return `${label}`;
-                                },
-                                label(ctx) {
-                                    return `${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: { ticks: { maxTicksLimit: 8, color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') }, grid: { color: chartGridColor } },
-                        y: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') }, grid: { color: chartGridColor } }
-                    }
-                },
-                plugins: [crosshair]
-            });
             requestAnimationFrame(() => wrap.classList.add('show'));
             wrap.classList.remove('fade');
         }
@@ -1475,74 +1460,19 @@
             deltaEl.className = `delta ${changeClass}`;
             deltaEl.textContent = `${data.change >= 0 ? '+' : ''}${data.change.toFixed(2)} (${data.change_pct >= 0 ? '+' : ''}${data.change_pct.toFixed(2)}%)`;
 
-            const ctx = document.getElementById('watchChart').getContext('2d');
-            const wrap = ctx.canvas.parentElement;
+            const container = document.getElementById('watchChart');
+            const wrap = container.parentElement;
             wrap.classList.add('fade');
-            if (watchChart) watchChart.destroy();
-            const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
-            gradient.addColorStop(0, 'rgba(79, 140, 255, 0.25)');
-            const isLight2 = document.documentElement.getAttribute('data-theme') === 'light';
-            const gradientEnd2 = isLight2 ? 'rgba(255,255,255,0)' : 'rgba(0,0,0,0)';
-            gradient.addColorStop(1, gradientEnd2);
-            const crosshair = {
-                id: 'watch-vline',
-                afterDatasetsDraw(chart) {
-                    const {ctx} = chart;
-                    const active = chart.tooltip?.getActiveElements?.();
-                    if (!active || !active.length) return;
-                    const x = active[0].element.x;
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.moveTo(x, chart.chartArea.top);
-                    ctx.lineTo(x, chart.chartArea.bottom);
-                    ctx.lineWidth = 1;
-                    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-                    ctx.stroke();
-                    ctx.restore();
-                }
-            };
+            disposeLightweightChart(watchChart);
+            const created = createLineChart('watchChart');
+            watchChart = created.chart;
+            watchSeries = created.series;
+            const lineData = normalizeLineData(data.labels, data.prices);
+            if (watchSeries && lineData.length) {
+                watchSeries.setData(lineData);
+                watchChart.timeScale().fitContent();
+            }
 
-            const chartGridColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-grid') || 'rgba(255,255,255,0.05)';
-            watchChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label: data.name,
-                        data: data.prices,
-                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-blue'),
-                        backgroundColor: gradient,
-                        tension: 0.25,
-                        pointRadius: 2,
-                        pointHoverRadius: 5,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'nearest', intersect: false, axis: 'x' },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            enabled: true,
-                            position: 'nearest',
-                            displayColors: false,
-                            callbacks: {
-                                title(items) { return items[0]?.label; },
-                                label(ctx) {
-                                    return `${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: { ticks: { maxTicksLimit: 8, color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') }, grid: { color: chartGridColor } },
-                        y: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') }, grid: { color: chartGridColor } }
-                    }
-                },
-                plugins: [crosshair]
-            });
             requestAnimationFrame(() => wrap.classList.add('show'));
             wrap.classList.remove('fade');
             watchChart.__symbol = data.symbol;
@@ -2012,68 +1942,78 @@
                 const pillUser = document.getElementById('navPillUser');
                 const pillAvatar = document.getElementById('navPillAvatar');
                 
+                // Old header elements may be absent (page now uses _site_nav.html
+                // partial which has its own user widget). Guard every access.
                 if (data.authenticated && data.user) {
                     isAuthenticated = true;
                     currentRoles = data.roles || { admin: false, moderator: false };
-                    
-                    authLinks.style.display = 'none';
-                    userMenu.style.display = 'inline-flex';
+
+                    if (authLinks) authLinks.style.display = 'none';
+                    if (userMenu) userMenu.style.display = 'inline-flex';
 
                     const displayName = data.user.display_name || data.user.email || 'User';
-                    userName.innerText = displayName;
+                    if (userName) userName.innerText = displayName;
 
-                    userAvatar.innerHTML = '';
-                    if (data.user.avatar_url) {
-                        const img = document.createElement('img');
-                        img.src = data.user.avatar_url;
-                        userAvatar.appendChild(img);
-                    } else {
-                        const initials = displayName.split(' ').map(word => word[0]).join('').slice(0, 2).toUpperCase();
-                        userAvatar.innerText = initials;
-                        userAvatar.style.background = avatarColor(displayName);
+                    if (userAvatar) {
+                        userAvatar.innerHTML = '';
+                        if (data.user.avatar_url) {
+                            const img = document.createElement('img');
+                            img.src = data.user.avatar_url;
+                            userAvatar.appendChild(img);
+                        } else {
+                            const initials = displayName.split(' ').map(word => word[0]).join('').slice(0, 2).toUpperCase();
+                            userAvatar.innerText = initials;
+                            userAvatar.style.background = avatarColor(displayName);
+                        }
                     }
 
-                    // Pill avatar
-                    pillSignin.style.display = 'none';
-                    pillUser.classList.add('show');
-                    pillAvatar.innerHTML = '';
-                    if (data.user.avatar_url) {
-                        const img2 = document.createElement('img');
-                        img2.src = data.user.avatar_url;
-                        pillAvatar.appendChild(img2);
-                    } else {
-                        const initials = displayName.split(' ').map(word => word[0]).join('').slice(0, 2).toUpperCase();
-                        pillAvatar.innerText = initials;
-                        pillAvatar.style.background = avatarColor(displayName);
+                    // Pill avatar (only when the old pill nav is present)
+                    if (pillSignin) pillSignin.style.display = 'none';
+                    if (pillUser) pillUser.classList.add('show');
+                    if (pillAvatar) {
+                        pillAvatar.innerHTML = '';
+                        if (data.user.avatar_url) {
+                            const img2 = document.createElement('img');
+                            img2.src = data.user.avatar_url;
+                            pillAvatar.appendChild(img2);
+                        } else {
+                            const initials = displayName.split(' ').map(word => word[0]).join('').slice(0, 2).toUpperCase();
+                            pillAvatar.innerText = initials;
+                            pillAvatar.style.background = avatarColor(displayName);
+                        }
                     }
 
-                    // Build dropdown
+                    // Build dropdown (only if old dropdown still exists)
                     const dropdown = document.getElementById('userDropdown');
-                    let links = `<a href="/profile">Profile</a>`;
-                    if (currentRoles.admin) {
-                        links += `<a href="/admin">Admin Dashboard</a>`;
+                    if (dropdown) {
+                        let links = `<a href="/profile">Profile</a>`;
+                        if (currentRoles.admin) {
+                            links += `<a href="/admin">Admin Dashboard</a>`;
+                        }
+                        if (currentRoles.moderator && !currentRoles.admin) {
+                            links += `<a href="/moderator">Moderator Dashboard</a>`;
+                        }
+                        links += `<button class="logout-btn" onclick="logout()">Log out</button>`;
+                        dropdown.innerHTML = links;
                     }
-                    if (currentRoles.moderator && !currentRoles.admin) {
-                        links += `<a href="/moderator">Moderator Dashboard</a>`;
-                    }
-                    links += `<button class="logout-btn" onclick="logout()">Log out</button>`;
-                    dropdown.innerHTML = links;
 
                     updateNavSearchAccess();
                     primeSearchCache();
                 } else {
                     isAuthenticated = false;
-                    authLinks.style.display = 'inline-flex';
-                    userMenu.style.display = 'none';
-                    pillSignin.style.display = '';
-                    pillUser.classList.remove('show');
+                    if (authLinks) authLinks.style.display = 'inline-flex';
+                    if (userMenu) userMenu.style.display = 'none';
+                    if (pillSignin) pillSignin.style.display = '';
+                    if (pillUser) pillUser.classList.remove('show');
                     updateNavSearchAccess();
                 }
             } catch (e) {
                 console.error('Auth check failed:', e);
                 isAuthenticated = false;
-                document.getElementById('authLinks').style.display = 'inline-flex';
-                document.getElementById('userMenu').style.display = 'none';
+                const al = document.getElementById('authLinks');
+                const um = document.getElementById('userMenu');
+                if (al) al.style.display = 'inline-flex';
+                if (um) um.style.display = 'none';
                 updateNavSearchAccess();
             }
         }
