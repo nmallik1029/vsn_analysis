@@ -852,6 +852,36 @@
                 }
             }
 
+            async function userHasUsername(accessToken) {
+                try {
+                    var res = await fetch('/api/auth/user', {
+                        headers: { 'Authorization': 'Bearer ' + accessToken }
+                    });
+                    var data = await res.json();
+                    return !!(data.authenticated && data.user && data.user.username);
+                } catch (e) {
+                    console.error('Username check failed:', e);
+                    return true;
+                }
+            }
+
+            async function finishAuthenticatedSession(session, fallbackRedirect) {
+                var synced = await syncSessionToFlask(session);
+                if (!synced) {
+                    throw new Error('Could not finish sign-in. Please try again.');
+                }
+
+                var hasUsername = await userHasUsername(session.access_token);
+                if (!hasUsername) {
+                    window.location.href = '/auth/callback';
+                    return;
+                }
+
+                var redirectTo = sessionStorage.getItem('auth_redirect') || fallbackRedirect || '/index';
+                sessionStorage.removeItem('auth_redirect');
+                window.location.href = redirectTo;
+            }
+
             // ============================================
             // TAB SWITCHING
             // ============================================
@@ -996,8 +1026,10 @@
                             email: email,
                             password: password,
                             options: {
+                                emailRedirectTo: window.location.origin + '/auth/callback',
                                 data: {
-                                    display_name: displayName
+                                    display_name: displayName,
+                                    username: displayName
                                 }
                             }
                         });
@@ -1010,14 +1042,12 @@
                         if (data.user && data.user.identities && data.user.identities.length === 0) {
                             showError('An account with this email already exists.');
                         } else if (data.user && !data.session) {
-                            // Email confirmation required - show OTP view
-                            showOtpView(email);
+                            showSuccess('Account created. Check your email to confirm your account, then we will finish your username setup.');
                         } else if (data.session) {
                             // Auto-confirmed (shouldn't happen with email confirmation enabled)
                             console.log('Auto-confirmed, syncing and redirecting...');
-                            await syncSessionToFlask(data.session);
                             await claimUsername(displayName, data.session.access_token);
-                            window.location.href = '/index';
+                            await finishAuthenticatedSession(data.session, '/index');
                         }
                     } else {
                         console.log('Attempting login...');
@@ -1049,13 +1079,8 @@
 
                         if (loginResult.error) throw loginResult.error;
 
-                        console.log('Login successful, syncing session...');
-                        await syncSessionToFlask(loginResult.data.session);
-                        
-                        console.log('Redirecting...');
-                        var redirectTo = sessionStorage.getItem('auth_redirect') || '/index';
-                        sessionStorage.removeItem('auth_redirect');
-                        window.location.href = redirectTo;
+                        console.log('Login successful, finishing session...');
+                        await finishAuthenticatedSession(loginResult.data.session, '/index');
                     }
                 } catch (error) {
                     console.error('Auth error:', error);
@@ -1098,7 +1123,6 @@
 
                     if (result.data.session) {
                         console.log('OTP verified, syncing session...');
-                        await syncSessionToFlask(result.data.session);
                         
                         // Claim the username
                         if (pendingUsername) {
@@ -1108,7 +1132,7 @@
                         
                         showOtpSuccess('Email verified! Redirecting...');
                         setTimeout(() => {
-                            window.location.href = '/index';
+                            finishAuthenticatedSession(result.data.session, '/index');
                         }, 1000);
                     }
                 } catch (error) {
@@ -1169,11 +1193,8 @@
                     var sessionResult = await supabaseClient.auth.getSession();
                     console.log('Session check result:', sessionResult);
                     if (sessionResult.data.session) {
-                        console.log('Already logged in, syncing to Flask and redirecting...');
-                        var synced = await syncSessionToFlask(sessionResult.data.session);
-                        if (synced) {
-                            window.location.href = '/index';
-                        }
+                        console.log('Already logged in, finishing session...');
+                        await finishAuthenticatedSession(sessionResult.data.session, '/index');
                     }
                 } catch (e) {
                     console.error('Session check error:', e);

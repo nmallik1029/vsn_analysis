@@ -258,20 +258,61 @@
         // ============================================
         // MAIN FLOW
         // ============================================
+        async function getCallbackSession() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            if (code) {
+                const exchanged = await supabase.auth.exchangeCodeForSession(code);
+                if (exchanged.error) throw exchanged.error;
+                if (exchanged.data?.session) return exchanged.data.session;
+            }
+
+            const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+            const accessToken = hash.get('access_token');
+            const refreshToken = hash.get('refresh_token');
+            if (accessToken && refreshToken) {
+                const updated = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken
+                });
+                if (updated.error) throw updated.error;
+                if (updated.data?.session) return updated.data.session;
+            }
+
+            const { data, error } = await supabase.auth.getSession();
+            if (error) throw error;
+            return data?.session || null;
+        }
+
+        async function syncSessionToFlask(session) {
+            const response = await fetch('/api/auth/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    access_token: session.access_token,
+                    refresh_token: session.refresh_token
+                })
+            });
+
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Could not finish sign-in. Please try again.');
+            }
+        }
+
+        function continueToApp() {
+            const redirectTo = sessionStorage.getItem('auth_redirect') || '/index';
+            sessionStorage.removeItem('auth_redirect');
+            window.location.replace(redirectTo);
+        }
+
         async function handleCallback() {
             showView('loading-view');
 
             try {
-                // Get session from Supabase
-                const { data, error } = await supabase.auth.getSession();
+                const session = await getCallbackSession();
 
-                if (error) {
-                    console.error('Session error:', error);
-                    showError('Authentication failed. Please try again.');
-                    return;
-                }
-
-                if (!data?.session) {
+                if (!session) {
                     // No session - might be email verification link clicked
                     // Show the email verified view with login button
                     showView('email-verified-view');
@@ -282,38 +323,29 @@
                     return;
                 }
 
-                const session = data.session;
                 const user = session.user;
 
                 console.log('User authenticated:', user.email);
 
-                // Sync session to Flask
-                await fetch('/api/auth/session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        access_token: session.access_token,
-                        refresh_token: session.refresh_token
-                    })
-                });
+                await syncSessionToFlask(session);
 
                 // Check if user already has a username in the database
                 const hasUsername = await checkUserHasUsername(session.access_token);
 
                 if (hasUsername) {
                     // User already has a username, go straight to app
-                    window.location.replace('/index');
+                    continueToApp();
                     return;
                 }
 
                 // Check if there's a display_name in metadata (from email signup)
-                const metadataUsername = user.user_metadata?.display_name;
+                const metadataUsername = user.user_metadata?.username || user.user_metadata?.display_name;
 
                 if (metadataUsername) {
                     // Try to claim the username from metadata
                     const claimed = await claimUsername(metadataUsername, session.access_token);
                     if (claimed) {
-                        window.location.replace('/index');
+                        continueToApp();
                         return;
                     }
                     // If claim failed (taken), fall through to username picker
@@ -324,7 +356,7 @@
 
             } catch (err) {
                 console.error('Callback error:', err);
-                showError('An unexpected error occurred.');
+                showError(err.message || 'An unexpected error occurred.');
             }
         }
 
@@ -338,8 +370,7 @@
                 });
                 const data = await res.json();
                 
-                // Check if the user has a display_name set (from usernames table)
-                return data.authenticated && data.user?.display_name;
+                return data.authenticated && !!data.user?.username;
             } catch (e) {
                 console.error('Error checking username:', e);
                 return false;
@@ -456,7 +487,7 @@
                 const claimed = await claimUsername(username, accessToken);
 
                 if (claimed) {
-                    window.location.replace('/index');
+                    continueToApp();
                 } else {
                     errorMsg.textContent = 'That username was just taken. Please try another.';
                     errorMsg.style.display = 'block';
