@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Demo / VSN Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/scrollbar.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,8 +18,6 @@
             --ink-1: #f4f4f6;
             --ink-2: #9a9aae;
             --ink-3: #5a5a6e;
-            --up: #00ff9c;
-            --down: #ff4d6d;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,201 +31,326 @@
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
         }
+        a { color: inherit; }
 
-        /* ---- Top bar ---- */
-        .bar {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 18px 40px;
-            background: var(--bg-0);
-            border-bottom: 1px solid var(--line);
-        }
-        .bar-left {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-        .bar-logo {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            color: var(--ink-1);
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 14px;
-            letter-spacing: 0.02em;
-        }
-        .bar-logo img { width: 26px; height: 26px; object-fit: contain; }
-        .bar-back {
-            color: var(--ink-2);
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 500;
-            transition: color 150ms ease;
-        }
-        .bar-back:hover { color: var(--ink-1); }
-        .bar-tag {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.22em;
-            color: var(--ink-3);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .bar-tag .dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: var(--up);
-            box-shadow: 0 0 12px var(--up);
-            animation: pulse 1.6s ease-in-out infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 0.4; }
-            50%      { opacity: 1; }
-        }
-
-        /* ---- Page ---- */
         .wrap {
-            max-width: 1200px;
+            max-width: 1240px;
             margin: 0 auto;
-            padding: 64px 40px 96px;
+            padding: 140px 40px 120px;
         }
+
+        /* ============ Hero ============ */
+        .hero { padding-bottom: 56px; border-bottom: 1px solid var(--line); margin-bottom: 72px; }
         .eyebrow {
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.22em;
             color: var(--ink-3);
-            margin-bottom: 18px;
+            margin-bottom: 22px;
+            font-weight: 700;
         }
         h1 {
-            font-size: clamp(36px, 4vw, 56px);
+            font-size: clamp(40px, 5vw, 72px);
             font-weight: 700;
             letter-spacing: -0.035em;
-            line-height: 1.02;
-            margin-bottom: 18px;
-        }
-        h1 .accent {
-            color: var(--up);
-            font-style: italic;
-            font-weight: 600;
+            line-height: 1;
+            margin-bottom: 22px;
+            max-width: 900px;
         }
         .lede {
             font-size: 17px;
-            line-height: 1.55;
+            line-height: 1.6;
             color: var(--ink-2);
-            max-width: 620px;
-            margin-bottom: 48px;
+            max-width: 680px;
         }
 
-        /* ---- Steps ---- */
-        .steps {
+        /* ============ Section ============ */
+        .section {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1px;
-            background: var(--line);
-            border: 1px solid var(--line);
-            margin-bottom: 64px;
+            grid-template-columns: 320px 1fr;
+            gap: 64px;
+            padding: 72px 0;
+            border-bottom: 1px solid var(--line);
         }
-        .step {
-            background: var(--bg-1);
-            padding: 28px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .step-num {
+        .section:last-of-type { border-bottom: 0; }
+        .section-tag {
             font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.22em;
             color: var(--ink-3);
-            letter-spacing: 0.2em;
+            font-weight: 700;
+            padding-top: 6px;
         }
-        .step-title {
-            font-size: 18px;
+        .section-head h2 {
+            font-size: clamp(28px, 3vw, 40px);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.05;
+            margin-bottom: 14px;
+        }
+        .section-head p {
+            color: var(--ink-2);
+            font-size: 16px;
+            line-height: 1.65;
+            max-width: 540px;
+        }
+        .section-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 24px;
+            font-size: 14px;
             font-weight: 600;
             color: var(--ink-1);
+            text-decoration: none;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--ink-2);
+            transition: border-color 160ms ease, color 160ms ease;
         }
-        .step-body {
-            color: var(--ink-2);
-            font-size: 14px;
-            line-height: 1.55;
-        }
+        .section-link:hover { border-color: var(--ink-1); }
+        .section-link .arrow { transition: transform 200ms ease; }
+        .section-link:hover .arrow { transform: translateX(4px); }
 
-        /* ---- Mock chart ---- */
-        .mock {
+        /* ============ Chart preview ============ */
+        .preview {
             border: 1px solid var(--line);
             background: var(--bg-1);
-            padding: 28px;
-            margin-bottom: 48px;
         }
-        .mock-head {
+        .preview-head {
             display: flex;
-            align-items: baseline;
+            align-items: center;
             justify-content: space-between;
-            margin-bottom: 18px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--line);
         }
-        .mock-sym {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: 0.02em;
-        }
-        .mock-name {
-            color: var(--ink-3);
-            font-size: 13px;
-            margin-left: 8px;
-        }
-        .mock-price {
-            font-size: 28px;
-            font-weight: 700;
-            font-variant-numeric: tabular-nums;
-        }
-        .mock-delta {
-            color: var(--up);
-            font-size: 14px;
-            font-variant-numeric: tabular-nums;
-            margin-left: 8px;
-        }
-        .mock-chart {
+        .preview-head-left { display: flex; align-items: center; gap: 14px; }
+        .preview-ticker { font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }
+        .preview-meta { color: var(--ink-3); font-size: 12px; }
+        .preview-price { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .preview-price-delta { color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; margin-left: 8px; }
+
+        .chart-body {
+            position: relative;
             width: 100%;
-            height: 220px;
-            display: block;
+            height: 280px;
         }
-        .mock-bar {
-            display: flex;
-            gap: 28px;
-            margin-top: 18px;
-            padding-top: 18px;
+        .chart-body svg { width: 100%; height: 100%; display: block; }
+
+        .preview-foot {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
             border-top: 1px solid var(--line);
         }
-        .mock-stat .k {
+        .preview-stat {
+            padding: 14px 18px;
+            border-right: 1px solid var(--line);
+        }
+        .preview-stat:last-child { border-right: 0; }
+        .preview-stat .k {
             font-size: 10px;
             color: var(--ink-3);
             letter-spacing: 0.18em;
             text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 6px;
         }
-        .mock-stat .v {
-            font-size: 15px;
+        .preview-stat .v {
+            font-size: 14px;
             font-weight: 600;
             font-variant-numeric: tabular-nums;
-            margin-top: 4px;
         }
 
-        /* ---- CTA ---- */
-        .cta-row {
-            display: flex;
+        /* ============ Screener preview ============ */
+        .screener-preview {
+            border: 1px solid var(--line);
+            background: var(--bg-1);
+        }
+        .screener-row {
+            display: grid;
+            grid-template-columns: 36px 1fr 84px 56px 80px;
             align-items: center;
+            gap: 16px;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--line);
+        }
+        .screener-row:last-child { border-bottom: 0; }
+        .screener-row .rank { color: var(--ink-3); font-size: 12px; font-weight: 700; }
+        .screener-row .sym { font-weight: 700; font-size: 13px; }
+        .screener-row .name { color: var(--ink-3); font-size: 12px; margin-left: 8px; font-weight: 400; }
+        .screener-row .verdict { color: var(--ink-2); font-size: 12px; font-weight: 500; }
+        .screener-row .score {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ink-1);
+            border: 1px solid var(--line-2);
+            padding: 4px 0;
+            min-width: 42px;
+        }
+        .screener-row .factor-bar {
+            height: 4px;
+            background: var(--line);
+            position: relative;
+            overflow: hidden;
+        }
+        .screener-row .factor-bar span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, #7fd8ff, #ff7eb6, #ffb36b);
+        }
+        .screener-head {
+            display: grid;
+            grid-template-columns: 36px 1fr 84px 56px 80px;
+            gap: 16px;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--line);
+            background: var(--bg-2);
+            font-size: 10px;
+            color: var(--ink-3);
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-weight: 700;
+        }
+
+        /* ============ Community preview ============ */
+        .community-preview {
+            border: 1px solid var(--line);
+            background: var(--bg-1);
+        }
+        .post {
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--line);
+        }
+        .post:last-child { border-bottom: 0; }
+        .post-meta { color: var(--ink-3); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
+        .post-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+        .post-snippet { color: var(--ink-2); font-size: 13px; line-height: 1.55; }
+
+        /* ============ Profile preview — mirrors the community profile card ============ */
+        .profile-preview {
+            background: var(--bg-1);
+            border: 1px solid var(--line);
+            border-radius: 26px;
+            overflow: hidden;
+        }
+        .profile-cover {
+            height: 148px;
+            background-color: #1a1a22;
+            background-image: linear-gradient(135deg, #1a1a22 0%, #08080c 72%);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-bottom: 1px solid var(--line);
+        }
+        .profile-body { padding: 0 24px 22px; }
+        .profile-topline {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            margin-top: -46px;
+        }
+        .profile-avatar-large {
+            width: 92px;
+            height: 92px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #2a2a3a, #1c1c28);
+            border: 4px solid var(--bg-1);
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 30px;
+            color: var(--ink-1);
+            flex: 0 0 auto;
+            overflow: hidden;
+        }
+        .profile-avatar-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .profile-name-block { margin-top: 16px; }
+        .profile-display-name {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            line-height: 1.1;
+        }
+        .profile-handle {
+            color: var(--ink-3);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .profile-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin-top: 16px;
+            color: var(--ink-2);
+            font-size: 14px;
+        }
+        .profile-stats strong {
+            color: var(--ink-1);
+            font-weight: 700;
+            margin-right: 4px;
+        }
+        .profile-meta-line {
+            display: flex;
+            flex-wrap: wrap;
             gap: 14px;
-            margin-top: 24px;
+            margin-top: 14px;
+            color: var(--ink-3);
+            font-size: 13px;
+        }
+        .profile-socials {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 14px;
+        }
+        .profile-social-link {
+            color: var(--ink-2);
+            font-size: 13px;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: color 150ms ease, border-color 150ms ease;
+        }
+        .profile-social-link:hover {
+            color: var(--ink-1);
+            border-bottom-color: var(--ink-2);
+        }
+
+        /* ============ Closing CTA ============ */
+        .closing {
+            margin-top: 72px;
+            padding: 64px 40px;
+            border: 1px solid var(--line);
+            text-align: center;
+        }
+        .closing h2 {
+            font-size: clamp(28px, 3vw, 44px);
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            line-height: 1.05;
+            margin-bottom: 28px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .cta-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
         }
         .btn-primary {
             background: var(--ink-1);
             color: var(--bg-0);
-            font-weight: 600;
+            font-weight: 700;
             font-size: 14px;
-            padding: 14px 24px;
+            padding: 14px 26px;
             border: 1px solid var(--ink-1);
             cursor: pointer;
             font-family: inherit;
@@ -240,7 +364,7 @@
         .btn-secondary {
             background: transparent;
             color: var(--ink-1);
-            font-weight: 500;
+            font-weight: 600;
             font-size: 14px;
             padding: 14px 22px;
             border: 1px solid var(--line-2);
@@ -251,98 +375,223 @@
         }
         .btn-secondary:hover { border-color: var(--ink-3); background: var(--bg-2); }
 
-        @media (max-width: 700px) {
-            .steps { grid-template-columns: 1fr; }
-            .wrap { padding: 48px 24px 72px; }
-            .bar { padding: 16px 20px; }
+        @media (max-width: 880px) {
+            .wrap { padding: 110px 22px 80px; }
+            .section { grid-template-columns: 1fr; gap: 32px; padding: 56px 0; }
+            .preview-foot { grid-template-columns: repeat(3, 1fr); }
+            .preview-stat:nth-child(4), .preview-stat:nth-child(5) { border-top: 1px solid var(--line); }
+            .preview-stat:nth-child(3) { border-right: 0; }
+            .screener-row, .screener-head { grid-template-columns: 28px 1fr 64px; gap: 12px; padding: 12px 16px; }
+            .screener-row .verdict, .screener-row .factor-bar, .screener-head > div:nth-child(3), .screener-head > div:nth-child(4) { display: none; }
+            .closing { padding: 48px 22px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="bar">
-        <div class="bar-left">
-            <a href="/" class="bar-logo">
-                <img src="/static/logo.png" alt="VSN">
-                <span>VSN</span>
-            </a>
-            <a href="/" class="bar-back">← Back</a>
-        </div>
-        <div class="bar-tag">
-            <span class="dot"></span>
-            <span>Live demo</span>
-        </div>
-    </div>
+    {% set active_nav = 'demo' %}
+    {% include '_site_nav.html' %}
 
     <main class="wrap">
-        <div class="eyebrow">DEMO / 01</div>
-        <h1>See it <span class="accent">in action.</span></h1>
-        <p class="lede">A walk-through of what VSN Analysis actually does — clean charts, transparent scoring, and a search that resolves as you type. Below is a static preview of the chart view you'll land on after picking a ticker.</p>
+        <section class="hero">
+            <h1>What VSN looks like in practice.</h1>
+            <p class="lede">VSN Analysis pulls real market data into a quiet, focused workspace: full-screen charts, a multi-factor screener with reasoning, a feed of posts from other users, and a profile that tracks your watchlist. Have a look around.</p>
+            <br>
+            <p>All data below is for demonstration purposes only, visit <a href="https://www.vsnanalysis.com">our main page</a> for live data!</p>
+        </section>
 
-        <div class="steps">
-            <div class="step">
-                <div class="step-num">01</div>
-                <div class="step-title">Search a ticker</div>
-                <div class="step-body">Hit the markets button or use the search bar — type a symbol like AAPL, MSFT, or NVDA and we resolve it instantly.</div>
-            </div>
-            <div class="step">
-                <div class="step-num">02</div>
-                <div class="step-title">Read the chart</div>
-                <div class="step-body">Interactive price chart with volume, range selectors, and clean overlays. No flashing colors, no popups.</div>
-            </div>
-            <div class="step">
-                <div class="step-num">03</div>
-                <div class="step-title">Get the score</div>
-                <div class="step-body">A transparent VSN score with the factors that drove it — analyst targets, momentum, and fundamentals.</div>
-            </div>
-        </div>
-
-        <div class="mock">
-            <div class="mock-head">
-                <div>
-                    <span class="mock-sym">AAPL</span>
-                    <span class="mock-name">Apple Inc.</span>
+        <!-- ============ Fullscreen chart ============ -->
+        <section class="section">
+            <div class="section-tag">Fullscreen Chart</div>
+            <div>
+                <div class="section-head">
+                    <h2>The chart, full screen.</h2>
+                    <p>Tradingview-grade lightweight charts on every ticker. Pan, zoom, candle or line, infinite history, dotted last-price marker, volume below.</p>
                 </div>
-                <div>
-                    <span class="mock-price">$214.83</span>
-                    <span class="mock-delta">+1.42 (+0.67%)</span>
-                </div>
-            </div>
-            <svg class="mock-chart" viewBox="0 0 800 220" preserveAspectRatio="none" aria-hidden="true">
-                <defs>
-                    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#00ff9c" stop-opacity="0.35"/>
-                        <stop offset="100%" stop-color="#00ff9c" stop-opacity="0"/>
-                    </linearGradient>
-                </defs>
-                <!-- grid -->
-                <g stroke="#1c1c28" stroke-width="1">
-                    <line x1="0" y1="44" x2="800" y2="44"/>
-                    <line x1="0" y1="88" x2="800" y2="88"/>
-                    <line x1="0" y1="132" x2="800" y2="132"/>
-                    <line x1="0" y1="176" x2="800" y2="176"/>
-                </g>
-                <!-- area -->
-                <path d="M0 160 L40 150 L80 158 L120 140 L160 130 L200 142 L240 118 L280 124 L320 100 L360 110 L400 88 L440 96 L480 72 L520 84 L560 60 L600 70 L640 52 L680 64 L720 44 L760 56 L800 40 L800 220 L0 220 Z"
-                      fill="url(#g1)"/>
-                <!-- line -->
-                <path d="M0 160 L40 150 L80 158 L120 140 L160 130 L200 142 L240 118 L280 124 L320 100 L360 110 L400 88 L440 96 L480 72 L520 84 L560 60 L600 70 L640 52 L680 64 L720 44 L760 56 L800 40"
-                      fill="none" stroke="#00ff9c" stroke-width="2"/>
-            </svg>
-            <div class="mock-bar">
-                <div class="mock-stat"><div class="k">Open</div><div class="v">213.41</div></div>
-                <div class="mock-stat"><div class="k">High</div><div class="v">215.92</div></div>
-                <div class="mock-stat"><div class="k">Low</div><div class="v">212.88</div></div>
-                <div class="mock-stat"><div class="k">Volume</div><div class="v">48.2M</div></div>
-                <div class="mock-stat"><div class="k">VSN Score</div><div class="v" style="color:var(--up)">8.4</div></div>
-            </div>
-        </div>
 
-        <h2 style="font-size:24px;font-weight:600;margin-bottom:10px;">Ready to try the real thing?</h2>
-        <p style="color:var(--ink-2);">Free forever for individuals. No credit card. No newsletter spam.</p>
-        <div class="cta-row">
-            <a href="/auth?signup=1" class="btn-primary">Create your account →</a>
-            <a href="/" class="btn-secondary">Back to home</a>
+                <div class="preview" style="margin-top: 28px;">
+                    <div class="preview-head">
+                        <div class="preview-head-left">
+                            <span class="preview-ticker">AAPL</span>
+                            <span class="preview-meta">Apple Inc. · NASDAQ</span>
+                        </div>
+                        <div>
+                            <span class="preview-price">$214.83</span>
+                            <span class="preview-price-delta">+1.42  +0.67%</span>
+                        </div>
+                    </div>
+                    <div class="chart-body">
+                        <svg viewBox="0 0 800 280" preserveAspectRatio="none" aria-hidden="true">
+                            <g stroke="#1c1c28" stroke-width="1">
+                                <line x1="0" y1="56"  x2="800" y2="56"/>
+                                <line x1="0" y1="112" x2="800" y2="112"/>
+                                <line x1="0" y1="168" x2="800" y2="168"/>
+                                <line x1="0" y1="224" x2="800" y2="224"/>
+                            </g>
+                            <path d="M0 200 L40 188 L80 196 L120 174 L160 162 L200 178 L240 148 L280 156 L320 124 L360 138 L400 108 L440 120 L480 88 L520 100 L560 70 L600 84 L640 60 L680 76 L720 48 L760 64 L800 40"
+                                  fill="none" stroke="#f4f4f6" stroke-width="2"/>
+                            <line x1="0" y1="40" x2="800" y2="40" stroke="#ffb36b" stroke-width="1" stroke-dasharray="2 4"/>
+                        </svg>
+                    </div>
+                    <div class="preview-foot">
+                        <div class="preview-stat"><div class="k">Open</div><div class="v">213.41</div></div>
+                        <div class="preview-stat"><div class="k">High</div><div class="v">215.92</div></div>
+                        <div class="preview-stat"><div class="k">Low</div><div class="v">212.88</div></div>
+                        <div class="preview-stat"><div class="k">Volume</div><div class="v">48.2M</div></div>
+                        <div class="preview-stat"><div class="k">Range</div><div class="v">1Y</div></div>
+                    </div>
+                </div>
+
+                <a class="section-link" href="/chart/AAPL">Open AAPL fullscreen <span class="arrow">→</span></a>
+            </div>
+        </section>
+
+        <!-- ============ Screener + VSN Analysis ============ -->
+        <section class="section">
+            <div class="section-tag">Screener</div>
+            <div>
+                <div class="section-head">
+                    <h2>A screener that explains itself.</h2>
+                    <p>Rank a universe by value, momentum, growth, quality, and risk: each factor is a percentile within the current screen, so the scores actually separate names. Click any row and ask VSN Analysis to write a structured note on why it ranks where it does.</p>
+                </div>
+
+                <div class="screener-preview" style="margin-top: 28px;">
+                    <div class="screener-head">
+                        <div>#</div>
+                        <div>Symbol</div>
+                        <div>Verdict</div>
+                        <div>Score</div>
+                        <div>Factors</div>
+                    </div>
+                    <div class="screener-row">
+                        <div class="rank">1</div>
+                        <div><span class="sym">NVDA</span><span class="name">NVIDIA</span></div>
+                        <div class="verdict">High conviction</div>
+                        <div><span class="score">94</span></div>
+                        <div class="factor-bar"><span style="width: 94%"></span></div>
+                    </div>
+                    <div class="screener-row">
+                        <div class="rank">2</div>
+                        <div><span class="sym">MU</span><span class="name">Micron Technology</span></div>
+                        <div class="verdict">High conviction</div>
+                        <div><span class="score">87</span></div>
+                        <div class="factor-bar"><span style="width: 87%"></span></div>
+                    </div>
+                    <div class="screener-row">
+                        <div class="rank">3</div>
+                        <div><span class="sym">AVGO</span><span class="name">Broadcom Inc.</span></div>
+                        <div class="verdict">Constructive</div>
+                        <div><span class="score">76</span></div>
+                        <div class="factor-bar"><span style="width: 76%"></span></div>
+                    </div>
+                    <div class="screener-row">
+                        <div class="rank">4</div>
+                        <div><span class="sym">MSFT</span><span class="name">Microsoft Corp.</span></div>
+                        <div class="verdict">Constructive</div>
+                        <div><span class="score">68</span></div>
+                        <div class="factor-bar"><span style="width: 68%"></span></div>
+                    </div>
+                    <div class="screener-row">
+                        <div class="rank">5</div>
+                        <div><span class="sym">AAPL</span><span class="name">Apple Inc.</span></div>
+                        <div class="verdict">Mixed</div>
+                        <div><span class="score">54</span></div>
+                        <div class="factor-bar"><span style="width: 54%"></span></div>
+                    </div>
+                </div>
+
+                <a class="section-link" href="/screener">Open the screener <span class="arrow">→</span></a>
+            </div>
+        </section>
+
+        <!-- ============ Community ============ -->
+        <section class="section">
+            <div class="section-tag">Community</div>
+            <div>
+                <div class="section-head">
+                    <h2>A feed for people who actually read.</h2>
+                    <p>Posts from other VSN users: write-ups, screen ideas, single-ticker notes.</p>
+                </div>
+
+                <div class="community-preview" style="margin-top: 28px;">
+                    <div class="post">
+                        <div class="post-meta">Mallik N. · 2 days ago</div>
+                        <div class="post-title">Why I'm rotating out of memory for the next quarter</div>
+                        <div class="post-snippet">Both NVDA and MU still screen as high conviction, but the memory cycle has historically rolled over a quarter or two ahead of the broader semis. Here's the structural read and what would change my mind.</div>
+                    </div>
+                    <div class="post">
+                        <div class="post-meta">Avery K. · 5 days ago</div>
+                        <div class="post-title">Quiet screener: 12 names with high quality and low momentum</div>
+                        <div class="post-snippet">Filter for a value &gt; 70, quality &gt; 70, momentum &lt; 40. You get a small list of solid companies the market currently dislikes. Some are dislike-able for a reason; a few are not.</div>
+                    </div>
+                    <div class="post">
+                        <div class="post-meta">Jordan P. · 1 week ago</div>
+                        <div class="post-title">Notes on F: the dividend setup nobody's pricing</div>
+                        <div class="post-snippet">A short write-up on Ford after the latest print. Free cash flow story is back, balance sheet is cleaner than the headlines suggest, and the yield is doing real work.</div>
+                    </div>
+                </div>
+
+                <a class="section-link" href="/community">Browse the community <span class="arrow">→</span></a>
+            </div>
+        </section>
+
+        <!-- ============ Profile ============ -->
+        <section class="section">
+            <div class="section-tag">Your profile</div>
+            <div>
+                <div class="section-head">
+                    <h2>A profile that gets out of the way.</h2>
+                    <p>Your watchlist, your screens, your posts all kept in one quiet place. Sign in with email or Google and your state follows you across devices.</p>
+                </div>
+
+                <section class="profile-preview" style="margin-top: 28px;" aria-label="Profile preview">
+                    {# Drop banner at static/images/demo-banner.jpg (or .png). Falls back to the gradient if missing. #}
+                    <div class="profile-cover" style="background-image: url('{{ url_for('static', filename='images/demo-banner.jpg') }}'), linear-gradient(135deg, #1a1a22 0%, #08080c 72%);"></div>
+                    <div class="profile-body">
+                        <div class="profile-topline">
+                            {# Drop avatar at static/images/demo-avatar.png. If the file is missing the onerror handler swaps in the letter fallback. #}
+                            <div class="profile-avatar-large">
+                                <img src="{{ url_for('static', filename='images/demo-avatar.png') }}"
+                                     alt="John Doe"
+                                     onerror="this.parentNode.textContent='J';">
+                            </div>
+                        </div>
+                        <div class="profile-name-block">
+                            <div class="profile-display-name">VSN Analysis</div>
+                            <div class="profile-handle">@vsn</div>
+                        </div>
+                        <div class="profile-stats">
+                            <span><strong>481</strong>posts</span>
+                            <span><strong>80.3k</strong>followers</span>
+                            <span><strong>194</strong>following</span>
+                        </div>
+                        <div class="profile-meta-line">
+                            <span>Joined December 2025</span>
+                            <span>138 reposts</span>
+                            <span>481 comments</span>
+                        </div>
+                        <div class="profile-socials">
+                            <a class="profile-social-link">X/Twitter</a>
+                            <a class="profile-social-link">Reddit</a>
+                            <a class="profile-social-link">Instagram</a>
+                            <a class="profile-social-link">GitHub</a>
+                            <a class="profile-social-link">Website</a>
+
+                        </div>
+                    </div>
+                </section>
+
+                <a class="section-link" href="/profile">Open your profile <span class="arrow">→</span></a>
+            </div>
+        </section>
+
+        <!-- ============ Closing ============ -->
+        <div class="closing">
+            <h2>Try the real thing, on your own tickers.</h2>
+            <div class="cta-row">
+                <a href="/auth?signup=1" class="btn-primary">Create your account →</a>
+                <a href="/" class="btn-secondary">Back to home</a>
+            </div>
         </div>
     </main>
 

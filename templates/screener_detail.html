@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ ticker }} Screen | VSN Analysis</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/scrollbar.css') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -27,20 +28,20 @@
     html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     button { font: inherit; }
     body.analysis-open { overflow: hidden; }
-    .shell { width: min(1500px, calc(100vw - 64px)); margin: 0 auto; padding: 118px 0 132px; transition: filter 240ms ease; }
-    body.analysis-open .shell { filter: blur(10px); }
+    .shell { width: min(1500px, calc(100vw - 64px)); margin: 0 auto; padding: 118px 0 132px; }
     .back { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 700; }
     .hero { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 36px; align-items: end; padding: 28px 0 30px; border-bottom: 1px solid var(--line); }
     .kicker { margin: 0 0 10px; color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-    h1 { margin: 0; font-size: clamp(54px, 9vw, 128px); line-height: .86; letter-spacing: 0; }
-    .title-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-    .company-logo { width: 68px; height: 68px; border: 1px solid var(--line-2); background: var(--panel); display: grid; place-items: center; overflow: hidden; flex: 0 0 auto; }
-    .company-logo img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
-    .company-logo span { font-size: 24px; font-weight: 800; }
-    .price-inline { display: flex; align-items: baseline; gap: 12px; margin-left: 4px; }
-    .price-inline strong { font-size: clamp(30px, 4vw, 58px); line-height: 1; }
-    .price-inline span { font-size: 16px; font-weight: 800; }
-    .sub { margin: 16px 0 0; color: var(--muted); font-size: 16px; line-height: 1.6; max-width: 840px; }
+    h1 { margin: 0; font-size: clamp(48px, 7vw, 96px); line-height: 1; letter-spacing: -0.02em; font-weight: 800; }
+    .title-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .company-logo { width: 52px; height: 52px; display: grid; place-items: center; overflow: hidden; flex: 0 0 auto; }
+    .company-logo img { width: 100%; height: 100%; object-fit: contain; }
+    .company-logo span { font-size: 22px; font-weight: 800; color: var(--muted); }
+    .ticker-block { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+    .price-inline { display: inline-flex; align-items: baseline; gap: 10px; padding-left: 4px; border-left: 1px solid var(--line); margin-left: 4px; padding-left: 18px; }
+    .price-inline strong { font-size: clamp(26px, 3vw, 40px); line-height: 1; font-weight: 700; letter-spacing: -0.01em; }
+    .price-inline span { font-size: 15px; font-weight: 700; }
+    .sub { margin: 14px 0 0; color: var(--muted); font-size: 15px; line-height: 1.6; max-width: 840px; }
     .scorebox { text-align: right; }
     .score { font-size: 76px; font-weight: 800; line-height: .9; }
     .label { color: var(--soft); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; margin-top: 8px; }
@@ -67,10 +68,9 @@
     .metric { background: #000; padding: 16px; min-height: 84px; }
     .metric > span { display: block; color: var(--soft); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
     .metric strong { font-size: 20px; overflow-wrap: anywhere; }
-    .mini-chart { position: relative; height: 260px; border: 1px solid var(--line); background: #000; cursor: crosshair; }
-    .gradient-line-overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-    .chart-host { position: absolute; inset: 0; z-index: 1; }
-    .chart-tooltip { position: absolute; z-index: 3; pointer-events: none; display: none; padding: 8px 10px; border: 1px solid var(--line-2); background: rgba(8,8,12,.92); color: var(--ink); font-size: 12px; font-weight: 700; box-shadow: 0 14px 30px rgba(0,0,0,.35); }
+    .price-chart-wrap { position: relative; border: 1px solid var(--line); background: #000; }
+    .lw-chart { width: 100% !important; height: 320px !important; display: block; }
+    .chart-empty { padding: 80px 20px; text-align: center; color: var(--muted); font-size: 14px; }
     .news, .related { display: grid; gap: 0; border-top: 1px solid var(--line); }
     .article, .related-card { display: block; padding: 16px 0; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; }
     .article-title, .related-title { font-weight: 700; line-height: 1.4; }
@@ -83,17 +83,26 @@
     .floating-analysis {
       position: fixed;
       left: 50%;
-      bottom: 24px;
+      bottom: 28px;
       transform: translateX(-50%);
       z-index: 120;
       height: 52px;
       min-width: 220px;
-      padding: 0 24px;
-      border: 1px solid #fff;
-      background: #f6f6f7;
-      color: #000;
-      box-shadow: 0 18px 50px rgba(0,0,0,.45);
-      transition: transform 220ms ease, opacity 220ms ease;
+      padding: 0 26px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 999px;
+      background: rgba(18, 18, 24, 0.55);
+      color: var(--ink);
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      transition: transform 220ms ease, opacity 220ms ease, background 180ms ease, border-color 180ms ease;
+    }
+    .floating-analysis:hover {
+      background: rgba(32, 32, 42, 0.65);
+      border-color: rgba(255, 255, 255, 0.22);
     }
     body.analysis-open .floating-analysis { opacity: 0; transform: translate(-50%, 16px); pointer-events: none; }
 
@@ -123,60 +132,83 @@
     }
     .analysis-overlay.open .analysis-panel { transform: translateY(0) scale(1); opacity: 1; }
     .analysis-overlay.docking .analysis-panel { transform: translateY(28px) scale(.94); opacity: 0; }
-    .analysis-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 22px 28px; border-bottom: 1px solid rgba(255,255,255,.18); }
-    .analysis-title { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-    .analysis-title strong { display: block; margin-top: 6px; color: var(--ink); font-size: 34px; letter-spacing: 0; text-transform: none; }
-    .analysis-close { width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.28); background: transparent; color: var(--ink); cursor: pointer; font-size: 22px; }
-    .analysis-body { overflow: auto; padding: 34px min(7vw, 92px) 70px; }
-    .analysis-content { max-width: 980px; margin: 0 auto; }
+    .analysis-head { display: flex; align-items: center; justify-content: flex-end; gap: 18px; padding: 18px 22px; }
+    .analysis-title { display: none; }
+    .analysis-close { width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.18); background: transparent; color: var(--ink); cursor: pointer; font-size: 22px; border-radius: 999px; transition: background 160ms ease, border-color 160ms ease; }
+    .analysis-close:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.32); }
+    .analysis-body {
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+      padding: 34px min(4vw, 56px) 70px;
+      /* Firefox */
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.18) transparent;
+    }
+    /* WebKit (Chrome/Safari/Edge) */
+    .analysis-body::-webkit-scrollbar { width: 10px; }
+    .analysis-body::-webkit-scrollbar-track { background: transparent; }
+    .analysis-body::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    .analysis-body::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); background-clip: padding-box; }
+    .analysis-content { max-width: 1280px; margin: 0 auto; }
     .source { color: var(--soft); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 14px; }
     .source.warn { color: var(--warn); }
-    .analysis-summary { color: var(--ink); font-size: clamp(28px, 4vw, 56px); line-height: 1.05; font-weight: 800; margin-bottom: 24px; }
+    .analysis-summary { color: var(--ink); font-size: clamp(20px, 1.8vw, 28px); line-height: 1.3; font-weight: 700; margin-bottom: 22px; letter-spacing: -0.005em; }
     .analysis-content h3 { margin: 28px 0 10px; font-size: 14px; color: var(--ink); letter-spacing: .08em; text-transform: uppercase; }
     .analysis-content p, .analysis-content li { color: var(--muted); font-size: 18px; line-height: 1.75; }
     .analysis-content ul { padding-left: 24px; }
     .typing { white-space: pre-wrap; color: var(--muted); font-size: 18px; line-height: 1.75; }
     .cursor::after { content: ""; display: inline-block; width: 8px; height: 1.05em; margin-left: 4px; background: var(--ink); vertical-align: -2px; animation: blink 900ms steps(2,end) infinite; }
     @keyframes blink { 50% { opacity: 0; } }
-    .analyzing { min-height: 360px; display: grid; place-items: center; text-align: center; }
+    .analyzing {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 8px 0 18px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 22px;
+    }
+    .analyzing-logo {
+      width: 28px;
+      height: 28px;
+      flex: 0 0 auto;
+      animation: vsnSpin 1800ms linear infinite;
+      filter: drop-shadow(0 0 6px rgba(127, 216, 255, 0.35));
+    }
     .analyzing-title {
-      font-size: clamp(34px, 6vw, 78px);
-      font-weight: 800;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.005em;
       background: linear-gradient(90deg, #7fd8ff, #ff7eb6, #f6f06a, #c7ef74, #b58cff, #7fd8ff);
       background-size: 360% 100%;
       color: transparent;
       -webkit-background-clip: text;
       background-clip: text;
-      animation: gradientRun 850ms linear infinite;
-    }
-    .analyzing-line {
-      width: min(520px, 70vw);
-      height: 4px;
-      margin: 26px auto 0;
-      background: linear-gradient(90deg, #7fd8ff, #ff7eb6, #f6f06a, #c7ef74, #b58cff, #7fd8ff);
-      background-size: 280% 100%;
-      animation: gradientRun 600ms linear infinite;
+      animation: gradientRun 4500ms linear infinite;
     }
     @keyframes gradientRun { to { background-position: -280% 0; } }
-    .dock-card {
-      position: fixed;
-      right: 28px;
-      bottom: 92px;
-      z-index: 118;
-      width: 280px;
-      border: 1px solid var(--line-2);
-      background: var(--panel-2);
-      padding: 14px 16px;
-      box-shadow: 0 18px 50px rgba(0,0,0,.5);
-      transform: translateY(16px);
-      opacity: 0;
-      pointer-events: none;
-      transition: transform 260ms cubic-bezier(.16,1,.3,1), opacity 200ms ease;
-    }
-    .dock-card.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
-    .dock-card strong { display: block; margin-bottom: 6px; }
-    .dock-card span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    @keyframes vsnSpin { to { transform: rotate(360deg); } }
 
+    /* Fade-in for the formatted analysis once typing completes */
+    .analysis-formatted {
+      opacity: 0;
+      transform: translateY(8px);
+      animation: analysisFadeIn 480ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .analysis-formatted > *:nth-child(1) { animation-delay: 0ms; }
+    .analysis-formatted > *:nth-child(2) { animation-delay: 60ms; }
+    .analysis-formatted > *:nth-child(3) { animation-delay: 120ms; }
+    .analysis-formatted > *:nth-child(4) { animation-delay: 180ms; }
+    .analysis-formatted > *:nth-child(5) { animation-delay: 240ms; }
+    .analysis-formatted > *:nth-child(n+6) { animation-delay: 300ms; }
+    @keyframes analysisFadeIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
     @media (max-width: 1000px) {
       .shell { width: min(100% - 32px, 860px); }
       .hero, .grid { grid-template-columns: 1fr; }
@@ -192,16 +224,16 @@
   {% set active_nav = 'screener' %}
   {% include '_site_nav.html' %}
   <main class="shell">
-    <a class="back" href="/screener">Back to screener</a>
     <section class="hero">
       <div>
-        <p class="kicker">VSN stock dossier</p>
         <div class="title-row">
           <div class="company-logo" id="companyLogo"><span>{{ ticker[:1] }}</span></div>
-          <h1 id="tickerTitle">{{ ticker }}</h1>
-          <div class="price-inline">
-            <strong id="headerPrice">--</strong>
-            <span id="headerChange">--</span>
+          <div class="ticker-block">
+            <h1 id="tickerTitle">{{ ticker }}</h1>
+            <div class="price-inline">
+              <strong id="headerPrice">--</strong>
+              <span id="headerChange">--</span>
+            </div>
           </div>
         </div>
         <p class="sub" id="tickerSub">Loading company data...</p>
@@ -219,12 +251,9 @@
     <div class="grid">
       <div>
         <section class="section">
-          <h2>Price path</h2>
-          <p class="section-intro">A compact look at recent direction. The goal is context, not chart overload.</p>
-          <div class="mini-chart" id="miniChart">
-            <div class="chart-host" id="chartHost"></div>
-            <canvas class="gradient-line-overlay" id="gradientOverlay" aria-hidden="true"></canvas>
-            <div class="chart-tooltip" id="chartTooltip"></div>
+          <h2>Compact Graph</h2>
+          <div class="price-chart-wrap" id="priceChartWrap">
+            <div id="priceChart" class="lw-chart"></div>
           </div>
         </section>
         <section class="section">
@@ -261,11 +290,7 @@
     </div>
   </main>
 
-  <button class="floating-analysis btn-primary" id="analysisBtn" type="button">Get VSN Analysis</button>
-  <button class="dock-card" id="dockCard" type="button">
-    <strong>VSN Analysis docked</strong>
-    <span>Click to reopen the generated analysis.</span>
-  </button>
+  <button class="floating-analysis" id="analysisBtn" type="button">Get VSN Analysis</button>
 
   <div class="analysis-overlay" id="analysisOverlay" aria-hidden="true">
     <section class="analysis-panel" id="analysisPanel" role="dialog" aria-modal="true" aria-label="VSN Analysis">
@@ -313,17 +338,14 @@
         document.body.classList.remove('analysis-open');
         if (state.analysisGenerated) {
           document.getElementById('analysisBtn').textContent = 'View VSN Analysis';
-          document.getElementById('dockCard').classList.add('show');
         }
       }, 260);
     }
     function setAnalyzing() {
       document.getElementById('analysisContent').innerHTML = `
         <div class="analyzing">
-          <div>
-            <div class="analyzing-title">Analyzing ${escapeHtml(ticker)}</div>
-            <div class="analyzing-line"></div>
-          </div>
+          <img class="analyzing-logo" src="/static/logo.png" alt="VSN">
+          <div class="analyzing-title">Analyzing ${escapeHtml(ticker)}</div>
         </div>
       `;
     }
@@ -350,148 +372,197 @@
       const source = ai.source || 'Unknown';
       const warn = source.toLowerCase().includes('failed') || source.toLowerCase().includes('fallback') || source.toLowerCase().includes('backup');
       document.getElementById('analysisContent').innerHTML = `
-        <div class="source ${warn ? 'warn' : ''}">Source: ${escapeHtml(source)}</div>
-        <div class="analysis-summary">${escapeHtml(ai.summary || ai.thesis || 'Analysis generated.')}</div>
-        ${ai.thesis ? `<p>${escapeHtml(ai.thesis)}</p>` : ''}
-        ${ai.setup_quality ? `<h3>Setup quality</h3><p>${escapeHtml(ai.setup_quality)}</p>` : ''}
-        <h3>Supporting points</h3><ul>${(ai.supporting_points || []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
-        <h3>Risks</h3><ul>${(ai.risks || []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
-        ${ai.scenario_analysis ? `<h3>Scenario analysis</h3><ul>${ai.scenario_analysis.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>` : ''}
-        <h3>What to watch</h3><ul>${(ai.what_to_watch || []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+        <div class="analysis-formatted">
+          <div class="source ${warn ? 'warn' : ''}">Source: ${escapeHtml(source)}</div>
+          <div class="analysis-summary">${escapeHtml(ai.summary || ai.thesis || 'Analysis generated.')}</div>
+          ${ai.thesis ? `<p>${escapeHtml(ai.thesis)}</p>` : ''}
+          ${ai.setup_quality ? `<h3>Setup quality</h3><p>${escapeHtml(ai.setup_quality)}</p>` : ''}
+          <h3>Supporting points</h3><ul>${(ai.supporting_points || []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+          <h3>Risks</h3><ul>${(ai.risks || []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+          ${ai.scenario_analysis ? `<h3>Scenario analysis</h3><ul>${ai.scenario_analysis.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>` : ''}
+          <h3>What to watch</h3><ul>${(ai.what_to_watch || []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+        </div>
       `;
     }
     function typeAnalysis(ai) {
       const text = analysisPlainText(ai);
       const content = document.getElementById('analysisContent');
-      content.innerHTML = '<div class="typing cursor" id="typingText"></div>';
+      // Keep the "Analyzing {ticker}" header visible while typing below it.
+      const existingAnalyzing = content.querySelector('.analyzing');
+      const headerHTML = existingAnalyzing ? existingAnalyzing.outerHTML : '';
+      content.innerHTML = headerHTML +
+        '<div class="typing cursor" id="typingText" style="transition: opacity 320ms ease;"></div>';
       const target = document.getElementById('typingText');
+      const scroller = document.querySelector('.analysis-body');
       let i = 0;
       const step = Math.max(2, Math.ceil(text.length / 420));
       const timer = setInterval(() => {
         i = Math.min(text.length, i + step);
         target.textContent = text.slice(0, i);
+        // Auto-follow: keep the newest typed text at the bottom of the viewport.
+        // Defer to next frame so the layout reflow from the textContent change
+        // has completed before we read scrollHeight.
+        if (scroller) {
+          requestAnimationFrame(() => {
+            scroller.scrollTop = scroller.scrollHeight;
+          });
+        }
         if (i >= text.length) {
           clearInterval(timer);
-          setTimeout(() => renderAnalysisFormatted(ai), 280);
+          // Fade the typewriter out, then swap in the formatted view (which has its own fade-in)
+          setTimeout(() => {
+            target.style.opacity = '0';
+            const header = content.querySelector('.analyzing');
+            if (header) {
+              header.style.transition = 'opacity 320ms ease';
+              header.style.opacity = '0';
+            }
+            setTimeout(() => {
+              renderAnalysisFormatted(ai);
+              // Reset scroll so the formatted view starts at the top
+              if (scroller) scroller.scrollTop = 0;
+            }, 320);
+          }, 480);
         }
       }, 14);
     }
+    // ============================================================
+    // Price chart — TradingView Lightweight Charts.
+    // Pattern mirrors chart.html: transparent line series (for crosshair
+    // + last-value badge), an area series for the underneath fill, and a
+    // canvas overlay that draws the VSN multi-color gradient line on top.
+    // fixLeftEdge/fixRightEdge clamp scroll to the actual data range.
+    // ============================================================
     let priceChart = null;
     let priceSeries = null;
-    let gradientDrawFrame = null;
-    let chartData = [];
-    function resizeGradientCanvas() {
-      const canvas = document.getElementById('gradientOverlay');
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      const w = Math.max(1, Math.floor(rect.width * dpr));
-      const h = Math.max(1, Math.floor(rect.height * dpr));
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-      }
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    let priceChartResizeObserver = null;
+
+    function parseChartTime(value) {
+      if (typeof value === 'number') return value;
+      if (!value) return undefined;
+      const raw = String(value);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+      const parsed = Date.parse(raw.includes('T') ? raw : raw.replace(' ', 'T'));
+      return Number.isNaN(parsed) ? raw.slice(0, 10) : Math.floor(parsed / 1000);
     }
-    function drawGradientLine() {
-      const canvas = document.getElementById('gradientOverlay');
-      if (!canvas || !priceChart || !priceSeries || !chartData.length) return;
-      resizeGradientCanvas();
-      const ctx = canvas.getContext('2d');
-      const rect = canvas.getBoundingClientRect();
-      ctx.clearRect(0, 0, rect.width, rect.height);
-      const points = chartData.map(p => ({
-        x: priceChart.timeScale().timeToCoordinate(p.time),
-        y: priceSeries.priceToCoordinate(p.value),
-      })).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
-      if (points.length < 2) return;
-      const gradient = ctx.createLinearGradient(0, 0, rect.width, 0);
-      gradient.addColorStop(0, '#6fdcff');
-      gradient.addColorStop(0.45, '#ff6eb8');
-      gradient.addColorStop(0.72, '#fff36b');
-      gradient.addColorStop(1, '#c7ef74');
-      ctx.save();
-      ctx.lineWidth = 2.6;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = gradient;
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, points[0].y);
-      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-      ctx.stroke();
-      ctx.restore();
-    }
-    function scheduleGradientDraw() {
-      if (gradientDrawFrame) return;
-      gradientDrawFrame = requestAnimationFrame(() => {
-        gradientDrawFrame = null;
-        drawGradientLine();
+
+    function resizePriceChart() {
+      const container = document.getElementById('priceChart');
+      if (!priceChart || !container) return;
+      const rect = container.getBoundingClientRect();
+      priceChart.applyOptions({
+        width: Math.max(1, Math.floor(rect.width)),
+        height: Math.max(1, Math.floor(rect.height)),
       });
     }
+
+    function disposePriceChart() {
+      if (priceChartResizeObserver) {
+        try { priceChartResizeObserver.disconnect(); } catch (e) {}
+        priceChartResizeObserver = null;
+      }
+      if (priceChart) {
+        try { priceChart.remove(); } catch (e) {}
+        priceChart = null;
+        priceSeries = null;
+      }
+    }
+
     function renderPriceChart(data) {
-      const host = document.getElementById('chartHost');
-      const tooltip = document.getElementById('chartTooltip');
-      if (!host || !data || data.length < 2 || !window.LightweightCharts) {
-        document.getElementById('miniChart').innerHTML = '<div class="empty">Not enough price history.</div>';
+      const wrap = document.getElementById('priceChartWrap');
+      if (!wrap || !window.LightweightCharts) return;
+
+      const points = (data || [])
+        .map(p => ({ time: parseChartTime(p.time), value: Number(p.value) }))
+        .filter(p => p.time !== undefined && Number.isFinite(p.value));
+
+      if (points.length < 2) {
+        disposePriceChart();
+        wrap.innerHTML = '<div class="chart-empty">Not enough price history to chart.</div>';
         return;
       }
-      chartData = data.map(p => ({ time: p.time, value: Number(p.value) })).filter(p => p.time && Number.isFinite(p.value));
-      if (priceChart) priceChart.remove();
+
+      // Make sure the host exists (a prior empty state may have replaced it)
+      if (!document.getElementById('priceChart')) {
+        wrap.innerHTML = '<div id="priceChart" class="lw-chart"></div>';
+      }
+      const host = document.getElementById('priceChart');
+
+      disposePriceChart();
+
       priceChart = LightweightCharts.createChart(host, {
-        width: host.clientWidth,
-        height: host.clientHeight,
-        layout: { background: { type: 'solid', color: '#000000' }, textColor: '#7f7f92', fontFamily: 'Inter, sans-serif' },
+        autoSize: true,
+        layout: {
+          background: { type: 'solid', color: '#000000' },
+          textColor: '#7f7f92',
+          fontFamily: 'Inter, sans-serif',
+        },
         grid: {
           vertLines: { color: 'rgba(255,255,255,0.045)' },
           horzLines: { color: 'rgba(255,255,255,0.055)' },
         },
-        rightPriceScale: { borderColor: '#1d1d29' },
-        timeScale: { borderColor: '#1d1d29', timeVisible: false, secondsVisible: false },
+        rightPriceScale: {
+          borderColor: '#1d1d29',
+          scaleMargins: { top: 0.14, bottom: 0.10 },
+        },
+        timeScale: {
+          borderColor: '#1d1d29',
+          timeVisible: true,
+          secondsVisible: false,
+          rightOffset: 4,
+          barSpacing: 6,
+          minBarSpacing: 2,
+          // Clamp scroll/pan to the actual data range — no scrolling into empty space.
+          fixLeftEdge: true,
+          fixRightEdge: true,
+          lockVisibleTimeRangeOnResize: true,
+        },
         crosshair: {
           mode: LightweightCharts.CrosshairMode.Normal,
-          vertLine: { color: 'rgba(255,255,255,.35)', style: 2 },
-          horzLine: { color: 'rgba(255,255,255,.20)', style: 2 },
+          vertLine: {
+            color: 'rgba(255,255,255,0.22)',
+            width: 1,
+            style: LightweightCharts.LineStyle.Dashed,
+            labelBackgroundColor: '#1d1d29',
+          },
+          horzLine: {
+            color: 'rgba(255,255,255,0.22)',
+            width: 1,
+            style: LightweightCharts.LineStyle.Dashed,
+            labelBackgroundColor: '#1d1d29',
+          },
         },
-        handleScroll: true,
-        handleScale: true,
+        handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+        handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
       });
+
+      // Clean VSN cyan line — no area fill.
       priceSeries = priceChart.addLineSeries({
-        color: 'rgba(255,255,255,0)',
+        color: '#7fd8ff',
         lineWidth: 2,
+        priceLineColor: '#ffb36b',
+        priceLineWidth: 1,
+        priceLineStyle: LightweightCharts.LineStyle.Dotted,
+        priceLineVisible: true,
         lastValueVisible: true,
-        priceLineVisible: false,
         crosshairMarkerVisible: true,
-        crosshairMarkerRadius: 4,
+        crosshairMarkerRadius: 5,
+        crosshairMarkerBorderWidth: 2,
         crosshairMarkerBorderColor: '#f6f6f7',
         crosshairMarkerBackgroundColor: '#000',
       });
-      priceSeries.setData(chartData);
+      priceSeries.setData(points);
       priceChart.timeScale().fitContent();
-      priceChart.subscribeCrosshairMove(param => {
-        if (!param || !param.point || !param.time) {
-          tooltip.style.display = 'none';
-          return;
-        }
-        const item = param.seriesData.get(priceSeries);
-        if (!item) {
-          tooltip.style.display = 'none';
-          return;
-        }
-        tooltip.style.display = 'block';
-        tooltip.innerHTML = `${param.time}<br>${fmtMoney(item.value)}`;
-        const left = Math.min(Math.max(10, param.point.x + 14), host.clientWidth - 120);
-        const top = Math.min(Math.max(10, param.point.y - 44), host.clientHeight - 56);
-        tooltip.style.left = `${left}px`;
-        tooltip.style.top = `${top}px`;
-      });
-      priceChart.timeScale().subscribeVisibleLogicalRangeChange(scheduleGradientDraw);
-      setTimeout(scheduleGradientDraw, 0);
-      window.addEventListener('resize', () => {
-        if (!priceChart || !host) return;
-        priceChart.applyOptions({ width: host.clientWidth, height: host.clientHeight });
-        scheduleGradientDraw();
-      });
+
+      // First-frame resize so the chart picks up the real container size
+      requestAnimationFrame(resizePriceChart);
+
+      if (typeof ResizeObserver !== 'undefined') {
+        priceChartResizeObserver = new ResizeObserver(resizePriceChart);
+        priceChartResizeObserver.observe(host);
+      } else {
+        window.addEventListener('resize', resizePriceChart);
+      }
     }
     async function loadCompanyLogo(symbol) {
       const box = document.getElementById('companyLogo');
@@ -524,7 +595,7 @@
       const history = data.history || {};
       document.getElementById('tickerTitle').textContent = row.symbol;
       document.getElementById('analysisTicker').textContent = row.symbol;
-      document.getElementById('tickerSub').textContent = `${row.name || row.symbol} · ${m.sector || 'Sector unavailable'} · ${row.verdict} · ${Math.round(row.confidence || 0)}% data confidence`;
+      document.getElementById('tickerSub').textContent = `${row.name || row.symbol} · ${m.sector || 'Sector unavailable'}`;
       document.getElementById('headerPrice').textContent = fmtMoney(m.current_price || row.price);
       const headerChange = m.day_change_percent ?? row.change_pct;
       document.getElementById('headerChange').textContent = `${fmt(headerChange, '%')}`;
@@ -560,7 +631,7 @@
         listLine('Volume vs 60D avg', fmt(tech.volume_vs_60d, '%'))
       ].join('');
       document.getElementById('analyst').innerHTML = [
-        listLine('Recommendation', m.recommendation || '--'),
+        listLine('Recommendation', m.recommendation ? (['buy','sell','hold','strong buy','strong sell','underperform','outperform'].includes(String(m.recommendation).toLowerCase()) ? String(m.recommendation).replace(/\b\w/g, c => c.toUpperCase()) : m.recommendation) : '--'),
         listLine('Target price', fmtMoney(m.target_price)),
         listLine('Target range', m.target_low && m.target_high ? `${fmtMoney(m.target_low)} - ${fmtMoney(m.target_high)}` : '--'),
         listLine('Analysts', m.number_of_analysts || '--')
@@ -608,7 +679,6 @@
         if (!data.success) throw new Error(data.error || 'Analysis failed');
         state.analysis = data.analysis;
         state.analysisGenerated = true;
-        document.getElementById('dockCard').classList.add('show');
         btn.textContent = 'View VSN Analysis';
         typeAnalysis(data.analysis);
       } catch (err) {
@@ -619,11 +689,6 @@
       }
     }
     document.getElementById('analysisBtn').addEventListener('click', getAnalysis);
-    document.getElementById('dockCard').addEventListener('click', () => {
-      if (!state.analysis) return;
-      openAnalysisPanel();
-      renderAnalysisFormatted(state.analysis);
-    });
     document.getElementById('analysisClose').addEventListener('click', dockAnalysisPanel);
     document.getElementById('analysisOverlay').addEventListener('click', (e) => {
       if (e.target.id === 'analysisOverlay') dockAnalysisPanel();

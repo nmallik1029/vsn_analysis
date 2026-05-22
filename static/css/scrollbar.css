@@ -1,0 +1,24 @@
+/* ============================================================
+   Site-wide dark scrollbar.
+   Loaded from every template's <head> via:
+     <link rel="stylesheet" href="{{ url_for('static', filename='css/scrollbar.css') }}">
+   Firefox uses the `scrollbar-*` properties; WebKit (Chrome /
+   Edge / Safari) uses the `::-webkit-scrollbar*` pseudo-elements.
+   ============================================================ */
+html {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.28);
+    background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner { background: transparent; }
