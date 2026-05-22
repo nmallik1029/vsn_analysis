@@ -552,6 +552,398 @@
         }
         .btn-secondary:hover { border-color: var(--ink-3); background: var(--bg-2); }
 
+        /* ============================================================
+           BELOW-HERO CONTENT
+           ============================================================ */
+        .below-fold {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 112px 40px 128px;
+        }
+
+        .story-section {
+            position: relative;
+            padding: 26px 0 112px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .story-section::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 64px;
+            height: 1px;
+            background: var(--ink-1);
+        }
+
+        .story-kicker,
+        .tour-kicker {
+            color: var(--ink-3);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+        }
+
+        .story-title {
+            margin: 22px 0 54px;
+            max-width: 840px;
+            font-size: clamp(34px, 5vw, 68px);
+            line-height: 0.98;
+            font-weight: 700;
+            letter-spacing: -0.045em;
+        }
+
+        .story-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 26px;
+        }
+
+        .story-copy {
+            margin: 0;
+            color: var(--ink-2);
+            font-size: clamp(16px, 1.35vw, 20px);
+            line-height: 1.72;
+        }
+
+        .story-copy strong {
+            color: var(--ink-1);
+            font-weight: 600;
+        }
+
+        .story-copy:nth-of-type(1) { grid-column: 1 / span 7; }
+        .story-copy:nth-of-type(2) { grid-column: 6 / span 6; margin-top: 30px; }
+        .story-copy:nth-of-type(3) { grid-column: 2 / span 6; margin-top: 16px; }
+        .story-copy:nth-of-type(4) { grid-column: 7 / span 5; margin-top: 38px; }
+        .story-copy:nth-of-type(5) { grid-column: 3 / span 7; margin-top: 14px; }
+
+        .story-marker {
+            grid-column: 1 / -1;
+            height: 1px;
+            margin: 34px 0 4px;
+            background: linear-gradient(90deg, var(--line), transparent);
+            position: relative;
+        }
+
+        .story-marker::after {
+            content: "";
+            position: absolute;
+            right: 18%;
+            top: -4px;
+            width: 9px;
+            height: 9px;
+            border: 1px solid var(--ink-3);
+            background: var(--bg-0);
+        }
+
+        .product-tour {
+            padding-top: 112px;
+        }
+
+        .tour-head {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 64px;
+            padding-bottom: 48px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .tour-head h2 {
+            margin: 0;
+            max-width: 760px;
+            font-size: clamp(32px, 4vw, 58px);
+            line-height: 1;
+            letter-spacing: -0.04em;
+            font-weight: 700;
+        }
+
+        .tour-head p {
+            margin: 20px 0 0;
+            max-width: 680px;
+            color: var(--ink-2);
+            font-size: 16px;
+            line-height: 1.65;
+        }
+
+        .tour-section {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 64px;
+            padding: 72px 0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .tour-section:last-of-type { border-bottom: 0; }
+
+        .tour-label {
+            color: var(--ink-3);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            padding-top: 6px;
+        }
+
+        .tour-copy h3 {
+            margin: 0 0 14px;
+            font-size: clamp(27px, 3vw, 42px);
+            line-height: 1.05;
+            letter-spacing: -0.025em;
+            font-weight: 700;
+        }
+
+        .tour-copy p {
+            margin: 0;
+            max-width: 620px;
+            color: var(--ink-2);
+            font-size: 16px;
+            line-height: 1.65;
+        }
+
+        .tour-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 24px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--ink-2);
+            color: var(--ink-1);
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .tour-link .arrow {
+            transition: transform 180ms ease;
+        }
+
+        .tour-link:hover .arrow { transform: translateX(4px); }
+
+        .tour-preview {
+            margin-top: 28px;
+            border: 1px solid var(--line);
+            background: var(--bg-1);
+        }
+
+        .preview-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .preview-head-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+        .preview-ticker { font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }
+        .preview-meta { color: var(--ink-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .preview-price { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .preview-price-delta { color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; margin-left: 8px; }
+
+        .chart-preview-body {
+            position: relative;
+            width: 100%;
+            height: 280px;
+        }
+
+        .chart-preview-body svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .preview-foot {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            border-top: 1px solid var(--line);
+        }
+
+        .preview-stat {
+            padding: 14px 18px;
+            border-right: 1px solid var(--line);
+        }
+
+        .preview-stat:last-child { border-right: 0; }
+        .preview-stat .k {
+            margin-bottom: 6px;
+            color: var(--ink-3);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+        .preview-stat .v {
+            font-size: 14px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .screener-preview-head,
+        .screener-preview-row {
+            display: grid;
+            grid-template-columns: 36px 1fr 110px 56px 92px;
+            gap: 16px;
+            align-items: center;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .screener-preview-head {
+            background: var(--bg-2);
+            color: var(--ink-3);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .screener-preview-row:last-child { border-bottom: 0; }
+        .screener-preview-row .rank { color: var(--ink-3); font-size: 12px; font-weight: 700; }
+        .screener-preview-row .sym { font-weight: 700; font-size: 13px; }
+        .screener-preview-row .name { margin-left: 8px; color: var(--ink-3); font-size: 12px; font-weight: 400; }
+        .screener-preview-row .verdict { color: var(--ink-2); font-size: 12px; font-weight: 500; }
+        .screener-preview-row .score {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 42px;
+            padding: 4px 0;
+            border: 1px solid var(--line-2);
+            color: var(--ink-1);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .factor-bar {
+            height: 4px;
+            background: var(--line);
+            overflow: hidden;
+        }
+
+        .factor-bar span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, #7fd8ff, #ff7eb6, #ffb36b);
+        }
+
+        .watchlist-preview {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-top: 28px;
+        }
+
+        .wl-demo-card {
+            min-height: 172px;
+            padding: 18px 20px;
+            border: 1px solid var(--line);
+            background: var(--bg-1);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .wl-demo-name { color: var(--ink-1); font-size: 15px; font-weight: 700; }
+        .wl-demo-count {
+            color: var(--ink-3);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+        .wl-demo-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: auto;
+        }
+        .wl-demo-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 9px;
+            border: 1px solid var(--line);
+            background: var(--bg-2);
+            color: var(--ink-2);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+        .wl-demo-pill.more { color: var(--ink-3); }
+
+        .community-preview {
+            margin-top: 28px;
+            border: 1px solid var(--line);
+            background: var(--bg-1);
+        }
+
+        .post-preview {
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--line);
+        }
+        .post-preview:last-child { border-bottom: 0; }
+        .post-meta { margin-bottom: 8px; color: var(--ink-3); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+        .post-title { margin-bottom: 6px; font-size: 16px; font-weight: 700; }
+        .post-snippet { color: var(--ink-2); font-size: 13px; line-height: 1.55; }
+
+        .profile-preview {
+            margin-top: 28px;
+            background: var(--bg-1);
+            border: 1px solid var(--line);
+            border-radius: 26px;
+            overflow: hidden;
+        }
+        .profile-cover {
+            height: 148px;
+            background: linear-gradient(135deg, #1a1a22 0%, #08080c 72%);
+            border-bottom: 1px solid var(--line);
+        }
+        .profile-body { padding: 0 24px 22px; }
+        .profile-topline { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: -46px; }
+        .profile-avatar-large {
+            width: 92px;
+            height: 92px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #2a2a3a, #1c1c28);
+            border: 4px solid var(--bg-1);
+            display: grid;
+            place-items: center;
+            color: var(--ink-1);
+            font-size: 30px;
+            font-weight: 700;
+            overflow: hidden;
+        }
+        .profile-avatar-large img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .profile-name-block { margin-top: 16px; }
+        .profile-display-name { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; }
+        .profile-handle { margin-top: 4px; color: var(--ink-3); font-size: 14px; }
+        .profile-stats, .profile-meta-line, .profile-socials { display: flex; flex-wrap: wrap; gap: 14px 18px; margin-top: 14px; }
+        .profile-stats { color: var(--ink-2); font-size: 14px; }
+        .profile-stats strong { color: var(--ink-1); font-weight: 700; margin-right: 4px; }
+        .profile-meta-line { color: var(--ink-3); font-size: 13px; }
+        .profile-social-link { color: var(--ink-2); font-size: 13px; text-decoration: none; }
+
+        .home-closing {
+            margin-top: 72px;
+            padding: 64px 40px;
+            border: 1px solid var(--line);
+            text-align: center;
+        }
+        .home-closing h2 {
+            max-width: 700px;
+            margin: 0 auto 28px;
+            font-size: clamp(28px, 3vw, 44px);
+            line-height: 1.05;
+            letter-spacing: -0.025em;
+            font-weight: 700;
+        }
+        .home-closing-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
         /* scroll cue at bottom */
         .scroll-cue {
             position: absolute;
@@ -3178,6 +3570,67 @@
             transition: border-color 150ms ease, background 150ms ease;
         }
         .ag-btn-secondary:hover { border-color: var(--ink-3); background: var(--bg-2); }
+
+        @media (max-width: 980px) {
+            .below-fold {
+                padding: 84px 24px 96px;
+            }
+            .story-title {
+                margin-bottom: 40px;
+            }
+            .story-grid {
+                display: block;
+            }
+            .story-copy {
+                max-width: 760px;
+                margin: 0 0 28px !important;
+            }
+            .story-marker {
+                margin: 36px 0;
+            }
+            .tour-head,
+            .tour-section {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+            .tour-section {
+                padding: 56px 0;
+            }
+            .watchlist-preview {
+                grid-template-columns: 1fr;
+            }
+            .preview-foot {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .preview-stat {
+                border-bottom: 1px solid var(--line);
+            }
+            .preview-stat:nth-child(2n) {
+                border-right: 0;
+            }
+            .preview-stat:nth-last-child(-n + 1) {
+                border-bottom: 0;
+            }
+            .screener-preview-head,
+            .screener-preview-row {
+                grid-template-columns: 28px 1fr 58px;
+                gap: 12px;
+                padding: 12px 16px;
+            }
+            .screener-preview-head > div:nth-child(3),
+            .screener-preview-head > div:nth-child(5),
+            .screener-preview-row .verdict,
+            .screener-preview-row .factor-bar {
+                display: none;
+            }
+            .home-closing {
+                padding: 48px 22px;
+            }
+            .home-closing-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
     </style>
 </head>
 <body>
@@ -3231,10 +3684,263 @@
         <p class="hero-sub">VSN Analysis is built for ease of use. Don't spend your time sifting through meaningless data. No credit card, no "free" trial, no commitment. Use us and go.</p>
             <div class="hero-cta-row">
                 <a href="#" class="btn-primary" id="openMarketsBtn">Open the markets <span class="arrow">→</span></a>
-                <a href="/demo" class="btn-secondary">See it in action</a>
+                <a href="#product-tour" class="btn-secondary">See it in action</a>
             </div>
         </div>
         </section>
+
+    <!-- ============ BELOW THE FOLD ============ -->
+    <main class="below-fold">
+        <section class="story-section" aria-labelledby="storyTitle">
+            <h2 class="story-title" id="storyTitle">Stock research should feel understandable before it feels powerful.</h2>
+            <div class="story-grid">
+                <p class="story-copy">Stock research can get overwhelming fast. A lot of platforms are built like you already know exactly what every chart, indicator, screener, and data table means. That works for experienced traders, but it makes things harder for beginners who are just trying to understand what they are looking at.</p>
+                <p class="story-copy">VSN keeps the important pieces in one place You shouldn't need five different tabs open just to follow one stock, compare the basics, or understand why something is moving.</p>
+                <div class="story-marker" aria-hidden="true"></div>
+                <p class="story-copy">We also don't believe basic stock tools should be locked behind a paywall. There are no free trials that turn into surprise subscriptions, and there are no features that suddenly become paid once you start using them. If something is on VSN, the goal is for people to actually be able to use it.</p>
+                <p class="story-copy">This is a small project built by a small developer team, not a giant company trying to sell another finance subscription. That means we can move quickly, fix issues often, and listen when something feels confusing, broken, or unnecessary.</p>
+                <p class="story-copy">VSN is not trying to replace every advanced trading platform. There is a time and a place for those high-end tools, but we believe there's also a place for a simpler, more focused approach. VSN is for people who want a cleaner place to track stocks, understand basic market information, and build confidence without getting buried under tools they don't need yet.</p>
+            </div>
+        </section>
+
+        <section class="product-tour" id="product-tour" aria-labelledby="tourTitle">
+            <div class="tour-head">
+                <div class="tour-kicker">DEMO</div>
+                <div>
+                    <h2 id="tourTitle">A quieter workspace for charts, screens, watchlists, and market notes.</h2>
+                    <p>VSN pulls live market data into a focused set of tools: fullscreen charts, a multi-factor screener with reasoning, personal watchlists, community posts, and a profile that keeps your activity together.</p>
+                </div>
+            </div>
+
+            <section class="tour-section">
+                <div class="tour-label">Fullscreen chart</div>
+                <div class="tour-copy">
+                    <h3>A lightweight chart for normal people.</h3>
+                    <p>View the essentials without a wall of controls: price, volume, range, company identity, and a clean interactive chart that stays focused on the stock itself.</p>
+
+                    <div class="tour-preview">
+                        <div class="preview-head">
+                            <div class="preview-head-left">
+                                <span class="preview-ticker">AAPL</span>
+                                <span class="preview-meta">Apple Inc. - NASDAQ</span>
+                            </div>
+                            <div>
+                                <span class="preview-price">$214.83</span>
+                                <span class="preview-price-delta">+1.42 +0.67%</span>
+                            </div>
+                        </div>
+                        <div class="chart-preview-body">
+                            <svg viewBox="0 0 800 280" preserveAspectRatio="none" aria-hidden="true">
+                                <g stroke="#1c1c28" stroke-width="1">
+                                    <line x1="0" y1="56" x2="800" y2="56"/>
+                                    <line x1="0" y1="112" x2="800" y2="112"/>
+                                    <line x1="0" y1="168" x2="800" y2="168"/>
+                                    <line x1="0" y1="224" x2="800" y2="224"/>
+                                </g>
+                                <defs>
+                                    <linearGradient id="homeChartLine" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#7fd8ff"/>
+                                        <stop offset="48%" stop-color="#ff7eb6"/>
+                                        <stop offset="100%" stop-color="#ffb36b"/>
+                                    </linearGradient>
+                                </defs>
+                                <path d="M0 200 L40 188 L80 196 L120 174 L160 162 L200 178 L240 148 L280 156 L320 124 L360 138 L400 108 L440 120 L480 88 L520 100 L560 70 L600 84 L640 60 L680 76 L720 48 L760 64 L800 40"
+                                      fill="none" stroke="url(#homeChartLine)" stroke-width="2.4"/>
+                                <line x1="0" y1="40" x2="800" y2="40" stroke="#ffb36b" stroke-width="1" stroke-dasharray="2 4"/>
+                            </svg>
+                        </div>
+                        <div class="preview-foot">
+                            <div class="preview-stat"><div class="k">Open</div><div class="v">213.41</div></div>
+                            <div class="preview-stat"><div class="k">High</div><div class="v">215.92</div></div>
+                            <div class="preview-stat"><div class="k">Low</div><div class="v">212.88</div></div>
+                            <div class="preview-stat"><div class="k">Volume</div><div class="v">48.2M</div></div>
+                            <div class="preview-stat"><div class="k">Range</div><div class="v">1Y</div></div>
+                        </div>
+                    </div>
+
+                    <a class="tour-link" href="/chart/AAPL">Open AAPL fullscreen <span class="arrow">-&gt;</span></a>
+                </div>
+            </section>
+
+            <section class="tour-section">
+                <div class="tour-label">Screener</div>
+                <div class="tour-copy">
+                    <h3>The VSN Analysis Screener.</h3>
+                    <p>Rank stocks by value, momentum, growth, quality, and risk, then open a ticker screen for deeper metrics and an AI-assisted readout that explains what the score is actually seeing.</p>
+
+                    <div class="tour-preview">
+                        <div class="screener-preview-head">
+                            <div>#</div>
+                            <div>Symbol</div>
+                            <div>Verdict</div>
+                            <div>Score</div>
+                            <div>Factors</div>
+                        </div>
+                        <div class="screener-preview-row">
+                            <div class="rank">1</div>
+                            <div><span class="sym">NVDA</span><span class="name">NVIDIA</span></div>
+                            <div class="verdict">High conviction</div>
+                            <div><span class="score">94</span></div>
+                            <div class="factor-bar"><span style="width: 94%"></span></div>
+                        </div>
+                        <div class="screener-preview-row">
+                            <div class="rank">2</div>
+                            <div><span class="sym">MU</span><span class="name">Micron Technology</span></div>
+                            <div class="verdict">High conviction</div>
+                            <div><span class="score">87</span></div>
+                            <div class="factor-bar"><span style="width: 87%"></span></div>
+                        </div>
+                        <div class="screener-preview-row">
+                            <div class="rank">3</div>
+                            <div><span class="sym">AVGO</span><span class="name">Broadcom Inc.</span></div>
+                            <div class="verdict">Constructive</div>
+                            <div><span class="score">76</span></div>
+                            <div class="factor-bar"><span style="width: 76%"></span></div>
+                        </div>
+                        <div class="screener-preview-row">
+                            <div class="rank">4</div>
+                            <div><span class="sym">MSFT</span><span class="name">Microsoft Corp.</span></div>
+                            <div class="verdict">Constructive</div>
+                            <div><span class="score">68</span></div>
+                            <div class="factor-bar"><span style="width: 68%"></span></div>
+                        </div>
+                        <div class="screener-preview-row">
+                            <div class="rank">5</div>
+                            <div><span class="sym">AAPL</span><span class="name">Apple Inc.</span></div>
+                            <div class="verdict">Mixed</div>
+                            <div><span class="score">54</span></div>
+                            <div class="factor-bar"><span style="width: 54%"></span></div>
+                        </div>
+                    </div>
+
+                    <a class="tour-link" href="/screener">Open the screener <span class="arrow">-&gt;</span></a>
+                </div>
+            </section>
+
+            <section class="tour-section">
+                <div class="tour-label">Watchlists</div>
+                <div class="tour-copy">
+                    <h3>Keep track of the stocks that matter to you.</h3>
+                    <p>Create watchlists for themes, ideas, screens, or long-term names. Each list tracks live price, day change, and the move since you added each ticker.</p>
+
+                    <div class="watchlist-preview">
+                        <div class="wl-demo-card">
+                            <div class="wl-demo-name">AI Leaders</div>
+                            <div class="wl-demo-count">6 tickers</div>
+                            <div class="wl-demo-pills">
+                                <span class="wl-demo-pill">NVDA</span>
+                                <span class="wl-demo-pill">AMD</span>
+                                <span class="wl-demo-pill">AVGO</span>
+                                <span class="wl-demo-pill">MU</span>
+                                <span class="wl-demo-pill">PLTR</span>
+                                <span class="wl-demo-pill more">+1</span>
+                            </div>
+                        </div>
+                        <div class="wl-demo-card">
+                            <div class="wl-demo-name">Dividend Anchors</div>
+                            <div class="wl-demo-count">5 tickers</div>
+                            <div class="wl-demo-pills">
+                                <span class="wl-demo-pill">JNJ</span>
+                                <span class="wl-demo-pill">KO</span>
+                                <span class="wl-demo-pill">PG</span>
+                                <span class="wl-demo-pill">XOM</span>
+                                <span class="wl-demo-pill">PEP</span>
+                            </div>
+                        </div>
+                        <div class="wl-demo-card">
+                            <div class="wl-demo-name">EV &amp; Clean Energy</div>
+                            <div class="wl-demo-count">4 tickers</div>
+                            <div class="wl-demo-pills">
+                                <span class="wl-demo-pill">TSLA</span>
+                                <span class="wl-demo-pill">RIVN</span>
+                                <span class="wl-demo-pill">ENPH</span>
+                                <span class="wl-demo-pill">FSLR</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a class="tour-link" href="/watchlist">Open your watchlists <span class="arrow">-&gt;</span></a>
+                </div>
+            </section>
+
+            <section class="tour-section">
+                <div class="tour-label">Community</div>
+                <div class="tour-copy">
+                    <h3>Market notes that don't need to be novels.</h3>
+                    <p>Share single-ticker thoughts, screen ideas, and quick research notes with other VSN users. The goal is useful context without the weight of a giant article.</p>
+
+                    <div class="community-preview">
+                        <div class="post-preview">
+                            <div class="post-meta">Mallik N. - 2 days ago</div>
+                            <div class="post-title">Why I am rotating out of memory for the next quarter</div>
+                            <div class="post-snippet">NVDA and MU still screen well, but the memory cycle has historically rolled over before broader semis. Here is what would change my mind.</div>
+                        </div>
+                        <div class="post-preview">
+                            <div class="post-meta">Avery K. - 5 days ago</div>
+                            <div class="post-title">Quiet screener: quality names with weak momentum</div>
+                            <div class="post-snippet">Filter for strong quality and low momentum. You get a short list of solid companies the market currently dislikes.</div>
+                        </div>
+                        <div class="post-preview">
+                            <div class="post-meta">Jordan P. - 1 week ago</div>
+                            <div class="post-title">Notes on F: the dividend setup nobody is pricing</div>
+                            <div class="post-snippet">Ford after the latest print: the free cash flow story is back, and the yield is doing real work.</div>
+                        </div>
+                    </div>
+
+                    <a class="tour-link" href="/community">Browse the community <span class="arrow">-&gt;</span></a>
+                </div>
+            </section>
+
+            <section class="tour-section">
+                <div class="tour-label">Profile</div>
+                <div class="tour-copy">
+                    <h3>A clean, intuitive profile.</h3>
+                    <p>Your posts, follows, links, and profile settings live in one quiet place. Sign in with email or Google tweak anything you want!</p>
+
+                    <section class="profile-preview" style="margin-top: 28px;" aria-label="Profile preview">
+                        {# Drop banner at static/images/demo-banner.jpg (or .png). Falls back to the gradient if missing. #}
+                        <div class="profile-cover" style="background-image: url('{{ url_for('static', filename='images/demo-banner.jpg') }}'), linear-gradient(135deg, #1a1a22 0%, #08080c 72%);"></div>
+                        <div class="profile-body">
+                            <div class="profile-topline">
+                                {# Drop avatar at static/images/demo-avatar.png. If the file is missing the onerror handler swaps in the letter fallback. #}
+                                <div class="profile-avatar-large">
+                                    <img src="{{ url_for('static', filename='images/demo-avatar.png') }}"
+                                        alt="John Doe"
+                                        onerror="this.parentNode.textContent='J';">
+                                </div>
+                            </div>
+                            <div class="profile-name-block">
+                                <div class="profile-display-name">VSN Analysis</div>
+                                <div class="profile-handle">@vsn</div>
+                            </div>
+                            <div class="profile-stats">
+                                <span><strong>481</strong>posts</span>
+                                <span><strong>80.3k</strong>followers</span>
+                                <span><strong>194</strong>following</span>
+                            </div>
+                            <div class="profile-meta-line">
+                                <span>Joined December 2025</span>
+                                <span>138 reposts</span>
+                                <span>481 comments</span>
+                            </div>
+                            <div class="profile-socials">
+                                <a class="profile-social-link">X/Twitter</a>
+                                <a class="profile-social-link">Reddit</a>
+                                <a class="profile-social-link">Instagram</a>
+                                <a class="profile-social-link">GitHub</a>
+                                <a class="profile-social-link">Website</a>
+
+                            </div>
+                        </div>
+                    </section>
+
+                    <a class="tour-link" href="/profile">Open your profile <span class="arrow">-&gt;</span></a>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    {% include '_site_footer.html' %}
 
     <!-- ============ AUTH GATE MODAL ============ -->
     <div class="ag-overlay" id="agOverlay" role="dialog" aria-modal="true" aria-label="Sign in required">

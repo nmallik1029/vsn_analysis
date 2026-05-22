@@ -1,0 +1,193 @@
+<style>
+  .vsn-footer {
+    --footer-bg: #000;
+    --footer-line: #1d1d29;
+    --footer-line-2: #2b2b3a;
+    --footer-ink: #f6f6f7;
+    --footer-muted: #9a9aae;
+    --footer-soft: #73738a;
+    background: var(--footer-bg);
+    color: var(--footer-ink);
+    border-top: 1px solid var(--footer-line);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+  }
+  .vsn-footer-inner {
+    width: min(1240px, calc(100% - 48px));
+    margin: 0 auto;
+    padding: 72px 0 34px;
+  }
+  .vsn-footer-cta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 28px;
+    align-items: center;
+    padding-bottom: 56px;
+    border-bottom: 1px solid var(--footer-line);
+  }
+  .vsn-footer-cta h2 {
+    margin: 0 0 8px;
+    font-size: clamp(26px, 3vw, 42px);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+  }
+  .vsn-footer-cta p {
+    margin: 0;
+    color: var(--footer-muted);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .vsn-footer-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 20px;
+    background: var(--footer-ink);
+    color: #000;
+    border: 1px solid var(--footer-ink);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .vsn-footer-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(140px, 190px));
+    gap: 42px;
+    padding: 36px 0 42px;
+  }
+  .vsn-footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--footer-ink);
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 800;
+  }
+  .vsn-footer-brand img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+  .vsn-footer-mission {
+    max-width: 420px;
+    margin: 18px 0 0;
+    color: var(--footer-muted);
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .vsn-footer-disclaimer {
+    max-width: 520px;
+    margin: 22px 0 0;
+    color: var(--footer-soft);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .vsn-footer-col h3 {
+    margin: 0 0 14px;
+    color: var(--footer-ink);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .vsn-footer-col a {
+    display: block;
+    width: fit-content;
+    margin: 0 0 10px;
+    color: var(--footer-muted);
+    text-decoration: none;
+    font-size: 14px;
+  }
+  .vsn-footer-col a:hover { color: var(--footer-ink); }
+  .vsn-footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding-top: 22px;
+    border-top: 1px solid var(--footer-line);
+    color: var(--footer-soft);
+    font-size: 12px;
+  }
+  .vsn-footer-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--footer-line);
+    color: var(--footer-muted);
+  }
+  .vsn-footer-status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #00ff9c;
+  }
+  @media (max-width: 860px) {
+    .vsn-footer-inner { width: min(100% - 32px, 640px); padding-top: 54px; }
+    .vsn-footer-cta { grid-template-columns: 1fr; }
+    .vsn-footer-grid { grid-template-columns: 1fr 1fr; gap: 30px 28px; }
+    .vsn-footer-about { grid-column: 1 / -1; }
+    .vsn-footer-bottom { align-items: flex-start; flex-direction: column; }
+  }
+  @media (max-width: 520px) {
+    .vsn-footer-grid { grid-template-columns: 1fr; }
+    .vsn-footer-btn { width: 100%; }
+  }
+</style>
+
+<footer class="vsn-footer">
+  <div class="vsn-footer-inner">
+    <div class="vsn-footer-cta">
+      <div>
+        <h2>Follow stocks without opening five tabs.</h2>
+        <p>Clean charts, practical screens, watchlists, and community notes for people who want the market to feel less noisy.</p>
+      </div>
+      <a class="vsn-footer-btn" href="/auth?signup=1">Create free account</a>
+    </div>
+
+    <div class="vsn-footer-grid">
+      <div class="vsn-footer-about">
+        <a class="vsn-footer-brand" href="/">
+          <img src="{{ url_for('static', filename='logo-nav.png', v=static_version('logo-nav.png')) }}" alt="VSN">
+          <span>VSN Analysis</span>
+        </a>
+        <p class="vsn-footer-mission">VSN Analysis is a focused stock research workspace built for cleaner market tracking and easier beginner-friendly analysis.</p>
+        <p class="vsn-footer-disclaimer">Market data, screen scores, posts, and analysis on VSN are for informational and educational purposes only. VSN does not provide financial advice.</p>
+      </div>
+
+      <div class="vsn-footer-col">
+        <h3>Product</h3>
+        <a href="/markets">Markets</a>
+        <a href="/screener">Screener</a>
+        <a href="/watchlist">Watchlists</a>
+        <a href="/community">Community</a>
+      </div>
+
+      <div class="vsn-footer-col">
+        <h3>Support</h3>
+        <a href="/contact">Contact</a>
+        <a href="/community">Feedback</a>
+        <a href="/auth">Sign in</a>
+      </div>
+
+      <div class="vsn-footer-col">
+        <h3>Legal</h3>
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
+        <a href="/disclaimer">Disclaimer</a>
+      </div>
+    </div>
+
+    <div class="vsn-footer-bottom">
+      <span>&copy; 2026 VSN Analysis. All rights reserved.</span>
+    </div>
+  </div>
+</footer>

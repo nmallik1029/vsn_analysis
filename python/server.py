@@ -569,7 +569,391 @@ def design_system():
 
 @app.route('/demo')
 def demo_page():
-    return render_template('demo.html')
+    return redirect('/#product-tour')
+
+
+def _legal_sections(page: str) -> list[dict]:
+    common_contact = 'Questions can be sent through the contact page or raised through the VSN community feedback flow.'
+    pages = {
+        'privacy': [
+            {
+                'heading': 'Summary of key points',
+                'paragraphs': [
+                    'This Privacy Policy explains how VSN Analysis collects, uses, stores, and shares information when you use our website and services, including VSN Analysis at https://www.vsnanalysis.com and any related VSN pages that link to this policy.',
+                    'VSN Analysis is a focused stock research workspace built for cleaner market tracking and easier beginner-friendly analysis. If you do not agree with this policy, you should not use the services.'
+                ],
+                'items': [
+                    'We collect account information you provide, such as your name, email address, username, profile details, and authentication information.',
+                    'We collect technical and usage information needed to operate, secure, debug, and improve the service.',
+                    'We use cookies and browser storage for authentication, preferences, redirects, and basic site functionality.',
+                    'We do not sell personal information.',
+                    'Some features may use third-party service providers, including Supabase for authentication/database services, market data providers, and Google Cloud AI/Gemini for AI-powered analysis.'
+                ]
+            },
+            {
+                'heading': 'Information you provide to us',
+                'paragraphs': [
+                    'We collect personal information that you voluntarily provide when you register, create or update your profile, post or comment in the community, follow users, save watchlists, contact us, or otherwise interact with VSN.',
+                    'The personal information we collect depends on how you use the service.'
+                ],
+                'items': [
+                    'Names, display names, and usernames.',
+                    'Email addresses.',
+                    'Profile images, banner/profile settings, and social/profile links you choose to add.',
+                    'Watchlists, posts, comments, reposts, follows, follower/following counts, likes, and other community activity.',
+                    'Authentication records needed to create, verify, and maintain your account. Password authentication is handled through our authentication provider; we do not need to store your plain-text password.'
+                ]
+            },
+            {
+                'heading': 'Information automatically collected',
+                'paragraphs': [
+                    'We automatically collect certain technical information when you visit, use, or navigate VSN. This information may include your IP address, browser and device characteristics, operating system, language preferences, referring URLs, pages viewed, timestamps, feature interactions, and diagnostic information.',
+                    'This information is primarily needed to maintain the security and operation of the services, fix bugs, understand usage trends, and improve the product.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'Cookies and browser storage',
+                'paragraphs': [
+                    'VSN uses necessary cookies and similar browser storage technologies to operate the service. For example, our server uses a signed session cookie so logged-in users can access protected pages, and the frontend uses localStorage and sessionStorage for authentication state, redirects, interface state, cached page data, and temporary workflow state.',
+                    'Most browsers accept cookies by default. You can remove or reject cookies through your browser settings, but doing so may prevent login, account features, profile pages, watchlists, community features, or other parts of VSN from working correctly.',
+                    'We do not currently use advertising cookies.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'Social login data',
+                'paragraphs': [
+                    'If you choose to register or log in using a third-party login provider such as Google, we may receive certain profile information from that provider, such as your email address, name, account identifier, and profile image, depending on the provider and your settings.',
+                    'We use this information only to create, authenticate, and manage your VSN account and to complete the onboarding flow.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'AI-powered features',
+                'paragraphs': [
+                    'VSN may offer features powered by artificial intelligence, machine learning, or similar technologies, including AI-assisted stock screening, summaries, and analysis.',
+                    'To provide these features, relevant inputs, market data, screen data, ticker symbols, prompts, and generated outputs may be processed by third-party AI service providers, including Google Cloud AI/Gemini. You should not submit sensitive personal information into AI analysis tools.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'How we use information',
+                'paragraphs': [
+                    'We process information to provide, improve, administer, secure, and debug VSN, to create and manage accounts, to authenticate users, to display community and profile features, to operate watchlists and market tools, to provide AI-powered features, and to communicate with users when needed.',
+                    'We may also use aggregated or de-identified information to understand usage trends and improve the service.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'When and with whom we share information',
+                'paragraphs': [
+                    'We may share information with service providers that help us operate VSN, including providers for authentication, database/storage, hosting, market data, analytics, AI processing, security, and support.',
+                    'We may also share information if required by law, to protect rights and safety, to prevent fraud or abuse, or in connection with a business transfer such as a merger, acquisition, financing, or sale of assets.',
+                    'We do not sell or share personal information for third-party targeted advertising.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'Public community content',
+                'paragraphs': [
+                    'Posts, comments, usernames, avatars, follower counts, and public profile links may be visible to other VSN users depending on your profile settings.',
+                    'Private profile settings are designed to limit profile visibility, but content you intentionally publish may still be visible in the areas where you shared it.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'How long we keep information',
+                'paragraphs': [
+                    'We keep personal information for as long as needed to provide the services, maintain your account, comply with legal obligations, resolve disputes, prevent abuse, and enforce our terms.',
+                    'When we no longer have an ongoing legitimate need to process personal information, we will delete, anonymize, or securely retain it until deletion is possible.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'How we keep information safe',
+                'paragraphs': [
+                    'We use reasonable technical and organizational measures designed to protect personal information. However, no electronic transmission or storage system can be guaranteed to be 100% secure, so we cannot promise that unauthorized third parties will never be able to access, steal, or modify information.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'Children',
+                'paragraphs': [
+                    'VSN is not intended for children under 18. We do not knowingly collect or market to children under 18. If we learn that we have collected personal information from a child under 18, we will take reasonable steps to delete it.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'Your privacy rights',
+                'paragraphs': [
+                    'Depending on where you live, you may have rights to request access to personal information, correction of inaccurate information, deletion of personal information, a copy of personal information, withdrawal of consent, or other rights provided by applicable law.',
+                    'You can review or update certain account information in your account settings. To request access, correction, deletion, or another privacy action, contact us using the contact details below.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'United States privacy rights',
+                'paragraphs': [
+                    'Residents of certain U.S. states may have additional privacy rights, including the right to know whether we process personal data, access personal data, correct inaccuracies, request deletion, obtain a copy of data, and opt out of certain uses such as sale, sharing, targeted advertising, or profiling where applicable.',
+                    'We do not knowingly sell personal information and do not currently share personal information for third-party targeted advertising.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'Do Not Track',
+                'paragraphs': [
+                    'Some browsers include Do Not Track signals. Because there is not currently a uniform legal or technical standard for responding to those signals, VSN does not respond to Do Not Track browser signals at this time.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'Updates to this policy',
+                'paragraphs': [
+                    'We may update this Privacy Policy from time to time. The updated version will be indicated by the updated date at the top of the page. If we make material changes, we may provide notice by posting the updated policy or by contacting users where appropriate.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'Contact us',
+                'paragraphs': [
+                    'If you have questions or comments about this Privacy Policy, contact us at nmallik1029@gmail.com or through https://www.vsnanalysis.com/contact.',
+                    common_contact
+                ],
+                'items': []
+            }
+        ],
+        'terms': [
+            {
+                'heading': 'Introduction',
+                'paragraphs': [
+                    'Welcome to VSN Analysis. These Terms and Conditions govern your access to and use of vsnanalysis.com and any related services, tools, pages, features, or content provided through the website, including market data, stock tracking tools, watchlists, screeners, community posts, and account features.',
+                    'By using VSN Analysis, you agree to these Terms. If you do not agree, you should not use the website.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '1. About VSN Analysis',
+                'paragraphs': [
+                    'VSN Analysis is a stock analysis and tracking platform designed to help users view market information, organize stocks, follow community posts, and access basic financial tools in a simpler format.',
+                    'VSN Analysis is built and maintained by a small developer team. We may update, remove, add, or change features at any time as the platform improves.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '2. Not Financial Advice',
+                'paragraphs': [
+                    'VSN Analysis does not provide financial, investment, legal, tax, or professional advice.',
+                    'All information on the website is provided for general informational and educational purposes only. This may include stock data, charts, market information, community content, watchlists, screeners, or other financial-related information.',
+                    'You should not make investment decisions based only on information from VSN Analysis. You are responsible for doing your own research and, when appropriate, speaking with a licensed financial advisor before making investment decisions.',
+                    'We are not responsible for any financial losses, missed opportunities, trading decisions, or other outcomes related to your use of the website.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '3. Market Data and Accuracy',
+                'paragraphs': [
+                    'VSN Analysis may display stock prices, company data, market data, financial metrics, charts, or other information from third-party sources or APIs.',
+                    'We try to provide accurate and useful information, but we cannot guarantee that all data is complete, current, accurate, or error-free. Market data may be delayed, incorrect, unavailable, or affected by third-party service issues.',
+                    'You agree that VSN Analysis is not responsible for any errors, delays, missing data, incorrect data, or decisions made based on information shown on the website.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '4. User Accounts',
+                'paragraphs': [
+                    'Some features of VSN Analysis may require an account. This may include creating posts, saving watchlists, interacting with the community, or accessing personalized features.',
+                    'When creating an account, you agree to provide accurate information and to keep your login details secure. You are responsible for all activity that happens under your account.',
+                    'You may not create an account using false information, impersonate another person, attempt to access another user’s account, or use the platform in a way that harms the website or other users.',
+                    'We reserve the right to suspend, restrict, or delete accounts that violate these Terms or create risk for the platform or other users.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '5. Community Content',
+                'paragraphs': [
+                    'VSN Analysis may allow users to create posts, comments, profiles, or other community content.',
+                    'You are responsible for anything you post. You agree not to post content that is illegal, abusive, threatening, hateful, misleading, spam, sexually explicit, defamatory, or otherwise harmful.',
+                    'You also agree not to post content that infringes on another person’s rights, including copyrights, trademarks, privacy rights, or intellectual property rights.',
+                    'We may remove, hide, restrict, or moderate community content at our discretion. We may also suspend or remove users who abuse community features.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '6. No Guarantee of User Content Accuracy',
+                'paragraphs': [
+                    'Community posts and user-generated content are created by individual users, not by VSN Analysis.',
+                    'We do not guarantee that user posts, trading ideas, opinions, predictions, comments, or shared information are accurate, reliable, or appropriate. Any investment-related content posted by users should be treated as opinion, not financial advice.',
+                    'You are responsible for evaluating any content before relying on it.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '7. Acceptable Use',
+                'paragraphs': [
+                    'You agree not to misuse VSN Analysis. This includes, but is not limited to:'
+                ],
+                'items': [
+                    'Attempting to hack, disrupt, overload, or damage the website.',
+                    'Scraping, copying, or collecting data in a way that harms the platform.',
+                    'Uploading malicious code, viruses, or harmful files.',
+                    'Bypassing security or authentication systems.',
+                    'Creating spam accounts or fake engagement.',
+                    'Harassing, threatening, or abusing other users.',
+                    'Using the platform for illegal activity.',
+                    'Attempting to reverse engineer or copy private systems.',
+                    'Misrepresenting yourself or impersonating others.'
+                ]
+            },
+            {
+                'heading': '8. Free Access and Future Changes',
+                'paragraphs': [
+                    'VSN Analysis currently aims to provide its features without free trials, subscriptions, or paid feature locks.',
+                    'However, we reserve the right to change, add, remove, or modify features in the future. If any pricing, premium features, or paid services are introduced later, they will be presented separately with their own terms or notices.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '9. Intellectual Property',
+                'paragraphs': [
+                    'The VSN Analysis website, branding, design, code, layout, text, logos, graphics, and original content are owned by VSN Analysis or its developers, unless otherwise stated.',
+                    'You may not copy, reproduce, resell, redistribute, or use VSN Analysis branding, design, code, or content without permission, except as allowed by law.',
+                    'User-generated content remains owned by the user who created it. However, by posting content on VSN Analysis, you give us permission to display, store, share, and use that content as needed to operate the website.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '10. Third-Party Services and Links',
+                'paragraphs': [
+                    'VSN Analysis may use third-party services for authentication, hosting, databases, market data, analytics, APIs, or other website functions.',
+                    'The website may also contain links to third-party websites or services. We are not responsible for third-party websites, services, data, policies, or content.',
+                    'Your use of third-party services may also be governed by their own terms and privacy policies.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '11. Website Availability',
+                'paragraphs': [
+                    'We try to keep VSN Analysis available and working properly, but we do not guarantee that the website will always be online, error-free, secure, or uninterrupted.',
+                    'The website may be unavailable because of maintenance, bugs, updates, hosting issues, API failures, third-party outages, or other technical problems.',
+                    'We are not responsible for any loss, inconvenience, or damage caused by website downtime or service interruptions.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '12. Limitation of Liability',
+                'paragraphs': [
+                    'To the maximum extent allowed by law, VSN Analysis and its developers are not liable for any indirect, incidental, special, consequential, or financial damages related to your use of the website.',
+                    'This includes, but is not limited to, trading losses, investment losses, lost profits, data loss, account issues, service interruptions, inaccurate information, or reliance on market data or community content.',
+                    'You use VSN Analysis at your own risk.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '13. Disclaimer of Warranties',
+                'paragraphs': [
+                    'VSN Analysis is provided “as is” and “as available.”',
+                    'We do not make guarantees that the website will meet your expectations, be fully accurate, be uninterrupted, be secure, or be free from errors.',
+                    'We disclaim all warranties to the fullest extent allowed by law, including implied warranties of merchantability, fitness for a particular purpose, and non-infringement.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '14. Account Termination',
+                'paragraphs': [
+                    'We may suspend, restrict, or terminate your access to VSN Analysis at any time if we believe you violated these Terms, misused the platform, created risk for other users, or harmed the website.',
+                    'You may stop using VSN Analysis at any time.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '15. Changes to These Terms',
+                'paragraphs': [
+                    'We may update these Terms from time to time. When we do, we may update the “Last Updated” date at the top of this page.',
+                    'Your continued use of VSN Analysis after changes are posted means you accept the updated Terms.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '16. Privacy',
+                'paragraphs': [
+                    'Your use of VSN Analysis may also be governed by our Privacy Policy, which explains how we collect, use, and protect user information.'
+                ],
+                'items': []
+            },
+            {
+                'heading': '17. Contact',
+                'paragraphs': [
+                    'If you have questions about these Terms, you can contact us at nmallik1029@gmail.com or visit https://vsnanalysis.com/contact.'
+                ],
+                'items': []
+            }
+        ],
+        'disclaimer': [
+            {
+                'heading': 'Not financial advice',
+                'paragraphs': [
+                    'VSN does not provide financial, investment, tax, legal, or trading advice. Nothing on VSN should be treated as a recommendation to buy, sell, or hold any security.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'Market data and analysis',
+                'paragraphs': [
+                    'Market data, chart data, screen scores, AI-generated analysis, community posts, and related metrics may be delayed, incomplete, incorrect, or unavailable.',
+                    'Always verify important information with primary sources before making financial decisions.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'Risk',
+                'paragraphs': [
+                    'Investing and trading involve risk, including the possible loss of principal. Past performance, screen scores, and historical patterns do not guarantee future results.'
+                ],
+                'items': []
+            }
+        ],
+        'contact': [
+            {
+                'heading': 'Contact VSN',
+                'paragraphs': [
+                    'VSN is built by a small team, so the best way to reach us right now is through community feedback or direct project communication channels as they become available.',
+                    'For product feedback, bug reports, account issues, or legal questions, include the page URL, your browser, and a short description of what happened.'
+                ],
+                'items': []
+            },
+            {
+                'heading': 'What to send',
+                'paragraphs': [],
+                'items': [
+                    'Bug reports for broken pages, charts, auth, or community features.',
+                    'Confusing flows or screens that need clearer language.',
+                    'Privacy, account, or moderation concerns.'
+                ]
+            }
+        ]
+    }
+    return pages.get(page, [])
+
+
+@app.route('/privacy')
+def privacy_page():
+    return render_template('legal.html', title='Privacy Policy', sections=_legal_sections('privacy'))
+
+
+@app.route('/terms')
+def terms_page():
+    return render_template('legal.html', title='Terms and Conditions', sections=_legal_sections('terms'))
+
+
+@app.route('/disclaimer')
+def disclaimer_page():
+    return render_template('legal.html', title='Disclaimer', sections=_legal_sections('disclaimer'))
+
+
+@app.route('/contact')
+def contact_page():
+    return render_template('legal.html', title='Contact', sections=_legal_sections('contact'))
 
 
 @app.route('/landing-legacy')
