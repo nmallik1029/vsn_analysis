@@ -1,72 +1,156 @@
 # VSN Analysis
 
-A web-based stock analysis tool that provides buy consideration scores based on fundamental analysis.
+VSN Analysis is a stock research web app built around cleaner market pages, watchlists, community posts, and an AI-assisted screener. The goal is simple: make it easier to follow stocks without opening five different tools just to understand what is going on.
 
-## Features
+This repo contains the Flask app, HTML templates, static assets, Supabase-backed account and community features, and the Cloudflare Worker/container setup used for deployment.
 
-- Real-time stock data from Yahoo Finance
-- Buy consideration score (0-100) based on:
-  - Valuation (P/E, PEG ratio)
-  - Profitability (ROE, profit margins)
-  - Growth (revenue & earnings growth)
-  - Financial health (debt/equity, current ratio)
-  - Technical factors (52-week position, volatility, beta)
-- Key metrics display
-- 52-week price range indicator
+## What is included
 
-## Setup
+- Public home page with VSN branding and legal/footer pages
+- Email and Google auth through Supabase
+- Account settings with avatar upload, username, profile links, privacy settings, password reset, logout, and deletion
+- Market pages with stock search and Lightweight Charts
+- Full screen stock charts
+- Watchlists
+- Community feed, posts, comments, likes, reposts, followers, following lists, and user profiles
+- Screener with factor scores and optional Gemini-powered VSN analysis
+- Admin and moderator pages
 
-### 1. Install Python dependencies
+## Tech stack
+
+- Python 3.11
+- Flask
+- Supabase Auth, Postgres, and Storage
+- Yahoo Finance style market data through Python fetchers
+- TradingView Lightweight Charts on the frontend
+- Gemini for AI screener reasoning when configured
+- Cloudflare Workers plus Containers for production deploys
+
+## Local setup
+
+Install Python dependencies:
 
 ```bash
-cd stock-analyzer
 pip install -r requirements.txt
 ```
 
-### 2. Start the server
+Install Node dependencies for Wrangler:
+
+```bash
+npm install
+```
+
+Run the Flask app locally:
 
 ```bash
 cd python
 python server.py
 ```
 
-### 3. Open in browser
+Open:
 
-Go to: **http://localhost:5000**
-
-## Usage
-
-1. Enter a stock ticker symbol (e.g., AAPL, MSFT, GOOGL)
-2. Click "ANALYZE"
-3. View the results including:
-   - Current price and daily change
-   - Buy consideration score with recommendation
-   - Score breakdown by category
-   - Key financial metrics
-   - 52-week price range position
-
-## Project Structure
-
+```text
+http://localhost:5000
 ```
+
+## Environment variables
+
+The app has development defaults for some values, but production should use real secrets through the environment.
+
+Useful variables:
+
+```text
+SECRET_KEY
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+LLM_PROVIDER
+GEMINI_API_KEY
+GEMINI_MODEL
+GEMINI_MAX_OUTPUT_TOKENS
+OPENAI_API_KEY
+CLOUDFLARE_API_TOKEN
+CLOUDFLARE_ACCOUNT_ID
+CLOUDFLARE_SITE_TAG
+ADMIN_EMAILS
+MODERATOR_EMAILS
+```
+
+For Cloudflare, set secrets with Wrangler:
+
+```bash
+npx wrangler secret put SUPABASE_ANON_KEY
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+npx wrangler secret put SECRET_KEY
+npx wrangler secret put GEMINI_API_KEY
+```
+
+## Deployment
+
+The production deploy is configured in `wrangler.toml`.
+
+Current routes:
+
+```text
+vsnanalysis.com/*
+www.vsnanalysis.com/*
+admin.vsnanalysis.com/*
+```
+
+Deploy with:
+
+```bash
+npm run deploy
+```
+
+or:
+
+```bash
+npx wrangler deploy
+```
+
+Cloudflare builds the container from `Dockerfile` and runs the Flask app with Gunicorn.
+
+## Project layout
+
+```text
 stock-analyzer/
-├── index.html          # Frontend UI
-├── requirements.txt    # Python dependencies
-├── README.md          # This file
-└── python/
-    ├── server.py       # Flask API server
-    ├── data_fetcher.py # Yahoo Finance data fetching
-    ├── scoring.py      # Buy score calculation
-    ├── analyzer.py     # Main analysis logic
-    ├── report.py       # Text report generation
-    └── visualization.py # Chart generation
+  python/
+    server.py              Main Flask server and routes
+    data_fetcher.py        Stock data fetching
+    scoring.py             Screener and scoring logic
+    analyzer.py            Analysis helpers
+    report.py              Report generation helpers
+    visualization.py       Chart generation helpers
+  templates/               HTML templates
+  static/                  CSS, images, logos, and browser assets
+  worker/
+    index.ts               Cloudflare Worker container entry
+  scripts/                 Utility scripts
+  Dockerfile               Production container
+  wrangler.toml            Cloudflare deploy config
+  requirements.txt         Python dependencies
+  package.json             Wrangler scripts
 ```
 
-## API Endpoints
+## Useful pages
 
-- `GET /` - Serves the main HTML page
-- `GET /api/analyze/<TICKER>` - Returns JSON with stock analysis
-- `GET /api/health` - Health check
+```text
+/                       Home
+/auth                   Sign in and sign up
+/markets                Markets
+/chart/<ticker>         Full screen stock chart
+/watchlist              Watchlists
+/screener               Market screener
+/screener/<ticker>      Ticker screener page
+/community              Community feed
+/profile                Account settings
+/privacy                Privacy Policy
+/terms                  Terms and Conditions
+/disclaimer             Financial disclaimer
+/contact                Contact
+```
 
-## Disclaimer
+## Notes
 
-This tool is for informational purposes only and should not be considered financial advice. Always conduct your own research before making investment decisions.
+VSN Analysis is for informational and educational use. It is not financial advice. Market data, AI output, community posts, and screen scores can be wrong, delayed, incomplete, or unavailable. Always verify important information before making investment decisions.
