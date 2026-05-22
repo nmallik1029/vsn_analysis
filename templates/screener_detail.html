@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ ticker }} Screen | VSN Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    :root {
+      --bg: #000;
+      --panel: #08080c;
+      --panel-2: #101018;
+      --modal: #19191f;
+      --line: #1d1d29;
+      --line-2: #303040;
+      --ink: #f6f6f7;
+      --muted: #a6a6b8;
+      --soft: #73738a;
+      --up: #00ff9c;
+      --bad: #ff6f8d;
+      --warn: #ffbd7a;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    button { font: inherit; }
+    body.analysis-open { overflow: hidden; }
+    .shell { width: min(1500px, calc(100vw - 64px)); margin: 0 auto; padding: 118px 0 132px; transition: filter 240ms ease; }
+    body.analysis-open .shell { filter: blur(10px); }
+    .back { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 700; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 36px; align-items: end; padding: 28px 0 30px; border-bottom: 1px solid var(--line); }
+    .kicker { margin: 0 0 10px; color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(54px, 9vw, 128px); line-height: .86; letter-spacing: 0; }
+    .title-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .company-logo { width: 68px; height: 68px; border: 1px solid var(--line-2); background: var(--panel); display: grid; place-items: center; overflow: hidden; flex: 0 0 auto; }
+    .company-logo img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+    .company-logo span { font-size: 24px; font-weight: 800; }
+    .price-inline { display: flex; align-items: baseline; gap: 12px; margin-left: 4px; }
+    .price-inline strong { font-size: clamp(30px, 4vw, 58px); line-height: 1; }
+    .price-inline span { font-size: 16px; font-weight: 800; }
+    .sub { margin: 16px 0 0; color: var(--muted); font-size: 16px; line-height: 1.6; max-width: 840px; }
+    .scorebox { text-align: right; }
+    .score { font-size: 76px; font-weight: 800; line-height: .9; }
+    .label { color: var(--soft); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; margin-top: 8px; }
+    .btn { height: 46px; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); padding: 0 16px; cursor: pointer; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+    .btn:hover { border-color: #56566b; }
+    .btn-primary { background: var(--ink); color: #000; border-color: var(--ink); }
+    .hero-actions { margin-top: 22px; display: flex; justify-content: flex-end; gap: 10px; }
+    .return-strip { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 1px; border: 1px solid var(--line); background: var(--line); margin-top: 22px; }
+    .return-item { background: #000; padding: 14px; min-height: 72px; }
+    .return-item > span { display: block; color: var(--soft); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+    .return-item strong { font-size: 18px; }
+    .pos { color: var(--up); }
+    .neg { color: var(--bad); }
+    .grid { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 34px; margin-top: 30px; align-items: start; }
+    .section { border-top: 1px solid var(--line); padding: 24px 0; }
+    .section h2 { margin: 0 0 18px; font-size: 13px; letter-spacing: .09em; text-transform: uppercase; }
+    .section-intro { color: var(--muted); font-size: 14px; line-height: 1.6; margin: -8px 0 18px; }
+    .components { display: grid; gap: 14px; }
+    .component { display: grid; grid-template-columns: 120px 1fr 44px; gap: 12px; align-items: center; color: var(--muted); font-size: 14px; }
+    .component strong { color: var(--ink); text-transform: capitalize; }
+    .bar { height: 6px; background: var(--line); overflow: hidden; }
+    .bar span { display: block; height: 100%; background: linear-gradient(90deg, #7fd8ff, #f6f06a, #ff7eb6); }
+    .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+    .metric { background: #000; padding: 16px; min-height: 84px; }
+    .metric > span { display: block; color: var(--soft); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+    .metric strong { font-size: 20px; overflow-wrap: anywhere; }
+    .mini-chart { position: relative; height: 260px; border: 1px solid var(--line); background: #000; cursor: crosshair; }
+    .gradient-line-overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+    .chart-host { position: absolute; inset: 0; z-index: 1; }
+    .chart-tooltip { position: absolute; z-index: 3; pointer-events: none; display: none; padding: 8px 10px; border: 1px solid var(--line-2); background: rgba(8,8,12,.92); color: var(--ink); font-size: 12px; font-weight: 700; box-shadow: 0 14px 30px rgba(0,0,0,.35); }
+    .news, .related { display: grid; gap: 0; border-top: 1px solid var(--line); }
+    .article, .related-card { display: block; padding: 16px 0; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+    .article-title, .related-title { font-weight: 700; line-height: 1.4; }
+    .article-meta, .related-meta { color: var(--soft); font-size: 12px; margin-top: 7px; }
+    .side-card { border-top: 1px solid var(--line); padding: 20px 0; }
+    .side-card h3 { margin: 0 0 12px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+    .side-list { display: grid; gap: 12px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    .empty, .note { color: var(--muted); padding: 24px 0; line-height: 1.65; }
+
+    .floating-analysis {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      z-index: 120;
+      height: 52px;
+      min-width: 220px;
+      padding: 0 24px;
+      border: 1px solid #fff;
+      background: #f6f6f7;
+      color: #000;
+      box-shadow: 0 18px 50px rgba(0,0,0,.45);
+      transition: transform 220ms ease, opacity 220ms ease;
+    }
+    body.analysis-open .floating-analysis { opacity: 0; transform: translate(-50%, 16px); pointer-events: none; }
+
+    .analysis-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 180;
+      padding: 48px;
+      background: rgba(0,0,0,.34);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 240ms ease;
+    }
+    .analysis-overlay.open { opacity: 1; pointer-events: auto; }
+    .analysis-panel {
+      width: 100%;
+      height: 100%;
+      border: 1px solid #fff;
+      background: var(--modal);
+      box-shadow: 0 30px 90px rgba(0,0,0,.75);
+      transform: translateY(22px) scale(.985);
+      opacity: 0;
+      transition: transform 300ms cubic-bezier(.16,1,.3,1), opacity 220ms ease;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    .analysis-overlay.open .analysis-panel { transform: translateY(0) scale(1); opacity: 1; }
+    .analysis-overlay.docking .analysis-panel { transform: translateY(28px) scale(.94); opacity: 0; }
+    .analysis-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 22px 28px; border-bottom: 1px solid rgba(255,255,255,.18); }
+    .analysis-title { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .analysis-title strong { display: block; margin-top: 6px; color: var(--ink); font-size: 34px; letter-spacing: 0; text-transform: none; }
+    .analysis-close { width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.28); background: transparent; color: var(--ink); cursor: pointer; font-size: 22px; }
+    .analysis-body { overflow: auto; padding: 34px min(7vw, 92px) 70px; }
+    .analysis-content { max-width: 980px; margin: 0 auto; }
+    .source { color: var(--soft); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 14px; }
+    .source.warn { color: var(--warn); }
+    .analysis-summary { color: var(--ink); font-size: clamp(28px, 4vw, 56px); line-height: 1.05; font-weight: 800; margin-bottom: 24px; }
+    .analysis-content h3 { margin: 28px 0 10px; font-size: 14px; color: var(--ink); letter-spacing: .08em; text-transform: uppercase; }
+    .analysis-content p, .analysis-content li { color: var(--muted); font-size: 18px; line-height: 1.75; }
+    .analysis-content ul { padding-left: 24px; }
+    .typing { white-space: pre-wrap; color: var(--muted); font-size: 18px; line-height: 1.75; }
+    .cursor::after { content: ""; display: inline-block; width: 8px; height: 1.05em; margin-left: 4px; background: var(--ink); vertical-align: -2px; animation: blink 900ms steps(2,end) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .analyzing { min-height: 360px; display: grid; place-items: center; text-align: center; }
+    .analyzing-title {
+      font-size: clamp(34px, 6vw, 78px);
+      font-weight: 800;
+      background: linear-gradient(90deg, #7fd8ff, #ff7eb6, #f6f06a, #c7ef74, #b58cff, #7fd8ff);
+      background-size: 360% 100%;
+      color: transparent;
+      -webkit-background-clip: text;
+      background-clip: text;
+      animation: gradientRun 850ms linear infinite;
+    }
+    .analyzing-line {
+      width: min(520px, 70vw);
+      height: 4px;
+      margin: 26px auto 0;
+      background: linear-gradient(90deg, #7fd8ff, #ff7eb6, #f6f06a, #c7ef74, #b58cff, #7fd8ff);
+      background-size: 280% 100%;
+      animation: gradientRun 600ms linear infinite;
+    }
+    @keyframes gradientRun { to { background-position: -280% 0; } }
+    .dock-card {
+      position: fixed;
+      right: 28px;
+      bottom: 92px;
+      z-index: 118;
+      width: 280px;
+      border: 1px solid var(--line-2);
+      background: var(--panel-2);
+      padding: 14px 16px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.5);
+      transform: translateY(16px);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 260ms cubic-bezier(.16,1,.3,1), opacity 200ms ease;
+    }
+    .dock-card.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+    .dock-card strong { display: block; margin-bottom: 6px; }
+    .dock-card span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+    @media (max-width: 1000px) {
+      .shell { width: min(100% - 32px, 860px); }
+      .hero, .grid { grid-template-columns: 1fr; }
+      .scorebox { text-align: left; }
+      .hero-actions { justify-content: flex-start; }
+      .metrics, .return-strip { grid-template-columns: 1fr 1fr; }
+      .analysis-overlay { padding: 22px; }
+      .analysis-body { padding: 28px 22px 60px; }
+    }
+  </style>
+</head>
+<body>
+  {% set active_nav = 'screener' %}
+  {% include '_site_nav.html' %}
+  <main class="shell">
+    <a class="back" href="/screener">Back to screener</a>
+    <section class="hero">
+      <div>
+        <p class="kicker">VSN stock dossier</p>
+        <div class="title-row">
+          <div class="company-logo" id="companyLogo"><span>{{ ticker[:1] }}</span></div>
+          <h1 id="tickerTitle">{{ ticker }}</h1>
+          <div class="price-inline">
+            <strong id="headerPrice">--</strong>
+            <span id="headerChange">--</span>
+          </div>
+        </div>
+        <p class="sub" id="tickerSub">Loading company data...</p>
+        <div class="return-strip" id="returnStrip"></div>
+      </div>
+      <div class="scorebox">
+        <div class="score" id="conviction">--</div>
+        <div class="label">Conviction</div>
+        <div class="hero-actions">
+          <a class="btn" id="chartLink" href="/chart/{{ ticker }}">Open chart</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div>
+        <section class="section">
+          <h2>Price path</h2>
+          <p class="section-intro">A compact look at recent direction. The goal is context, not chart overload.</p>
+          <div class="mini-chart" id="miniChart">
+            <div class="chart-host" id="chartHost"></div>
+            <canvas class="gradient-line-overlay" id="gradientOverlay" aria-hidden="true"></canvas>
+            <div class="chart-tooltip" id="chartTooltip"></div>
+          </div>
+        </section>
+        <section class="section">
+          <h2>Factor breakdown</h2>
+          <div class="components" id="components"></div>
+        </section>
+        <section class="section">
+          <h2>Key metrics</h2>
+          <div class="metrics" id="metrics"></div>
+        </section>
+        <section class="section">
+          <h2>Recent news</h2>
+          <div class="news" id="news"><div class="empty">Loading news...</div></div>
+        </section>
+      </div>
+      <aside>
+        <div class="side-card">
+          <h3>Technical read</h3>
+          <div class="side-list" id="technical"></div>
+        </div>
+        <div class="side-card">
+          <h3>Analyst context</h3>
+          <div class="side-list" id="analyst"></div>
+        </div>
+        <div class="side-card">
+          <h3>Related stocks</h3>
+          <div class="related" id="related"></div>
+        </div>
+        <div class="side-card">
+          <h3>Seasonality</h3>
+          <div class="side-list" id="seasonality"></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <button class="floating-analysis btn-primary" id="analysisBtn" type="button">Get VSN Analysis</button>
+  <button class="dock-card" id="dockCard" type="button">
+    <strong>VSN Analysis docked</strong>
+    <span>Click to reopen the generated analysis.</span>
+  </button>
+
+  <div class="analysis-overlay" id="analysisOverlay" aria-hidden="true">
+    <section class="analysis-panel" id="analysisPanel" role="dialog" aria-modal="true" aria-label="VSN Analysis">
+      <div class="analysis-head">
+        <div class="analysis-title">VSN Analysis <strong id="analysisTicker">{{ ticker }}</strong></div>
+        <button class="analysis-close" id="analysisClose" type="button" aria-label="Dock analysis">×</button>
+      </div>
+      <div class="analysis-body">
+        <div class="analysis-content" id="analysisContent"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const ticker = {{ ticker|tojson }};
+    const state = { detail: null, analysis: null, analysisGenerated: false, generating: false };
+    const fmt = (v, suffix = '') => v === null || v === undefined || Number.isNaN(Number(v)) ? '--' : `${Number(v).toFixed(1)}${suffix}`;
+    const cls = v => Number(v) < 0 ? 'neg' : 'pos';
+    function fmtMoney(v) { return v === null || v === undefined ? '--' : `$${Number(v).toFixed(2)}`; }
+    function fmtCap(v) {
+      if (!v) return '--';
+      if (Math.abs(v) >= 1e12) return `${(v / 1e12).toFixed(1)}T`;
+      if (Math.abs(v) >= 1e9) return `${(v / 1e9).toFixed(1)}B`;
+      if (Math.abs(v) >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+      return Number(v).toLocaleString();
+    }
+    function metric(label, value) { return `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`; }
+    function listLine(label, value) { return `<div><strong>${label}</strong><br>${value || '--'}</div>`; }
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' }[ch]));
+    }
+    function openAnalysisPanel() {
+      document.body.classList.add('analysis-open');
+      const overlay = document.getElementById('analysisOverlay');
+      overlay.classList.add('open');
+      overlay.classList.remove('docking');
+      overlay.setAttribute('aria-hidden', 'false');
+    }
+    function dockAnalysisPanel() {
+      const overlay = document.getElementById('analysisOverlay');
+      overlay.classList.add('docking');
+      setTimeout(() => {
+        overlay.classList.remove('open', 'docking');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('analysis-open');
+        if (state.analysisGenerated) {
+          document.getElementById('analysisBtn').textContent = 'View VSN Analysis';
+          document.getElementById('dockCard').classList.add('show');
+        }
+      }, 260);
+    }
+    function setAnalyzing() {
+      document.getElementById('analysisContent').innerHTML = `
+        <div class="analyzing">
+          <div>
+            <div class="analyzing-title">Analyzing ${escapeHtml(ticker)}</div>
+            <div class="analyzing-line"></div>
+          </div>
+        </div>
+      `;
+    }
+    function analysisPlainText(ai) {
+      const lines = [];
+      lines.push(`Source: ${ai.source || 'Unknown'}`);
+      if (ai.summary) lines.push(`\n${ai.summary}`);
+      if (ai.thesis) lines.push(`\n${ai.thesis}`);
+      if (ai.setup_quality) lines.push(`\nSetup quality\n${ai.setup_quality}`);
+      const sections = [
+        ['Supporting points', ai.supporting_points],
+        ['Risks', ai.risks],
+        ['Scenario analysis', ai.scenario_analysis],
+        ['What to watch', ai.what_to_watch],
+      ];
+      for (const [title, items] of sections) {
+        if (!items || !items.length) continue;
+        lines.push(`\n${title}`);
+        for (const item of items) lines.push(`- ${item}`);
+      }
+      return lines.join('\n');
+    }
+    function renderAnalysisFormatted(ai) {
+      const source = ai.source || 'Unknown';
+      const warn = source.toLowerCase().includes('failed') || source.toLowerCase().includes('fallback') || source.toLowerCase().includes('backup');
+      document.getElementById('analysisContent').innerHTML = `
+        <div class="source ${warn ? 'warn' : ''}">Source: ${escapeHtml(source)}</div>
+        <div class="analysis-summary">${escapeHtml(ai.summary || ai.thesis || 'Analysis generated.')}</div>
+        ${ai.thesis ? `<p>${escapeHtml(ai.thesis)}</p>` : ''}
+        ${ai.setup_quality ? `<h3>Setup quality</h3><p>${escapeHtml(ai.setup_quality)}</p>` : ''}
+        <h3>Supporting points</h3><ul>${(ai.supporting_points || []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+        <h3>Risks</h3><ul>${(ai.risks || []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+        ${ai.scenario_analysis ? `<h3>Scenario analysis</h3><ul>${ai.scenario_analysis.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>` : ''}
+        <h3>What to watch</h3><ul>${(ai.what_to_watch || []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+      `;
+    }
+    function typeAnalysis(ai) {
+      const text = analysisPlainText(ai);
+      const content = document.getElementById('analysisContent');
+      content.innerHTML = '<div class="typing cursor" id="typingText"></div>';
+      const target = document.getElementById('typingText');
+      let i = 0;
+      const step = Math.max(2, Math.ceil(text.length / 420));
+      const timer = setInterval(() => {
+        i = Math.min(text.length, i + step);
+        target.textContent = text.slice(0, i);
+        if (i >= text.length) {
+          clearInterval(timer);
+          setTimeout(() => renderAnalysisFormatted(ai), 280);
+        }
+      }, 14);
+    }
+    let priceChart = null;
+    let priceSeries = null;
+    let gradientDrawFrame = null;
+    let chartData = [];
+    function resizeGradientCanvas() {
+      const canvas = document.getElementById('gradientOverlay');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(1, Math.floor(rect.width * dpr));
+      const h = Math.max(1, Math.floor(rect.height * dpr));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    function drawGradientLine() {
+      const canvas = document.getElementById('gradientOverlay');
+      if (!canvas || !priceChart || !priceSeries || !chartData.length) return;
+      resizeGradientCanvas();
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      const points = chartData.map(p => ({
+        x: priceChart.timeScale().timeToCoordinate(p.time),
+        y: priceSeries.priceToCoordinate(p.value),
+      })).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+      if (points.length < 2) return;
+      const gradient = ctx.createLinearGradient(0, 0, rect.width, 0);
+      gradient.addColorStop(0, '#6fdcff');
+      gradient.addColorStop(0.45, '#ff6eb8');
+      gradient.addColorStop(0.72, '#fff36b');
+      gradient.addColorStop(1, '#c7ef74');
+      ctx.save();
+      ctx.lineWidth = 2.6;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+      ctx.stroke();
+      ctx.restore();
+    }
+    function scheduleGradientDraw() {
+      if (gradientDrawFrame) return;
+      gradientDrawFrame = requestAnimationFrame(() => {
+        gradientDrawFrame = null;
+        drawGradientLine();
+      });
+    }
+    function renderPriceChart(data) {
+      const host = document.getElementById('chartHost');
+      const tooltip = document.getElementById('chartTooltip');
+      if (!host || !data || data.length < 2 || !window.LightweightCharts) {
+        document.getElementById('miniChart').innerHTML = '<div class="empty">Not enough price history.</div>';
+        return;
+      }
+      chartData = data.map(p => ({ time: p.time, value: Number(p.value) })).filter(p => p.time && Number.isFinite(p.value));
+      if (priceChart) priceChart.remove();
+      priceChart = LightweightCharts.createChart(host, {
+        width: host.clientWidth,
+        height: host.clientHeight,
+        layout: { background: { type: 'solid', color: '#000000' }, textColor: '#7f7f92', fontFamily: 'Inter, sans-serif' },
+        grid: {
+          vertLines: { color: 'rgba(255,255,255,0.045)' },
+          horzLines: { color: 'rgba(255,255,255,0.055)' },
+        },
+        rightPriceScale: { borderColor: '#1d1d29' },
+        timeScale: { borderColor: '#1d1d29', timeVisible: false, secondsVisible: false },
+        crosshair: {
+          mode: LightweightCharts.CrosshairMode.Normal,
+          vertLine: { color: 'rgba(255,255,255,.35)', style: 2 },
+          horzLine: { color: 'rgba(255,255,255,.20)', style: 2 },
+        },
+        handleScroll: true,
+        handleScale: true,
+      });
+      priceSeries = priceChart.addLineSeries({
+        color: 'rgba(255,255,255,0)',
+        lineWidth: 2,
+        lastValueVisible: true,
+        priceLineVisible: false,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 4,
+        crosshairMarkerBorderColor: '#f6f6f7',
+        crosshairMarkerBackgroundColor: '#000',
+      });
+      priceSeries.setData(chartData);
+      priceChart.timeScale().fitContent();
+      priceChart.subscribeCrosshairMove(param => {
+        if (!param || !param.point || !param.time) {
+          tooltip.style.display = 'none';
+          return;
+        }
+        const item = param.seriesData.get(priceSeries);
+        if (!item) {
+          tooltip.style.display = 'none';
+          return;
+        }
+        tooltip.style.display = 'block';
+        tooltip.innerHTML = `${param.time}<br>${fmtMoney(item.value)}`;
+        const left = Math.min(Math.max(10, param.point.x + 14), host.clientWidth - 120);
+        const top = Math.min(Math.max(10, param.point.y - 44), host.clientHeight - 56);
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+      });
+      priceChart.timeScale().subscribeVisibleLogicalRangeChange(scheduleGradientDraw);
+      setTimeout(scheduleGradientDraw, 0);
+      window.addEventListener('resize', () => {
+        if (!priceChart || !host) return;
+        priceChart.applyOptions({ width: host.clientWidth, height: host.clientHeight });
+        scheduleGradientDraw();
+      });
+    }
+    async function loadCompanyLogo(symbol) {
+      const box = document.getElementById('companyLogo');
+      if (!box) return;
+      box.innerHTML = `<span>${escapeHtml(symbol.slice(0, 1))}</span>`;
+      try {
+        const res = await fetch(`/api/logo/${encodeURIComponent(symbol)}`);
+        const data = await res.json();
+        if (!data.success || !data.logo_url) return;
+        const img = new Image();
+        img.alt = symbol;
+        img.onload = () => { box.innerHTML = ''; box.appendChild(img); };
+        img.src = data.logo_url;
+      } catch (_) {}
+    }
+    function renderReturns(returns) {
+      const order = ['5D','1M','6M','YTD','1Y','5Y','10Y','All'];
+      document.getElementById('returnStrip').innerHTML = order.map(label => {
+        const value = returns ? returns[label] : null;
+        return `<div class="return-item"><span>${label}</span><strong class="${cls(value)}">${fmt(value, '%')}</strong></div>`;
+      }).join('');
+    }
+    async function loadDetail() {
+      const res = await fetch(`/api/screener/${encodeURIComponent(ticker)}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Could not load screen');
+      state.detail = data;
+      const row = data.row;
+      const m = data.metrics || {};
+      const history = data.history || {};
+      document.getElementById('tickerTitle').textContent = row.symbol;
+      document.getElementById('analysisTicker').textContent = row.symbol;
+      document.getElementById('tickerSub').textContent = `${row.name || row.symbol} · ${m.sector || 'Sector unavailable'} · ${row.verdict} · ${Math.round(row.confidence || 0)}% data confidence`;
+      document.getElementById('headerPrice').textContent = fmtMoney(m.current_price || row.price);
+      const headerChange = m.day_change_percent ?? row.change_pct;
+      document.getElementById('headerChange').textContent = `${fmt(headerChange, '%')}`;
+      document.getElementById('headerChange').className = cls(headerChange);
+      document.getElementById('conviction').textContent = Math.round(row.score);
+      document.getElementById('chartLink').href = `/chart/${encodeURIComponent(row.symbol)}`;
+      loadCompanyLogo(row.symbol);
+      renderReturns(history.returns || {});
+      renderPriceChart(history.chart || []);
+      document.getElementById('components').innerHTML = Object.entries(row.components || {}).map(([name, score]) => `
+        <div class="component"><strong>${name}</strong><div class="bar"><span style="width:${Math.max(0, Math.min(100, Number(score) || 0))}%"></span></div><span>${Math.round(score)}</span></div>
+      `).join('');
+      document.getElementById('metrics').innerHTML = [
+        metric('Price', fmtMoney(m.current_price || row.price)),
+        metric('Day change', `<span class="${cls(m.day_change_percent ?? row.change_pct)}">${fmt(m.day_change_percent ?? row.change_pct, '%')}</span>`),
+        metric('Market cap', fmtCap(m.market_cap || row.market_cap)),
+        metric('P/E', fmt(m.pe_ratio ?? row.pe)),
+        metric('Forward P/E', fmt(m.forward_pe ?? row.forward_pe)),
+        metric('P/B', fmt(m.price_to_book ?? row.price_to_book)),
+        metric('Profit margin', fmt((m.profit_margin || 0) * 100, '%')),
+        metric('ROE', fmt((m.return_on_equity || 0) * 100, '%')),
+        metric('Revenue growth', fmt(m.revenue_growth, '%')),
+        metric('Debt/equity', fmt(m.debt_to_equity)),
+        metric('Dividend yield', fmt((m.dividend_yield || 0) * 100, '%')),
+        metric('Volatility', fmt(m.volatility, '%'))
+      ].join('');
+      const tech = history.technical || {};
+      document.getElementById('technical').innerHTML = [
+        listLine('Summary', tech.summary),
+        listLine('Price vs 50D', fmt(tech.price_vs_50d, '%')),
+        listLine('Price vs 200D', fmt(tech.price_vs_200d, '%')),
+        listLine('52W range position', fmt(tech.range_position, '%')),
+        listLine('Volume vs 60D avg', fmt(tech.volume_vs_60d, '%'))
+      ].join('');
+      document.getElementById('analyst').innerHTML = [
+        listLine('Recommendation', m.recommendation || '--'),
+        listLine('Target price', fmtMoney(m.target_price)),
+        listLine('Target range', m.target_low && m.target_high ? `${fmtMoney(m.target_low)} - ${fmtMoney(m.target_high)}` : '--'),
+        listLine('Analysts', m.number_of_analysts || '--')
+      ].join('');
+      const news = data.news || [];
+      document.getElementById('news').innerHTML = news.length ? news.map(a => `
+        <a class="article" href="${a.link || '#'}" target="_blank" rel="noopener noreferrer">
+          <div class="article-title">${escapeHtml(a.title || 'Untitled article')}</div>
+          <div class="article-meta">${escapeHtml(a.publisher || 'News')}${a.published ? ` · ${new Date(a.published * 1000).toLocaleDateString()}` : ''}</div>
+        </a>
+      `).join('') : '<div class="empty">No recent articles found.</div>';
+      const related = data.related_stocks || [];
+      document.getElementById('related').innerHTML = related.length ? related.map(r => `
+        <a class="related-card" href="/screener/${encodeURIComponent(r.symbol)}">
+          <div class="related-title">${escapeHtml(r.symbol)} · ${escapeHtml(r.name || '')}</div>
+          <div class="related-meta">${fmtMoney(r.price)} · <span class="${cls(r.change_pct)}">${fmt(r.change_pct, '%')}</span> · conviction ${Math.round(r.score || 0)}</div>
+        </a>
+      `).join('') : '<div class="empty">No related stocks found.</div>';
+      const seasonality = history.seasonality || [];
+      const best = [...seasonality].sort((a,b) => (b.avg_return || 0) - (a.avg_return || 0)).slice(0,3);
+      const worst = [...seasonality].sort((a,b) => (a.avg_return || 0) - (b.avg_return || 0)).slice(0,2);
+      document.getElementById('seasonality').innerHTML = seasonality.length
+        ? [listLine('Historically strongest', best.map(x => `${x.month} ${fmt(x.avg_return, '%')}`).join(', ')), listLine('Historically weakest', worst.map(x => `${x.month} ${fmt(x.avg_return, '%')}`).join(', '))].join('')
+        : '<div class="empty">Seasonality unavailable.</div>';
+    }
+    async function getAnalysis() {
+      if (!state.detail || state.generating) return;
+      if (state.analysisGenerated && state.analysis) {
+        openAnalysisPanel();
+        renderAnalysisFormatted(state.analysis);
+        return;
+      }
+      state.generating = true;
+      openAnalysisPanel();
+      setAnalyzing();
+      const btn = document.getElementById('analysisBtn');
+      btn.textContent = `Analyzing ${ticker}`;
+      try {
+        const res = await fetch('/api/screener/reason', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ row: state.detail.analysis_context })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Analysis failed');
+        state.analysis = data.analysis;
+        state.analysisGenerated = true;
+        document.getElementById('dockCard').classList.add('show');
+        btn.textContent = 'View VSN Analysis';
+        typeAnalysis(data.analysis);
+      } catch (err) {
+        document.getElementById('analysisContent').innerHTML = `<div class="note">${escapeHtml(err.message || 'Analysis failed.')}</div>`;
+        btn.textContent = 'Get VSN Analysis';
+      } finally {
+        state.generating = false;
+      }
+    }
+    document.getElementById('analysisBtn').addEventListener('click', getAnalysis);
+    document.getElementById('dockCard').addEventListener('click', () => {
+      if (!state.analysis) return;
+      openAnalysisPanel();
+      renderAnalysisFormatted(state.analysis);
+    });
+    document.getElementById('analysisClose').addEventListener('click', dockAnalysisPanel);
+    document.getElementById('analysisOverlay').addEventListener('click', (e) => {
+      if (e.target.id === 'analysisOverlay') dockAnalysisPanel();
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('analysisOverlay').classList.contains('open')) dockAnalysisPanel();
+    });
+    loadDetail().catch(err => {
+      document.getElementById('tickerSub').textContent = err.message || 'Could not load screen.';
+      document.getElementById('analysisBtn').disabled = true;
+    });
+  </script>
+</body>
+</html>

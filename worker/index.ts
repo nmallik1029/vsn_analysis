@@ -11,6 +11,11 @@ interface Env {
   CLOUDFLARE_API_TOKEN?: string;
   CLOUDFLARE_ACCOUNT_ID?: string;
   CLOUDFLARE_SITE_TAG?: string;
+  LLM_PROVIDER?: string;
+  OPENAI_API_KEY?: string;
+  OPENAI_MODEL?: string;
+  GEMINI_API_KEY?: string;
+  GEMINI_MODEL?: string;
 }
 
 export class StockAnalyzerContainer extends Container<Env> {
@@ -28,6 +33,11 @@ export class StockAnalyzerContainer extends Container<Env> {
     CLOUDFLARE_API_TOKEN: this.env.CLOUDFLARE_API_TOKEN ?? "",
     CLOUDFLARE_ACCOUNT_ID: this.env.CLOUDFLARE_ACCOUNT_ID ?? "",
     CLOUDFLARE_SITE_TAG: this.env.CLOUDFLARE_SITE_TAG ?? "",
+    LLM_PROVIDER: this.env.LLM_PROVIDER ?? "",
+    OPENAI_API_KEY: this.env.OPENAI_API_KEY ?? "",
+    OPENAI_MODEL: this.env.OPENAI_MODEL ?? "",
+    GEMINI_API_KEY: this.env.GEMINI_API_KEY ?? "",
+    GEMINI_MODEL: this.env.GEMINI_MODEL ?? "",
   };
 }
 

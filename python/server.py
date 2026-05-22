@@ -16,6 +16,7 @@ from functools import wraps
 import os
 import json
 import re
+import math
 import requests
 from urllib.parse import urlparse
 from supabase import create_client
@@ -43,6 +44,9 @@ LOGO_CACHE = {}
 LOGO_CACHE_TTL = 60 * 60 * 6
 NAME_CACHE = {}
 NAME_CACHE_TTL = 60 * 60 * 24 * 7
+SCREENER_CACHE = {}
+SCREENER_CACHE_TTL = 120
+YAHOO_QUOTE_API_AVAILABLE = True
 YAHOO_SESSION = requests.Session()
 YAHOO_SESSION.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
@@ -73,6 +77,16 @@ WATCHLIST = {
     'SPY': 'SPDR S&P 500 ETF',
     'QQQ': 'Invesco QQQ'
 }
+
+DEFAULT_SCREENER_SYMBOLS = [
+    'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'META', 'TSLA', 'AVGO', 'AMD', 'NFLX',
+    'JPM', 'V', 'MA', 'BAC', 'WFC', 'GS', 'MS', 'AXP', 'C', 'SCHW',
+    'XOM', 'CVX', 'COP', 'SLB', 'OXY', 'EOG',
+    'LLY', 'UNH', 'JNJ', 'MRK', 'ABBV', 'PFE', 'TMO', 'ISRG',
+    'WMT', 'COST', 'HD', 'MCD', 'NKE', 'SBUX', 'TGT',
+    'PLTR', 'CRM', 'ORCL', 'ADBE', 'NOW', 'SNOW', 'SHOP',
+    'SPY', 'QQQ', 'IWM', 'DIA'
+]
 
 
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
@@ -116,6 +130,11 @@ SUPABASE_SERVICE_ROLE_KEY = os.environ.get(
 CLOUDFLARE_API_TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN', '')
 CLOUDFLARE_ACCOUNT_ID = os.environ.get('CLOUDFLARE_ACCOUNT_ID', '')
 CLOUDFLARE_SITE_TAG = os.environ.get('CLOUDFLARE_SITE_TAG', '')
+LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'gemini').strip().lower()
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4.1-mini')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
 
 DATA_DIR = os.path.dirname(__file__)
 ADMIN_FILE = os.path.join(DATA_DIR, 'admin.json')
@@ -618,6 +637,15 @@ def analyze_page():
 def markets_page():
     return render_template('markets.html')
 
+@app.route('/screener')
+def screener_page():
+    return render_template('screener.html', active_nav='screener')
+
+@app.route('/screener/<ticker>')
+def screener_detail_page(ticker):
+    ticker = re.sub(r'[^A-Za-z0-9.^-]', '', ticker or '').upper()[:16]
+    return render_template('screener_detail.html', active_nav='screener', ticker=ticker)
+
 @app.route('/chart/<ticker>')
 def chart_page(ticker):
     return render_template('chart.html', ticker=ticker)
@@ -876,6 +904,7 @@ def search_tickers():
 
 def _enrich_with_names(symbols: list[str]) -> dict:
     """Look up name + exchange for a batch of tickers, with long-lived cache."""
+    global YAHOO_QUOTE_API_AVAILABLE
     now = time.time()
     info_by_symbol = {}
     to_fetch = []
@@ -886,10 +915,13 @@ def _enrich_with_names(symbols: list[str]) -> dict:
         else:
             to_fetch.append(s)
 
-    if to_fetch:
+    if to_fetch and YAHOO_QUOTE_API_AVAILABLE:
         try:
             url = 'https://query2.finance.yahoo.com/v7/finance/quote'
             resp = YAHOO_SESSION.get(url, params={'symbols': ','.join(to_fetch)}, timeout=5)
+            if resp.status_code in {401, 403}:
+                YAHOO_QUOTE_API_AVAILABLE = False
+                return info_by_symbol
             resp.raise_for_status()
             quotes = resp.json().get('quoteResponse', {}).get('result', []) or []
             for q in quotes:
@@ -908,6 +940,751 @@ def _enrich_with_names(symbols: list[str]) -> dict:
             print(f"Name enrichment failed: {e}")
 
     return info_by_symbol
+
+
+def _safe_float(value, default=None):
+    try:
+        if value is None:
+            return default
+        value = float(value)
+        if math.isnan(value) or math.isinf(value):
+            return default
+        return value
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_int(value, default=0):
+    try:
+        if value is None:
+            return default
+        return int(float(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _clamp(value: float, low: float = 0.0, high: float = 100.0) -> float:
+    return max(low, min(high, value))
+
+
+def _conviction_from_raw(raw: float) -> float:
+    """Convert a weighted component score into a wider, stable conviction score."""
+    return _clamp(100 / (1 + math.exp(-((raw - 50) / 11))))
+
+
+def _percentile_map(rows: list[dict], key: str, higher_is_better: bool = True) -> dict:
+    values = []
+    for row in rows:
+        value = _safe_float(row.get(key))
+        if value is not None:
+            values.append((row['symbol'], value))
+
+    if not values:
+        return {row['symbol']: 50.0 for row in rows}
+    if len(values) == 1:
+        return {row['symbol']: 50.0 for row in rows}
+    if min(v for _, v in values) == max(v for _, v in values):
+        return {row['symbol']: 50.0 for row in rows}
+
+    values.sort(key=lambda item: item[1], reverse=not higher_is_better)
+    scores = {}
+    last_value = None
+    last_score = 50.0
+    total = len(values) - 1
+    for idx, (symbol, value) in enumerate(values):
+        if last_value is not None and value == last_value:
+            score = last_score
+        else:
+            score = (idx / total) * 100
+            last_value = value
+            last_score = score
+        scores[symbol] = score
+
+    for row in rows:
+        scores.setdefault(row['symbol'], 50.0)
+    return scores
+
+
+def _fetch_quote_batch(symbols: list[str]) -> list[dict]:
+    global YAHOO_QUOTE_API_AVAILABLE
+    symbols = [s.upper().strip() for s in symbols if s and re.match(r'^[A-Z0-9.^-]{1,16}$', s.upper().strip())]
+    if not symbols:
+        return []
+
+    quotes = []
+    if YAHOO_QUOTE_API_AVAILABLE:
+        for i in range(0, len(symbols), 60):
+            chunk = symbols[i:i + 60]
+            try:
+                resp = YAHOO_SESSION.get(
+                    'https://query2.finance.yahoo.com/v7/finance/quote',
+                    params={'symbols': ','.join(chunk)},
+                    timeout=8
+                )
+                if resp.status_code in {401, 403}:
+                    YAHOO_QUOTE_API_AVAILABLE = False
+                    break
+                resp.raise_for_status()
+                quotes.extend(resp.json().get('quoteResponse', {}).get('result', []) or [])
+            except Exception as e:
+                print(f"Screener quote batch failed: {e}")
+    if quotes:
+        return quotes
+
+    requested = set(symbols)
+    predefined = _fetch_predefined_screener_quotes('most_actives', limit=max(100, len(symbols)))
+    quote_by_symbol = {q.get('symbol', '').upper(): q for q in predefined if q.get('symbol')}
+    quotes = [quote_by_symbol[s] for s in symbols if s in quote_by_symbol]
+    missing = [s for s in symbols if s not in quote_by_symbol]
+    if missing:
+        quotes.extend(_fetch_yfinance_quote_batch(missing))
+    return quotes
+
+
+def _fetch_predefined_screener_quotes(scr_id: str, limit: int = 100) -> list[dict]:
+    try:
+        url = "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved"
+        params = {
+            "scrIds": scr_id,
+            "count": limit,
+            "start": 0,
+            "formatted": "false",
+            "lang": "en-US",
+            "region": "US",
+        }
+        res = requests.get(url, params=params, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+        if res.status_code != 200:
+            return []
+        quotes = res.json().get("finance", {}).get("result", [{}])[0].get("quotes", []) or []
+        now = time.time()
+        for q in quotes:
+            sym = q.get('symbol')
+            if sym:
+                NAME_CACHE[sym] = {
+                    "name": q.get("shortName") or q.get("longName") or sym,
+                    "exchange": q.get("fullExchangeName") or q.get("exchange") or "",
+                    "type": q.get("quoteType") or "EQUITY",
+                    "ts": now,
+                }
+        return quotes
+    except Exception as e:
+        print(f"Predefined screener quote fetch failed: {e}")
+        return []
+
+
+def _fetch_yfinance_quote_batch(symbols: list[str]) -> list[dict]:
+    try:
+        import yfinance as yf
+        data = yf.download(
+            tickers=symbols,
+            period="1y",
+            interval="1d",
+            group_by="ticker",
+            auto_adjust=False,
+            progress=False,
+            threads=True,
+        )
+        quotes = []
+        info = _enrich_with_names(symbols)
+        for sym in symbols:
+            try:
+                frame = data[sym] if len(symbols) > 1 else data
+                if frame is None or frame.empty:
+                    continue
+                close = frame['Close'].dropna()
+                volume = frame['Volume'].dropna()
+                if close.empty:
+                    continue
+                last = float(close.iloc[-1])
+                prev = float(close.iloc[-2]) if len(close) > 1 else last
+                low = float(close.min())
+                high = float(close.max())
+                avg_volume = float(volume.tail(60).mean()) if not volume.empty else None
+                last_volume = float(volume.iloc[-1]) if not volume.empty else None
+                meta = info.get(sym, {})
+                quotes.append({
+                    'symbol': sym,
+                    'quoteType': meta.get('type') or 'EQUITY',
+                    'shortName': meta.get('name') or sym,
+                    'fullExchangeName': meta.get('exchange') or '',
+                    'regularMarketPrice': last,
+                    'regularMarketChange': last - prev,
+                    'regularMarketChangePercent': ((last - prev) / prev * 100) if prev else 0,
+                    'regularMarketVolume': last_volume,
+                    'averageDailyVolume3Month': avg_volume,
+                    'fiftyTwoWeekLow': low,
+                    'fiftyTwoWeekHigh': high,
+                })
+            except Exception as e:
+                print(f"yfinance quote fallback failed for {sym}: {e}")
+        return quotes
+    except Exception as e:
+        print(f"yfinance quote fallback failed: {e}")
+        return []
+
+
+def _volume_ratio(q: dict) -> float | None:
+    volume = _safe_float(q.get('regularMarketVolume'))
+    avg_volume = _safe_float(q.get('averageDailyVolume3Month')) or _safe_float(q.get('averageDailyVolume10Day'))
+    if volume is None or not avg_volume:
+        return None
+    return volume / avg_volume
+
+
+def _range_position(q: dict) -> float | None:
+    price = _safe_float(q.get('regularMarketPrice'))
+    low = _safe_float(q.get('fiftyTwoWeekLow'))
+    high = _safe_float(q.get('fiftyTwoWeekHigh'))
+    if price is None or low is None or high is None or high <= low:
+        return None
+    return _clamp(((price - low) / (high - low)) * 100)
+
+
+def _eps_growth_proxy(q: dict) -> float | None:
+    trailing = _safe_float(q.get('epsTrailingTwelveMonths'))
+    forward = _safe_float(q.get('epsForward'))
+    if trailing is None or forward is None or trailing <= 0:
+        return None
+    return ((forward - trailing) / trailing) * 100
+
+
+def _inverse_positive(q: dict, *keys: str) -> float | None:
+    vals = []
+    for key in keys:
+        value = _safe_float(q.get(key))
+        if value is not None and value > 0:
+            vals.append(1 / value)
+    if not vals:
+        return None
+    return sum(vals) / len(vals)
+
+
+def _build_screener_rows(symbols: list[str], limit: int = 50) -> list[dict]:
+    quotes = _fetch_quote_batch(symbols[:160])
+    rows = []
+    seen = set()
+    for q in quotes:
+        symbol = (q.get('symbol') or '').upper()
+        quote_type = (q.get('quoteType') or '').upper()
+        if not symbol or symbol in seen or quote_type not in {'EQUITY', 'ETF'}:
+            continue
+        price = _safe_float(q.get('regularMarketPrice'))
+        if price is None:
+            continue
+        seen.add(symbol)
+        row = {
+            'symbol': symbol,
+            'name': q.get('shortName') or q.get('longName') or NAME_CACHE.get(symbol, {}).get('name') or symbol,
+            'exchange': q.get('fullExchangeName') or q.get('exchange') or '',
+            'price': round(price, 2),
+            'change_pct': round(_safe_float(q.get('regularMarketChangePercent'), 0.0), 2),
+            'market_cap': _safe_int(q.get('marketCap')),
+            'volume': _safe_int(q.get('regularMarketVolume')),
+            'avg_volume': _safe_int(q.get('averageDailyVolume3Month')),
+            'volume_ratio': _volume_ratio(q),
+            'pe': _safe_float(q.get('trailingPE')),
+            'forward_pe': _safe_float(q.get('forwardPE')),
+            'price_to_book': _safe_float(q.get('priceToBook')),
+            'beta': _safe_float(q.get('beta')),
+            'range_position': _range_position(q),
+            'eps_growth': _eps_growth_proxy(q),
+            '_value_raw': _inverse_positive(q, 'trailingPE', 'forwardPE', 'priceToBook'),
+            '_momentum_raw': None,
+            '_growth_raw': _eps_growth_proxy(q),
+            '_quality_raw': None,
+            '_risk_raw': None,
+        }
+        volume_ratio = row['volume_ratio']
+        range_pos = row['range_position']
+        row['_momentum_raw'] = (
+            (row['change_pct'] * 0.45) +
+            ((range_pos or 50) * 0.35) +
+            ((min(volume_ratio or 1, 4) / 4) * 100 * 0.20)
+        )
+        row['_quality_raw'] = (
+            (math.log10(row['market_cap']) if row['market_cap'] > 0 else None),
+            (math.log10(row['avg_volume']) if row['avg_volume'] > 0 else None),
+        )
+        quality_parts = [v for v in row['_quality_raw'] if v is not None]
+        row['_quality_raw'] = sum(quality_parts) / len(quality_parts) if quality_parts else None
+        beta = row['beta']
+        row['_risk_raw'] = 100 - (abs((beta if beta is not None else 1.2) - 1) * 55)
+        rows.append(row)
+
+    if not rows:
+        return []
+
+    value_scores = _percentile_map(rows, '_value_raw', higher_is_better=True)
+    momentum_scores = _percentile_map(rows, '_momentum_raw', higher_is_better=True)
+    growth_scores = _percentile_map(rows, '_growth_raw', higher_is_better=True)
+    quality_scores = _percentile_map(rows, '_quality_raw', higher_is_better=True)
+    risk_scores = _percentile_map(rows, '_risk_raw', higher_is_better=True)
+
+    raw_rows = []
+    for row in rows:
+        coverage_keys = ['pe', 'forward_pe', 'price_to_book', 'beta', 'range_position', 'eps_growth', 'volume_ratio', 'market_cap']
+        coverage = sum(1 for key in coverage_keys if row.get(key) is not None and row.get(key) != 0) / len(coverage_keys)
+        components = {
+            'value': round(value_scores[row['symbol']], 1),
+            'momentum': round(momentum_scores[row['symbol']], 1),
+            'growth': round(growth_scores[row['symbol']], 1),
+            'quality': round(quality_scores[row['symbol']], 1),
+            'risk': round(risk_scores[row['symbol']], 1),
+        }
+        raw = (
+            components['value'] * 0.27 +
+            components['momentum'] * 0.25 +
+            components['growth'] * 0.18 +
+            components['quality'] * 0.18 +
+            components['risk'] * 0.12
+        )
+        row['components'] = components
+        row['_raw_score'] = raw
+        row['confidence'] = round(_clamp(coverage * 100), 0)
+        raw_rows.append(row)
+
+    rank_scores = _percentile_map(raw_rows, '_raw_score', higher_is_better=True)
+    for row in raw_rows:
+        score = round(_conviction_from_raw(row['_raw_score']), 0)
+        row['score'] = score
+        row['rank_percentile'] = round(rank_scores[row['symbol']], 0)
+        if score >= 85:
+            row['verdict'] = 'High conviction'
+        elif score >= 65:
+            row['verdict'] = 'Constructive'
+        elif score >= 45:
+            row['verdict'] = 'Mixed'
+        elif score >= 25:
+            row['verdict'] = 'Weak setup'
+        else:
+            row['verdict'] = 'Avoid for now'
+        row['reasons'] = _screener_reasons(row)
+        for private_key in list(row.keys()):
+            if private_key.startswith('_'):
+                row.pop(private_key, None)
+
+    return sorted(raw_rows, key=lambda r: (r['score'], r['confidence']), reverse=True)[:limit]
+
+
+def _screener_row_for_ticker(ticker: str) -> dict | None:
+    ticker = ticker.upper().strip()
+    universe = list(dict.fromkeys(DEFAULT_SCREENER_SYMBOLS + _fetch_most_active(limit=120) + [ticker]))
+    rows = _build_screener_rows(universe, limit=len(universe))
+    for row in rows:
+        if row.get('symbol') == ticker:
+            return row
+    single = _build_screener_rows([ticker], limit=1)
+    return single[0] if single else None
+
+
+def _stock_history_summary(ticker: str) -> dict:
+    cache_key = f"history-summary:{ticker}"
+    now = time.time()
+    cached = SCREENER_CACHE.get(cache_key)
+    if cached and now - cached['ts'] < 60 * 30:
+        return cached['data']
+    summary = {'returns': {}, 'sparkline': [], 'technical': {}, 'seasonality': []}
+    try:
+        import yfinance as yf
+        hist = yf.download(ticker, period="10y", interval="1d", progress=False, auto_adjust=False)
+        if hist is None or hist.empty:
+            return summary
+        close = hist['Close']
+        if hasattr(close, 'columns'):
+            close = close.iloc[:, 0]
+        close = close.dropna()
+        volume = hist['Volume'] if 'Volume' in hist else None
+        if volume is not None and hasattr(volume, 'columns'):
+            volume = volume.iloc[:, 0]
+        volume = volume.dropna() if volume is not None else None
+        if close.empty:
+            return summary
+        last = float(close.iloc[-1])
+        windows = {
+            '5D': 5,
+            '1M': 21,
+            '6M': 126,
+            'YTD': None,
+            '1Y': 252,
+            '5Y': 1260,
+            '10Y': 2520,
+        }
+        returns = {}
+        for label, days in windows.items():
+            try:
+                if label == 'YTD':
+                    year = close[close.index.year == close.index[-1].year]
+                    start = float(year.iloc[0]) if not year.empty else None
+                elif len(close) > days:
+                    start = float(close.iloc[-days - 1])
+                elif label in {'5Y', '10Y'} and len(close) > 200:
+                    start = float(close.iloc[0])
+                else:
+                    start = None
+                returns[label] = round(((last - start) / start) * 100, 2) if start else None
+            except Exception:
+                returns[label] = None
+        all_start = float(close.iloc[0]) if len(close) else None
+        returns['All'] = round(((last - all_start) / all_start) * 100, 2) if all_start else None
+
+        ma50 = float(close.tail(50).mean()) if len(close) >= 50 else None
+        ma200 = float(close.tail(200).mean()) if len(close) >= 200 else None
+        high_52 = float(close.tail(252).max()) if len(close) >= 60 else float(close.max())
+        low_52 = float(close.tail(252).min()) if len(close) >= 60 else float(close.min())
+        range_pos = ((last - low_52) / (high_52 - low_52) * 100) if high_52 > low_52 else None
+        three_month = returns.get('6M')
+        trend_score = 0
+        trend_score += 1 if ma50 and last > ma50 else -1
+        trend_score += 1 if ma200 and last > ma200 else -1
+        trend_score += 1 if range_pos and range_pos > 60 else -1 if range_pos and range_pos < 35 else 0
+        technical = {
+            'price_vs_50d': round(((last - ma50) / ma50) * 100, 2) if ma50 else None,
+            'price_vs_200d': round(((last - ma200) / ma200) * 100, 2) if ma200 else None,
+            'range_position': round(range_pos, 1) if range_pos is not None else None,
+            'volume_vs_60d': round((float(volume.iloc[-1]) / float(volume.tail(60).mean())) * 100, 1) if volume is not None and not volume.empty and float(volume.tail(60).mean()) else None,
+            'summary': 'Constructive' if trend_score >= 2 else 'Weak' if trend_score <= -2 else 'Mixed',
+            'momentum_6m': three_month,
+        }
+        month_returns = []
+        monthly = close.resample('ME').last().pct_change().dropna() * 100
+        if not monthly.empty:
+            grouped = monthly.groupby(monthly.index.month).mean()
+            labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            month_returns = [
+                {'month': labels[i - 1], 'avg_return': round(float(grouped.get(i, 0)), 2)}
+                for i in range(1, 13)
+            ]
+        tail = close.tail(160)
+        summary = {
+            'returns': returns,
+            'sparkline': [round(float(x), 2) for x in tail.values],
+            'chart': [
+                {'time': idx.strftime('%Y-%m-%d'), 'value': round(float(value), 2)}
+                for idx, value in tail.items()
+            ],
+            'technical': technical,
+            'seasonality': month_returns,
+        }
+        SCREENER_CACHE[cache_key] = {'ts': now, 'data': summary}
+        return summary
+    except Exception as e:
+        print(f"history summary failed for {ticker}: {e}")
+        return summary
+
+
+def _related_stock_cards(ticker: str, metrics: dict | None) -> list[dict]:
+    candidates = [s for s in DEFAULT_SCREENER_SYMBOLS if s != ticker][:80]
+    sector = (metrics or {}).get('sector') or ''
+    industry = (metrics or {}).get('industry') or ''
+    preferred = []
+    if 'Motor' in industry or ticker in {'F', 'GM', 'TSLA', 'RIVN', 'NIO'}:
+        preferred = ['GM', 'TSLA', 'RIVN', 'NIO', 'STLA', 'TM']
+    elif 'Technology' in sector or ticker in {'AAPL', 'MSFT', 'NVDA', 'AMD'}:
+        preferred = ['MSFT', 'AAPL', 'NVDA', 'AMD', 'AVGO', 'ORCL']
+    elif 'Financial' in sector or ticker in {'JPM', 'BAC', 'WFC'}:
+        preferred = ['JPM', 'BAC', 'WFC', 'GS', 'MS', 'C']
+    symbols = list(dict.fromkeys([s for s in preferred if s != ticker] + candidates))[:12]
+    cards = []
+    for row in _build_screener_rows(symbols, limit=6):
+        cards.append({
+            'symbol': row.get('symbol'),
+            'name': row.get('name'),
+            'price': row.get('price'),
+            'change_pct': row.get('change_pct'),
+            'score': row.get('score'),
+        })
+    return cards
+
+
+def _screener_reasons(row: dict) -> dict:
+    components = row.get('components') or {}
+    ranked = sorted(components.items(), key=lambda item: item[1], reverse=True)
+    positives = []
+    cautions = []
+    for name, score in ranked[:2]:
+        if score >= 65:
+            positives.append(f"{name.title()} ranks well versus the current screen.")
+    for name, score in sorted(components.items(), key=lambda item: item[1])[:2]:
+        if score <= 40:
+            cautions.append(f"{name.title()} is a relative drag in this universe.")
+    if row.get('range_position') is not None:
+        positives.append(f"Price sits around the {round(row['range_position'])}th percentile of its 52-week range.")
+    if row.get('volume_ratio') is not None and row['volume_ratio'] >= 1.5:
+        positives.append("Volume is running meaningfully above its recent average.")
+    if row.get('confidence', 0) < 70:
+        cautions.append("Several inputs are missing, so confidence is lower.")
+    return {
+        'positive': positives[:3] or ['No single factor dominates; this is a balanced relative ranking.'],
+        'caution': cautions[:3] or ['No major relative weakness stood out in the available data.']
+    }
+
+
+def _screener_universe_symbols(universe: str, query: str, limit: int) -> list[str]:
+    if query:
+        return [r['symbol'] for r in _yahoo_search_full(query)[:max(limit, 30)]]
+    if universe == 'watchlist':
+        return list(WATCHLIST.keys())
+    if universe == 'default':
+        return DEFAULT_SCREENER_SYMBOLS
+    active = _fetch_most_active(limit=max(120, limit * 3))
+    return active or DEFAULT_SCREENER_SYMBOLS
+
+
+def _fallback_screener_analysis(row: dict) -> dict:
+    components = row.get('components') or {}
+    best = max(components, key=components.get) if components else 'setup'
+    worst = min(components, key=components.get) if components else 'data quality'
+    return {
+        'source': 'deterministic fallback',
+        'verdict': row.get('verdict', 'Mixed'),
+        'summary': f"{row.get('symbol')} screens as {row.get('verdict', 'mixed').lower()} with a conviction score of {row.get('score')}.",
+        'thesis': (
+            f"The strongest part of the setup is {best}, while {worst} is the area that needs the most confirmation. "
+            "The score should be read as a structured screen, not a buy or sell instruction."
+        ),
+        'setup_quality': (
+            "The current setup is based on relative factor strength inside the selected universe. "
+            "A stronger read would combine a high conviction score, above-average momentum, solid quality, and no obvious valuation penalty."
+        ),
+        'supporting_points': (row.get('reasons') or {}).get('positive', [])[:3],
+        'risks': (row.get('reasons') or {}).get('caution', [])[:3],
+        'scenario_analysis': [
+            'Bull case: the strongest factor continues to lead and the weaker factor stops deteriorating.',
+            'Base case: the stock remains a watchlist candidate until more factors line up.',
+            'Bear case: the weakest factor continues to pressure the setup and the screen score fades.'
+        ],
+        'what_to_watch': [
+            'Whether volume confirms the current move.',
+            'Whether valuation stays reasonable versus peers.',
+            f"Whether the weak point, {worst}, improves on the next screen."
+        ],
+        'confidence': 'medium' if row.get('confidence', 0) >= 70 else 'low'
+    }
+
+
+def _screener_analysis_prompt(row: dict) -> dict:
+    return {
+        'symbol': row.get('symbol'),
+        'company': row.get('name'),
+        'score': row.get('score'),
+        'verdict': row.get('verdict'),
+        'confidence': row.get('confidence'),
+        'components': row.get('components'),
+        'metrics': {
+            'price': row.get('price'),
+            'change_pct': row.get('change_pct'),
+            'market_cap': row.get('market_cap'),
+            'volume': row.get('volume'),
+            'volume_ratio': row.get('volume_ratio'),
+            'pe': row.get('pe'),
+            'forward_pe': row.get('forward_pe'),
+            'price_to_book': row.get('price_to_book'),
+            'beta': row.get('beta'),
+            'range_position': row.get('range_position'),
+            'eps_growth': row.get('eps_growth'),
+            **(row.get('metrics') or {}),
+        },
+        'news': row.get('news') or [],
+        'analyst_context': row.get('analyst_context') or {},
+        'model_rules': [
+            'Use only the supplied data.',
+            'Do not claim this is financial advice.',
+            'Be direct and explain why the score is strong, weak, or mixed.'
+        ]
+    }
+
+
+def _screener_analysis_schema(include_openai_strict: bool = False) -> dict:
+    schema = {
+        'type': 'object',
+        'required': ['source', 'verdict', 'summary', 'thesis', 'setup_quality', 'supporting_points', 'risks', 'scenario_analysis', 'what_to_watch', 'confidence'],
+        'properties': {
+            'source': {'type': 'string'},
+            'verdict': {'type': 'string'},
+            'summary': {'type': 'string'},
+            'thesis': {'type': 'string'},
+            'setup_quality': {'type': 'string'},
+            'supporting_points': {'type': 'array', 'items': {'type': 'string'}},
+            'risks': {'type': 'array', 'items': {'type': 'string'}},
+            'scenario_analysis': {'type': 'array', 'items': {'type': 'string'}},
+            'what_to_watch': {'type': 'array', 'items': {'type': 'string'}},
+            'confidence': {'type': 'string', 'enum': ['low', 'medium', 'high']}
+        }
+    }
+    if include_openai_strict:
+        schema['additionalProperties'] = False
+    return schema
+
+
+def _llm_system_prompt() -> str:
+    return (
+        'You are an equity screener analyst for VSN Analysis. Write a useful mini analyst note, '
+        'not a one-sentence blurb. Reason from provided metrics only. Be specific about what the '
+        'screen likes, what it dislikes, and what would change the conclusion. Do not present the '
+        'output as financial advice.'
+    )
+
+
+def _parse_llm_json(text: str) -> dict | None:
+    if not text:
+        return None
+    cleaned = text.strip()
+    if cleaned.startswith('```'):
+        cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\s*```$', '', cleaned).strip()
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        decoder = json.JSONDecoder()
+        for idx, char in enumerate(cleaned):
+            if char not in '[{':
+                continue
+            try:
+                obj, _ = decoder.raw_decode(cleaned[idx:])
+                if isinstance(obj, dict):
+                    return obj
+            except json.JSONDecodeError:
+                continue
+    return None
+
+
+def _llm_configured() -> bool:
+    if LLM_PROVIDER == 'gemini':
+        return bool(GEMINI_API_KEY)
+    if LLM_PROVIDER == 'openai':
+        return bool(OPENAI_API_KEY)
+    return bool(GEMINI_API_KEY or OPENAI_API_KEY)
+
+
+def _active_llm_model() -> str | None:
+    if LLM_PROVIDER == 'gemini' and GEMINI_API_KEY:
+        return GEMINI_MODEL
+    if LLM_PROVIDER == 'openai' and OPENAI_API_KEY:
+        return OPENAI_MODEL
+    if GEMINI_API_KEY:
+        return GEMINI_MODEL
+    if OPENAI_API_KEY:
+        return OPENAI_MODEL
+    return None
+
+
+def _gemini_screener_analysis(row: dict) -> dict:
+    if not GEMINI_API_KEY:
+        return _fallback_screener_analysis(row)
+
+    prompt = _screener_analysis_prompt(row)
+    try:
+        resp = requests.post(
+            f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent',
+            headers={
+                'x-goog-api-key': GEMINI_API_KEY,
+                'Content-Type': 'application/json',
+            },
+            json={
+                'contents': [{
+                    'role': 'user',
+                    'parts': [{
+                        'text': f"{_llm_system_prompt()}\n\nAnalyze this screener row:\n{json.dumps(prompt)}"
+                    }]
+                }],
+                'generationConfig': {
+                    'responseMimeType': 'application/json',
+                    'responseJsonSchema': _screener_analysis_schema(),
+                    'maxOutputTokens': 2600,
+                    'temperature': 0.35,
+                }
+            },
+            timeout=20
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+        finish_reason = payload.get('candidates', [{}])[0].get('finishReason')
+        parts = payload.get('candidates', [{}])[0].get('content', {}).get('parts', []) or []
+        text = ''.join(part.get('text', '') for part in parts)
+        parsed = _parse_llm_json(text)
+        if parsed:
+            parsed['source'] = 'Gemini'
+            return parsed
+        print(f"Gemini screener analysis returned malformed JSON (finish={finish_reason}, chars={len(text)}): {text[:500]!r}")
+        fallback = _fallback_screener_analysis(row)
+        fallback['source'] = 'Gemini failed - backup shown'
+        fallback['summary'] = 'Gemini returned an incomplete response, so VSN is showing the deterministic backup note.'
+        return fallback
+    except Exception as e:
+        print(f"Gemini screener analysis failed: {e}")
+        return _fallback_screener_analysis(row)
+
+
+def _openai_screener_analysis(row: dict) -> dict:
+    if not OPENAI_API_KEY:
+        return _fallback_screener_analysis(row)
+
+    prompt = _screener_analysis_prompt(row)
+    schema = _screener_analysis_schema(include_openai_strict=True)
+
+    try:
+        resp = requests.post(
+            'https://api.openai.com/v1/responses',
+            headers={
+                'Authorization': f'Bearer {OPENAI_API_KEY}',
+                'Content-Type': 'application/json',
+            },
+            json={
+                'model': OPENAI_MODEL,
+                'input': [
+                    {
+                        'role': 'system',
+                        'content': _llm_system_prompt()
+                    },
+                    {
+                        'role': 'user',
+                        'content': json.dumps(prompt)
+                    }
+                ],
+                'text': {
+                    'format': {
+                        'type': 'json_schema',
+                        'name': 'stock_screener_reasoning',
+                        'strict': True,
+                        'schema': schema
+                    }
+                },
+                'max_output_tokens': 2600,
+            },
+            timeout=20
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+        text = payload.get('output_text')
+        if not text:
+            parts = []
+            for item in payload.get('output', []) or []:
+                for content in item.get('content', []) or []:
+                    if content.get('type') in {'output_text', 'text'} and content.get('text'):
+                        parts.append(content['text'])
+            text = ''.join(parts)
+        parsed = _parse_llm_json(text)
+        if parsed:
+            parsed['source'] = 'OpenAI'
+            return parsed
+        fallback = _fallback_screener_analysis(row)
+        fallback['source'] = 'OpenAI failed - backup shown'
+        return fallback
+    except Exception as e:
+        print(f"OpenAI screener analysis failed: {e}")
+        return _fallback_screener_analysis(row)
+
+
+def _screener_llm_analysis(row: dict) -> dict:
+    if LLM_PROVIDER == 'openai':
+        return _openai_screener_analysis(row)
+    if LLM_PROVIDER == 'gemini':
+        return _gemini_screener_analysis(row)
+    if GEMINI_API_KEY:
+        return _gemini_screener_analysis(row)
+    if OPENAI_API_KEY:
+        return _openai_screener_analysis(row)
+    return _fallback_screener_analysis(row)
 
 
 def _fetch_yahoo_search(query: str, limit: int = 12) -> dict:
@@ -1135,6 +1912,153 @@ def analyze(ticker):
         'ticker': ticker,
         'metrics': metrics,
         'score': score_data
+    })
+
+
+@app.route('/api/screener')
+def screener_api():
+    """Return a relative, data-backed screener universe."""
+    universe = request.args.get('universe', 'active').strip().lower()
+    if universe not in {'active', 'watchlist', 'default'}:
+        universe = 'active'
+    query = request.args.get('q', '').upper().strip()
+    query = re.sub(r'[^A-Z0-9.^-]', '', query)[:16]
+    try:
+        limit = max(5, min(100, int(request.args.get('limit', 50))))
+    except (TypeError, ValueError):
+        limit = 50
+
+    cache_key = f"{universe}:{query}:{limit}"
+    now = time.time()
+    cached = SCREENER_CACHE.get(cache_key)
+    if cached and now - cached['ts'] < SCREENER_CACHE_TTL:
+        return jsonify(cached['data'])
+
+    symbols = _screener_universe_symbols(universe, query, limit)
+    rows = _build_screener_rows(symbols, limit=limit)
+    payload = {
+        'success': True,
+        'universe': universe,
+        'query': query,
+        'generated_at': datetime.now(timezone.utc).isoformat(),
+        'llm_enabled': _llm_configured(),
+        'llm_provider': LLM_PROVIDER,
+        'rows': rows,
+        'method': {
+            'summary': 'Relative multi-factor screen with percentile scoring across the selected universe.',
+            'weights': {
+                'value': 27,
+                'momentum': 25,
+                'growth': 18,
+                'quality': 18,
+                'risk': 12
+            }
+        }
+    }
+    SCREENER_CACHE[cache_key] = {'ts': now, 'data': payload}
+    return jsonify(payload)
+
+
+@app.route('/api/screener/reason', methods=['POST'])
+def screener_reason_api():
+    data = request.get_json(silent=True) or {}
+    row = data.get('row') or {}
+    if not isinstance(row, dict) or not row.get('symbol'):
+        return jsonify({'success': False, 'error': 'Missing screener row'}), 400
+    analysis = _screener_llm_analysis(row)
+    return jsonify({
+        'success': True,
+        'llm_enabled': _llm_configured(),
+        'provider': LLM_PROVIDER if _llm_configured() else None,
+        'model': _active_llm_model(),
+        'analysis': analysis
+    })
+
+
+@app.route('/api/screener/<ticker>')
+def screener_detail_api(ticker):
+    ticker = re.sub(r'[^A-Za-z0-9.^-]', '', ticker or '').upper()[:16]
+    if not ticker:
+        return jsonify({'success': False, 'error': 'Invalid ticker'}), 400
+
+    row = _screener_row_for_ticker(ticker)
+    metrics = get_stock_data(ticker)
+    if row is None and metrics:
+        row = {
+            'symbol': ticker,
+            'name': metrics.get('name') or ticker,
+            'score': 50,
+            'rank_percentile': 50,
+            'verdict': 'Mixed',
+            'confidence': 50,
+            'components': {'value': 50, 'momentum': 50, 'growth': 50, 'quality': 50, 'risk': 50},
+            'reasons': {'positive': ['Detailed metrics are available.'], 'caution': ['Relative screener data was limited.']},
+            'price': metrics.get('current_price'),
+            'change_pct': metrics.get('day_change_percent'),
+            'market_cap': metrics.get('market_cap'),
+            'pe': metrics.get('pe_ratio'),
+            'forward_pe': metrics.get('forward_pe'),
+            'price_to_book': metrics.get('price_to_book'),
+            'beta': metrics.get('beta'),
+        }
+    if row is None:
+        return jsonify({'success': False, 'error': f'Could not screen {ticker}'}), 404
+
+    score_data = calculate_score(metrics) if metrics else None
+    news = (metrics or {}).get('news') or []
+    detail_metrics = metrics or {}
+    history = _stock_history_summary(ticker)
+    related = _related_stock_cards(ticker, detail_metrics)
+    analysis_context = {
+        **row,
+        'metrics': {
+            'sector': detail_metrics.get('sector'),
+            'industry': detail_metrics.get('industry'),
+            'current_price': detail_metrics.get('current_price'),
+            'previous_close': detail_metrics.get('previous_close'),
+            'day_change': detail_metrics.get('day_change'),
+            'day_change_percent': detail_metrics.get('day_change_percent'),
+            'fifty_two_week_high': detail_metrics.get('fifty_two_week_high'),
+            'fifty_two_week_low': detail_metrics.get('fifty_two_week_low'),
+            'pe_ratio': detail_metrics.get('pe_ratio'),
+            'forward_pe': detail_metrics.get('forward_pe'),
+            'peg_ratio': detail_metrics.get('peg_ratio'),
+            'price_to_book': detail_metrics.get('price_to_book'),
+            'profit_margin': detail_metrics.get('profit_margin'),
+            'return_on_equity': detail_metrics.get('return_on_equity'),
+            'revenue_growth': detail_metrics.get('revenue_growth'),
+            'earnings_growth': detail_metrics.get('earnings_growth'),
+            'debt_to_equity': detail_metrics.get('debt_to_equity'),
+            'current_ratio': detail_metrics.get('current_ratio'),
+            'dividend_yield': detail_metrics.get('dividend_yield'),
+            'beta': detail_metrics.get('beta'),
+            'volatility': detail_metrics.get('volatility'),
+        },
+        'analyst_context': {
+            'target_price': detail_metrics.get('target_price'),
+            'target_high': detail_metrics.get('target_high'),
+            'target_low': detail_metrics.get('target_low'),
+            'recommendation': detail_metrics.get('recommendation'),
+            'recommendation_mean': detail_metrics.get('recommendation_mean'),
+            'number_of_analysts': detail_metrics.get('number_of_analysts'),
+            'legacy_score': score_data,
+        },
+        'news': news[:6],
+        'history': history,
+        'related_stocks': related,
+    }
+    return jsonify({
+        'success': True,
+        'ticker': ticker,
+        'row': row,
+        'metrics': detail_metrics,
+        'score': score_data,
+        'news': news,
+        'history': history,
+        'related_stocks': related,
+        'analysis_context': analysis_context,
+        'llm_enabled': _llm_configured(),
+        'llm_provider': LLM_PROVIDER,
     })
 
 

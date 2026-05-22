@@ -7,8 +7,7 @@
      page's :root.
    - The scroll trigger uses window.scrollY > 80 (design.html uses
      an IntersectionObserver on .hero, which other pages don't have).
-   - data-auth-link redirects to /auth when logged out, no-ops when
-     logged in (placeholders for Watchlist/Screener/News).
+   - data-auth-link shows in-development placeholders for unfinished links.
    - Loads Inter from Google Fonts (design.html's body font) so the
      nav looks identical even on hosts that don't already load Inter.
    ============================================================ #}
@@ -300,8 +299,7 @@
         <div class="nav-links" id="navLinks">
             <a href="/markets" class="nav-link{% if active_nav == 'markets' %} active{% endif %}">Markets</a>
             <a href="#" class="nav-link" data-auth-link>Watchlist</a>
-            <a href="#" class="nav-link" data-auth-link>Screener</a>
-            <a href="#" class="nav-link" data-auth-link>News</a>
+            <a href="/screener" class="nav-link{% if active_nav == 'screener' %} active{% endif %}">Screener</a>
             <a href="/community" class="nav-link{% if active_nav == 'community' %} active{% endif %}">Community</a>
             <span class="nav-links-underline" aria-hidden="true"></span>
         </div>

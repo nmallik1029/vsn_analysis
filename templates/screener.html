@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screener | VSN Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --panel: #08080c;
+      --panel-2: #0d0d13;
+      --line: #1d1d29;
+      --line-2: #2b2b3a;
+      --ink: #f6f6f7;
+      --muted: #9a9aae;
+      --soft: #73738a;
+      --blue: #9db7ff;
+      --warn: #ffbd7a;
+      --bad: #ff6f8d;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { overflow-x: hidden; }
+    button, input, select { font: inherit; }
+
+    .shell {
+      width: min(1760px, calc(100vw - 64px));
+      margin: 0 auto;
+      padding: 118px 0 48px;
+    }
+
+    .page-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+    .kicker {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 72px);
+      line-height: 0.92;
+      letter-spacing: 0;
+      font-weight: 800;
+    }
+    .page-copy {
+      margin: 14px 0 0;
+      max-width: 680px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .method {
+      color: var(--soft);
+      font-size: 12px;
+      text-align: right;
+      max-width: 420px;
+      line-height: 1.5;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) auto auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 0 18px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .field {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 0 14px;
+    }
+    .field span { color: var(--soft); font-size: 16px; }
+    .field input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: 14px;
+    }
+    select, .btn {
+      height: 44px;
+      border: 1px solid var(--line-2);
+      background: var(--panel);
+      color: var(--ink);
+      padding: 0 14px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--ink);
+      color: #000;
+      border-color: var(--ink);
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 440px;
+      gap: 28px;
+      margin-top: 26px;
+      align-items: start;
+    }
+    .table-wrap {
+      border-top: 1px solid var(--line);
+      min-height: 520px;
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1040px;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #000;
+      color: var(--soft);
+      font-size: 11px;
+      text-align: left;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 13px 12px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+    td {
+      padding: 15px 12px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    tr { cursor: pointer; }
+    tbody tr:hover, tbody tr.active { background: rgba(255,255,255,0.035); }
+    .symbol { color: var(--ink); font-weight: 800; font-size: 14px; }
+    .company { display: block; color: var(--soft); font-size: 12px; margin-top: 3px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+    .score {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 28px;
+      border: 1px solid var(--line-2);
+      color: var(--ink);
+      font-weight: 800;
+    }
+    .verdict { color: var(--ink); font-weight: 600; }
+    .pos { color: #f3f3f4; }
+    .neg { color: var(--bad); }
+    .bar {
+      width: 96px;
+      height: 5px;
+      background: var(--line);
+      overflow: hidden;
+    }
+    .bar > span { display: block; height: 100%; background: linear-gradient(90deg, #7fd8ff, #f6f06a, #ff7eb6); }
+
+    .inspector {
+      position: sticky;
+      top: 100px;
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+    }
+    .inspector-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .inspector h2 {
+      margin: 0 0 6px;
+      font-size: 30px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+    .inspector-name {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .big-score {
+      min-width: 72px;
+      text-align: right;
+      font-size: 38px;
+      font-weight: 800;
+      line-height: 0.95;
+    }
+    .big-score span {
+      display: block;
+      color: var(--soft);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 8px;
+    }
+    .score-note {
+      color: var(--soft);
+      font-size: 12px;
+      line-height: 1.4;
+      margin-top: 10px;
+      text-align: right;
+    }
+    .section {
+      padding: 18px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .deep-section {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .deep-card {
+      border: 1px solid var(--line-2);
+      background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.018));
+      padding: 18px;
+    }
+    .deep-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .deep-card-title {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .ai-source {
+      color: var(--soft);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .ai-source.good { color: #f6f6f7; }
+    .ai-source.warn { color: var(--warn); }
+    .deep-copy {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .ai-summary {
+      color: var(--ink);
+      font-size: 18px;
+      line-height: 1.45;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .ai-paragraph {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 12px;
+      color: var(--soft);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 800;
+    }
+    .component {
+      display: grid;
+      grid-template-columns: 86px 1fr 44px;
+      align-items: center;
+      gap: 12px;
+      margin: 11px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .component strong { color: var(--ink); font-weight: 700; text-transform: capitalize; }
+    .metric-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 18px;
+    }
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .metric strong { color: var(--ink); font-weight: 600; }
+    .reasons {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .ai-output {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .ai-output h3 {
+      margin: 14px 0 6px;
+      color: var(--ink);
+      font-size: 13px;
+    }
+    .ai-output ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .empty, .error {
+      padding: 44px 0;
+      color: var(--muted);
+      font-size: 15px;
+      text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+      .shell { width: min(100% - 32px, 900px); padding-top: 96px; }
+      .page-head { display: block; }
+      .method { text-align: left; margin-top: 16px; }
+      .toolbar { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .inspector { position: static; }
+    }
+  </style>
+</head>
+<body>
+  {% set active_nav = 'screener' %}
+  {% include '_site_nav.html' %}
+
+  <main class="shell">
+    <div class="page-head">
+      <div>
+        <p class="kicker">VSN Screener</p>
+        <h1>Reasoned market screens.</h1>
+        <p class="page-copy">A relative multi-factor screen that ranks the selected universe, then explains why each setup is strong, mixed, or weak.</p>
+      </div>
+      <div class="method" id="methodText">Value, momentum, growth, quality, and risk are ranked against the current universe so scores can actually separate.</div>
+    </div>
+
+    <div class="toolbar">
+      <label class="field" aria-label="Ticker search">
+        <span>#</span>
+        <input id="queryInput" type="search" placeholder="Search ticker or leave blank for most active stocks" autocomplete="off">
+      </label>
+      <select id="universeSelect" aria-label="Universe">
+        <option value="active">Most active</option>
+        <option value="default">VSN default</option>
+        <option value="watchlist">Core watchlist</option>
+      </select>
+      <button class="btn btn-primary" id="runBtn" type="button">Run screen</button>
+    </div>
+
+    <div class="grid">
+      <section class="table-wrap" aria-label="Screener results">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Symbol</th>
+              <th>Conviction</th>
+              <th>Verdict</th>
+              <th>Value</th>
+              <th>Momentum</th>
+              <th>Growth</th>
+              <th>Quality</th>
+              <th>Risk</th>
+              <th>Price</th>
+              <th>Day</th>
+              <th>52W</th>
+            </tr>
+          </thead>
+          <tbody id="rowsBody">
+            <tr><td colspan="12" class="empty">Loading screen...</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <aside class="inspector" id="inspector" aria-label="Selected stock analysis">
+        <div class="empty">Select a stock to inspect the reasoning.</div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const rowsBody = document.getElementById('rowsBody');
+    const inspector = document.getElementById('inspector');
+    const queryInput = document.getElementById('queryInput');
+    const universeSelect = document.getElementById('universeSelect');
+    const runBtn = document.getElementById('runBtn');
+    let rows = [];
+    let selectedSymbol = null;
+
+    function fmtNumber(value) {
+      if (value === null || value === undefined || value === 0) return '—';
+      if (Math.abs(value) >= 1e12) return `${(value / 1e12).toFixed(1)}T`;
+      if (Math.abs(value) >= 1e9) return `${(value / 1e9).toFixed(1)}B`;
+      if (Math.abs(value) >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
+      return Number(value).toLocaleString();
+    }
+    function fmt(value, suffix = '') {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+      return `${Number(value).toFixed(1)}${suffix}`;
+    }
+    function bar(score) {
+      const width = Math.max(0, Math.min(100, Number(score) || 0));
+      return `<span style="width:${width}%"></span>`;
+    }
+
+    function renderRows() {
+      if (!rows.length) {
+        rowsBody.innerHTML = '<tr><td colspan="12" class="empty">No matching stocks found.</td></tr>';
+        inspector.innerHTML = '<div class="empty">Try another ticker or universe.</div>';
+        return;
+      }
+      rowsBody.innerHTML = rows.map((row, index) => `
+        <tr data-symbol="${row.symbol}" class="${row.symbol === selectedSymbol ? 'active' : ''}">
+          <td>${index + 1}</td>
+          <td><span class="symbol">${row.symbol}</span><span class="company">${row.name || row.symbol}</span></td>
+          <td><span class="score">${Math.round(row.score)}</span></td>
+          <td><span class="verdict">${row.verdict}</span></td>
+          <td><div class="bar">${bar(row.components.value)}</div></td>
+          <td><div class="bar">${bar(row.components.momentum)}</div></td>
+          <td><div class="bar">${bar(row.components.growth)}</div></td>
+          <td><div class="bar">${bar(row.components.quality)}</div></td>
+          <td><div class="bar">${bar(row.components.risk)}</div></td>
+          <td>$${fmt(row.price)}</td>
+          <td class="${row.change_pct >= 0 ? 'pos' : 'neg'}">${fmt(row.change_pct, '%')}</td>
+          <td>${fmt(row.range_position, '%')}</td>
+        </tr>
+      `).join('');
+      rowsBody.querySelectorAll('tr[data-symbol]').forEach(tr => {
+        tr.addEventListener('click', () => selectRow(tr.dataset.symbol));
+      });
+    }
+
+    function renderInspector(row) {
+      const positives = (row.reasons?.positive || []).map(x => `<li>${x}</li>`).join('');
+      const cautions = (row.reasons?.caution || []).map(x => `<li>${x}</li>`).join('');
+      inspector.innerHTML = `
+        <div class="inspector-head">
+          <div>
+            <h2>${row.symbol}</h2>
+            <div class="inspector-name">${row.name || row.symbol}</div>
+            <div class="inspector-name">${row.verdict} · ${Math.round(row.confidence)}% data confidence</div>
+          </div>
+          <div>
+            <div class="big-score">${Math.round(row.score)}<span>Conviction</span></div>
+            <div class="score-note">${Math.round(row.rank_percentile ?? row.score)}th percentile rank</div>
+          </div>
+        </div>
+        <div class="deep-section">
+          <div class="deep-card">
+            <div class="deep-card-head">
+              <div class="deep-card-title">Ticker screen</div>
+              <button class="btn btn-primary" id="screenBtn" type="button">Screen ${row.symbol}</button>
+            </div>
+            <div class="deep-copy">Open the full ${row.symbol} screen for deeper metrics, news context, and VSN Analysis.</div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">Components</div>
+          ${Object.entries(row.components).map(([name, score]) => `
+            <div class="component"><strong>${name}</strong><div class="bar">${bar(score)}</div><span>${Math.round(score)}</span></div>
+          `).join('')}
+        </div>
+        <div class="section">
+          <div class="section-title">Metrics</div>
+          <div class="metric-list">
+            <div class="metric"><span>Market cap</span><strong>${fmtNumber(row.market_cap)}</strong></div>
+            <div class="metric"><span>Volume</span><strong>${fmtNumber(row.volume)}</strong></div>
+            <div class="metric"><span>P/E</span><strong>${fmt(row.pe)}</strong></div>
+            <div class="metric"><span>Forward P/E</span><strong>${fmt(row.forward_pe)}</strong></div>
+            <div class="metric"><span>P/B</span><strong>${fmt(row.price_to_book)}</strong></div>
+            <div class="metric"><span>Beta</span><strong>${fmt(row.beta)}</strong></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">Why it ranks here</div>
+          <ul class="reasons">${positives}${cautions}</ul>
+        </div>
+      `;
+      document.getElementById('screenBtn').addEventListener('click', () => {
+        window.location.href = `/screener/${encodeURIComponent(row.symbol)}`;
+      });
+    }
+
+    function selectRow(symbol) {
+      selectedSymbol = symbol;
+      const row = rows.find(r => r.symbol === symbol);
+      renderRows();
+      if (row) renderInspector(row);
+    }
+
+    async function loadScreener() {
+      rowsBody.innerHTML = '<tr><td colspan="12" class="empty">Loading screen...</td></tr>';
+      inspector.innerHTML = '<div class="empty">Building the universe...</div>';
+      const params = new URLSearchParams({
+        universe: universeSelect.value,
+        q: queryInput.value.trim(),
+        limit: '50'
+      });
+      try {
+        const res = await fetch(`/api/screener?${params}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Screener failed');
+        rows = data.rows || [];
+        selectedSymbol = rows[0]?.symbol || null;
+        renderRows();
+        if (selectedSymbol) renderInspector(rows[0]);
+      } catch (err) {
+        rowsBody.innerHTML = `<tr><td colspan="12" class="error">${err.message || 'Failed to load screener.'}</td></tr>`;
+        inspector.innerHTML = '<div class="empty">The screener could not load. Try again in a moment.</div>';
+      }
+    }
+
+    runBtn.addEventListener('click', loadScreener);
+    queryInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') loadScreener();
+    });
+    universeSelect.addEventListener('change', loadScreener);
+    loadScreener();
+  </script>
+</body>
+</html>

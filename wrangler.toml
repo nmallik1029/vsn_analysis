@@ -30,10 +30,14 @@ new_sqlite_classes = ["StockAnalyzerContainer"]
 # Non-secret config (override per-env as needed).
 [vars]
 SUPABASE_URL = "https://wtxxnhjknjwmlsqxdovv.supabase.co"
+LLM_PROVIDER = "gemini"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # Secrets — DO NOT put real values here. Set with:
 #   wrangler secret put SUPABASE_ANON_KEY
 #   wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 #   wrangler secret put SECRET_KEY
+#   wrangler secret put GEMINI_API_KEY
+#   wrangler secret put OPENAI_API_KEY
 # They become available on `env` in the Worker, and we forward them
 # into the container via the Container class's envVars getter.
