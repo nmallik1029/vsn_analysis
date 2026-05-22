@@ -16,5 +16,23 @@
     "actor_id": "22349112-2e78-4ed2-a86b-4905186ee22c",
     "actor_username": "nmallik111",
     "target_user_id": "22349112-2e78-4ed2-a86b-4905186ee22c"
+  },
+  {
+    "type": "delete_post",
+    "timestamp": "2026-05-22T05:49:34.432862",
+    "post_id": "8348b3b3-32e1-40e1-a9fb-f0c0bbf3ed79",
+    "reason": "test post",
+    "actor_id": "22349112-2e78-4ed2-a86b-4905186ee22c",
+    "actor_username": "nmallik111",
+    "target_user_id": "22349112-2e78-4ed2-a86b-4905186ee22c"
+  },
+  {
+    "type": "delete_post",
+    "timestamp": "2026-05-22T05:49:38.231038",
+    "post_id": "70653186-a4e6-46c2-8f4b-c52366d91f22",
+    "reason": "test post",
+    "actor_id": "22349112-2e78-4ed2-a86b-4905186ee22c",
+    "actor_username": "nmallik111",
+    "target_user_id": "22349112-2e78-4ed2-a86b-4905186ee22c"
   }
 ]

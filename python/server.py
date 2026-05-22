@@ -634,19 +634,23 @@ def analyze_page():
     return render_template('index.html')
 
 @app.route('/markets')
+@require_auth_page
 def markets_page():
     return render_template('markets.html')
 
 @app.route('/screener')
+@require_auth_page
 def screener_page():
     return render_template('screener.html', active_nav='screener')
 
 @app.route('/screener/<ticker>')
+@require_auth_page
 def screener_detail_page(ticker):
     ticker = re.sub(r'[^A-Za-z0-9.^-]', '', ticker or '').upper()[:16]
     return render_template('screener_detail.html', active_nav='screener', ticker=ticker)
 
 @app.route('/chart/<ticker>')
+@require_auth_page
 def chart_page(ticker):
     return render_template('chart.html', ticker=ticker)
 
@@ -2117,6 +2121,336 @@ def get_index_snapshot(symbol: str, name: str, range_key: str):
     except Exception as e:
         print(f"Index fetch failed for {symbol}: {e}")
         return None
+
+
+# ============================================
+# WATCHLIST (multiple per user)
+# ============================================
+def _watchlist_quote_map(symbols: list[str]) -> dict:
+    """Fetch live quotes for a set of symbols keyed by symbol."""
+    if not symbols:
+        return {}
+    quotes = _fetch_quote_batch(symbols)
+    by_symbol = {}
+    for q in quotes:
+        sym = (q.get('symbol') or '').upper()
+        if sym:
+            by_symbol[sym] = q
+    return by_symbol
+
+
+def _serialize_watchlist_items(rows: list[dict]) -> list[dict]:
+    symbols = [r['symbol'] for r in rows]
+    quote_map = _watchlist_quote_map(symbols)
+    name_map = _enrich_with_names([s for s in symbols if s not in quote_map])
+    out = []
+    for r in rows:
+        sym = r['symbol']
+        q = quote_map.get(sym, {})
+        price = _safe_float(q.get('regularMarketPrice'))
+        added_price = _safe_float(r.get('added_price'))
+        change_since_pct = None
+        if price is not None and added_price not in (None, 0):
+            change_since_pct = round(((price - added_price) / added_price) * 100, 2)
+        name = (
+            q.get('shortName') or q.get('longName')
+            or NAME_CACHE.get(sym, {}).get('name')
+            or name_map.get(sym, {}).get('name')
+            or sym
+        )
+        out.append({
+            'symbol': sym,
+            'name': name,
+            'exchange': q.get('fullExchangeName') or q.get('exchange') or NAME_CACHE.get(sym, {}).get('exchange') or '',
+            'price': round(price, 2) if price is not None else None,
+            'change_pct': round(_safe_float(q.get('regularMarketChangePercent'), 0.0), 2) if q else None,
+            'day_change': round(_safe_float(q.get('regularMarketChange'), 0.0), 2) if q else None,
+            'added_price': round(added_price, 2) if added_price is not None else None,
+            'added_at': r.get('added_at'),
+            'change_since_added_pct': change_since_pct,
+        })
+    return out
+
+
+def _clean_watchlist_name(name) -> str:
+    if not isinstance(name, str):
+        return ''
+    return name.strip()[:80]
+
+
+def _get_user_watchlist(user_id: str, wl_id: str):
+    """Return a single watchlist row owned by the user, or None."""
+    try:
+        res = supabase.table('watchlists') \
+            .select('id, name, position, created_at') \
+            .eq('user_id', user_id) \
+            .eq('id', wl_id) \
+            .single() \
+            .execute()
+        return res.data
+    except Exception:
+        return None
+
+
+@app.route('/watchlist')
+@require_auth_page
+def watchlist_page():
+    return render_template('watchlist.html', active_nav='watchlist')
+
+
+@app.route('/watchlist/<wl_id>')
+@require_auth_page
+def watchlist_detail_page(wl_id):
+    return render_template('watchlist_detail.html', active_nav='watchlist', watchlist_id=wl_id)
+
+
+@app.route('/api/watchlists', methods=['GET'])
+@require_auth
+def watchlists_list():
+    user_id = request.user.get('id')
+    try:
+        wl_res = supabase.table('watchlists') \
+            .select('id, name, position, created_at') \
+            .eq('user_id', user_id) \
+            .order('position', desc=False) \
+            .order('created_at', desc=False) \
+            .execute()
+        watchlists = wl_res.data or []
+        items_res = supabase.table('watchlist') \
+            .select('watchlist_id, symbol') \
+            .eq('user_id', user_id) \
+            .execute()
+        items = items_res.data or []
+    except Exception as e:
+        print(f"watchlists_list failed: {e}")
+        return jsonify({'success': False, 'error': 'Failed to load watchlists'}), 500
+
+    by_wl = {}
+    for it in items:
+        by_wl.setdefault(it['watchlist_id'], []).append(it['symbol'])
+
+    out = []
+    for wl in watchlists:
+        symbols = by_wl.get(wl['id'], [])
+        out.append({
+            'id': wl['id'],
+            'name': wl['name'],
+            'position': wl.get('position') or 0,
+            'created_at': wl.get('created_at'),
+            'count': len(symbols),
+            'symbols': symbols[:8],
+        })
+    return jsonify({'success': True, 'watchlists': out})
+
+
+@app.route('/api/watchlists', methods=['POST'])
+@require_auth
+def watchlists_create():
+    user_id = request.user.get('id')
+    data = request.get_json(silent=True) or {}
+    name = _clean_watchlist_name(data.get('name')) or 'Untitled'
+    try:
+        max_pos_res = supabase.table('watchlists') \
+            .select('position') \
+            .eq('user_id', user_id) \
+            .order('position', desc=True) \
+            .limit(1) \
+            .execute()
+        rows = max_pos_res.data or []
+        next_pos = (rows[0]['position'] + 1) if rows else 0
+        ins = supabase.table('watchlists').insert({
+            'user_id': user_id,
+            'name': name,
+            'position': next_pos,
+        }).execute()
+        created = (ins.data or [{}])[0]
+    except Exception as e:
+        print(f"watchlist create failed: {e}")
+        return jsonify({'success': False, 'error': 'Failed to create watchlist'}), 500
+    return jsonify({'success': True, 'watchlist': {
+        'id': created.get('id'),
+        'name': created.get('name'),
+        'position': created.get('position'),
+        'created_at': created.get('created_at'),
+        'count': 0,
+        'symbols': [],
+    }})
+
+
+@app.route('/api/watchlists/<wl_id>', methods=['PATCH'])
+@require_auth
+def watchlists_update(wl_id):
+    user_id = request.user.get('id')
+    if not _get_user_watchlist(user_id, wl_id):
+        return jsonify({'success': False, 'error': 'Not found'}), 404
+    data = request.get_json(silent=True) or {}
+    update = {}
+    if 'name' in data:
+        cleaned = _clean_watchlist_name(data.get('name'))
+        if not cleaned:
+            return jsonify({'success': False, 'error': 'Name cannot be empty'}), 400
+        update['name'] = cleaned
+    if 'position' in data:
+        try:
+            update['position'] = int(data['position'])
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'Invalid position'}), 400
+    if not update:
+        return jsonify({'success': False, 'error': 'No changes'}), 400
+    try:
+        supabase.table('watchlists').update(update).eq('id', wl_id).eq('user_id', user_id).execute()
+    except Exception as e:
+        print(f"watchlist update failed: {e}")
+        return jsonify({'success': False, 'error': 'Failed to update watchlist'}), 500
+    return jsonify({'success': True})
+
+
+@app.route('/api/watchlists/reorder', methods=['POST'])
+@require_auth
+def watchlists_reorder():
+    """Body: {order: [id1, id2, ...]} — sets position for each by index."""
+    user_id = request.user.get('id')
+    data = request.get_json(silent=True) or {}
+    order = data.get('order')
+    if not isinstance(order, list) or not order:
+        return jsonify({'success': False, 'error': 'Order required'}), 400
+    try:
+        for idx, wl_id in enumerate(order):
+            if not isinstance(wl_id, str):
+                continue
+            supabase.table('watchlists') \
+                .update({'position': idx}) \
+                .eq('id', wl_id) \
+                .eq('user_id', user_id) \
+                .execute()
+    except Exception as e:
+        print(f"watchlists reorder failed: {e}")
+        return jsonify({'success': False, 'error': 'Failed to reorder'}), 500
+    return jsonify({'success': True})
+
+
+@app.route('/api/watchlists/<wl_id>', methods=['DELETE'])
+@require_auth
+def watchlists_delete(wl_id):
+    user_id = request.user.get('id')
+    if not _get_user_watchlist(user_id, wl_id):
+        return jsonify({'success': False, 'error': 'Not found'}), 404
+    try:
+        supabase.table('watchlists').delete().eq('id', wl_id).eq('user_id', user_id).execute()
+    except Exception as e:
+        print(f"watchlist delete failed: {e}")
+        return jsonify({'success': False, 'error': 'Failed to delete watchlist'}), 500
+    return jsonify({'success': True})
+
+
+@app.route('/api/watchlists/<wl_id>/items', methods=['GET'])
+@require_auth
+def watchlist_items_get(wl_id):
+    user_id = request.user.get('id')
+    wl = _get_user_watchlist(user_id, wl_id)
+    if not wl:
+        return jsonify({'success': False, 'error': 'Not found'}), 404
+    try:
+        res = supabase.table('watchlist') \
+            .select('symbol, added_price, added_at') \
+            .eq('user_id', user_id) \
+            .eq('watchlist_id', wl_id) \
+            .order('added_at', desc=True) \
+            .execute()
+        rows = res.data or []
+    except Exception as e:
+        print(f"watchlist items get failed: {e}")
+        return jsonify({'success': False, 'error': 'Failed to load items'}), 500
+    return jsonify({
+        'success': True,
+        'watchlist': {
+            'id': wl['id'],
+            'name': wl['name'],
+            'created_at': wl.get('created_at'),
+        },
+        'items': _serialize_watchlist_items(rows),
+    })
+
+
+@app.route('/api/watchlists/<wl_id>/items', methods=['POST'])
+@require_auth
+def watchlist_items_add(wl_id):
+    user_id = request.user.get('id')
+    if not _get_user_watchlist(user_id, wl_id):
+        return jsonify({'success': False, 'error': 'Not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    raw_symbols = data.get('symbols') or ([data.get('symbol')] if data.get('symbol') else [])
+    symbols = []
+    seen = set()
+    for s in raw_symbols:
+        if not isinstance(s, str):
+            continue
+        sym = re.sub(r'[^A-Za-z0-9.^-]', '', s).upper()[:16]
+        if sym and sym not in seen:
+            seen.add(sym)
+            symbols.append(sym)
+    if not symbols:
+        return jsonify({'success': False, 'error': 'No symbols supplied'}), 400
+
+    quote_map = _watchlist_quote_map(symbols)
+
+    try:
+        existing = supabase.table('watchlist') \
+            .select('symbol') \
+            .eq('user_id', user_id) \
+            .eq('watchlist_id', wl_id) \
+            .in_('symbol', symbols) \
+            .execute()
+        already = {r['symbol'] for r in (existing.data or [])}
+    except Exception as e:
+        print(f"watchlist items existence check failed: {e}")
+        already = set()
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    inserts = []
+    for sym in symbols:
+        if sym in already:
+            continue
+        price = _safe_float((quote_map.get(sym) or {}).get('regularMarketPrice'))
+        inserts.append({
+            'user_id': user_id,
+            'watchlist_id': wl_id,
+            'symbol': sym,
+            'added_price': price,
+            'added_at': now_iso,
+        })
+
+    if inserts:
+        try:
+            supabase.table('watchlist').insert(inserts).execute()
+        except Exception as e:
+            print(f"watchlist items insert failed: {e}")
+            return jsonify({'success': False, 'error': 'Failed to add items'}), 500
+
+    return watchlist_items_get(wl_id)
+
+
+@app.route('/api/watchlists/<wl_id>/items/<symbol>', methods=['DELETE'])
+@require_auth
+def watchlist_items_remove(wl_id, symbol):
+    user_id = request.user.get('id')
+    if not _get_user_watchlist(user_id, wl_id):
+        return jsonify({'success': False, 'error': 'Not found'}), 404
+    sym = re.sub(r'[^A-Za-z0-9.^-]', '', symbol or '').upper()[:16]
+    if not sym:
+        return jsonify({'success': False, 'error': 'Invalid symbol'}), 400
+    try:
+        supabase.table('watchlist') \
+            .delete() \
+            .eq('user_id', user_id) \
+            .eq('watchlist_id', wl_id) \
+            .eq('symbol', sym) \
+            .execute()
+    except Exception as e:
+        print(f"watchlist item delete failed: {e}")
+        return jsonify({'success': False, 'error': 'Failed to remove item'}), 500
+    return jsonify({'success': True})
 
 
 @app.route('/api/markets/indices')
@@ -4377,6 +4711,7 @@ def get_mod_logs():
 
 # Community page routes (was /blog — kept as redirects below for back-compat)
 @app.route('/community')
+@require_auth_page
 def community_feed():
     return render_template('blog.html')
 
@@ -4386,14 +4721,17 @@ def new_post_page():
     return render_template('blog_new.html')
 
 @app.route('/community/post/<post_id>')
+@require_auth_page
 def view_post_page(post_id):
     return render_template('blog_post.html', post_id=post_id)
 
 @app.route('/community/tag/<tag>')
+@require_auth_page
 def tag_posts_page(tag):
     return render_template('blog.html')
 
 @app.route('/community/user/<username>')
+@require_auth_page
 def user_posts_page(username):
     return render_template('blog.html')
 

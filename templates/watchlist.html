@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Watchlists | VSN Analysis</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/scrollbar.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --panel: #08080c;
+      --panel-2: #0d0d13;
+      --line: #1d1d29;
+      --line-2: #2b2b3a;
+      --ink: #f6f6f7;
+      --muted: #9a9aae;
+      --soft: #73738a;
+      --good: #7fe7a8;
+      --bad: #ff6f8d;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { overflow-x: hidden; }
+    button, input, select { font: inherit; }
+
+    .shell {
+      width: min(1480px, calc(100vw - 64px));
+      margin: 0 auto;
+      padding: 118px 0 64px;
+    }
+    .page-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+    .kicker { margin: 0 0 8px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(34px, 5vw, 56px); line-height: 0.92; font-weight: 800; }
+    .page-copy { margin: 14px 0 0; max-width: 620px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .toolbar label { color: var(--soft); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; }
+    .sort-select {
+      height: 40px;
+      background: var(--panel);
+      color: var(--ink);
+      border: 1px solid var(--line-2);
+      padding: 0 12px;
+      cursor: pointer;
+    }
+    .btn {
+      height: 40px;
+      background: var(--panel);
+      color: var(--ink);
+      border: 1px solid var(--line-2);
+      padding: 0 16px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-primary {
+      background: var(--ink);
+      color: #000;
+      border-color: var(--ink);
+      font-weight: 700;
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ====== Empty state ====== */
+    .empty-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px 100px;
+      gap: 24px;
+    }
+    .empty-label {
+      color: var(--soft);
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
+    .empty-card {
+      width: min(540px, 90vw);
+      aspect-ratio: 3 / 2;
+      border: 1.5px solid var(--line-2);
+      background: var(--panel);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+    .empty-card:hover {
+      border-color: #44445a;
+      background: var(--panel-2);
+      transform: translateY(-2px);
+    }
+    .empty-card svg {
+      width: 96px;
+      height: 96px;
+      color: var(--line-2);
+      transition: color 160ms ease;
+    }
+    .empty-card:hover svg { color: var(--soft); }
+
+    /* ====== Grid of watchlist cards ====== */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 18px;
+      margin-top: 22px;
+    }
+    .wl-card {
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 20px;
+      cursor: pointer;
+      transition: border-color 140ms ease, transform 140ms ease, background 140ms ease;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 200px;
+    }
+    .wl-card:hover {
+      border-color: var(--line-2);
+      background: var(--panel-2);
+    }
+    .wl-card.dragging { opacity: 0.4; }
+    .wl-card.drag-over {
+      border-color: var(--ink);
+      box-shadow: inset 0 0 0 1px var(--ink);
+    }
+    .wl-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .wl-card-title-wrap { flex: 1; min-width: 0; }
+    .wl-card-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: text;
+      padding: 2px 4px;
+      margin-left: -4px;
+      border-radius: 3px;
+      transition: background 120ms ease;
+    }
+    .wl-card-title:hover { background: rgba(255,255,255,0.05); }
+    .wl-card-meta {
+      margin-top: 4px;
+      color: var(--soft);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+    .wl-card-actions {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+    .wl-card:hover .wl-card-actions { opacity: 1; }
+    .icon-btn {
+      width: 28px; height: 28px;
+      background: transparent;
+      border: 1px solid var(--line-2);
+      color: var(--soft);
+      cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0;
+    }
+    .icon-btn:hover { color: var(--ink); border-color: var(--ink); }
+    .icon-btn.danger:hover { color: var(--bad); border-color: var(--bad); }
+
+    .wl-card-symbols {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: auto;
+    }
+    .wl-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .wl-pill-logo {
+      width: 14px; height: 14px;
+      border: 1px solid var(--line-2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 8px;
+      color: var(--soft);
+      background: #000;
+      overflow: hidden;
+    }
+    .wl-pill-logo img { width: 100%; height: 100%; object-fit: contain; display: none; }
+    .wl-pill-logo.has-logo img { display: block; }
+    .wl-pill-logo.has-logo span { display: none; }
+    .wl-card-empty {
+      color: var(--soft);
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    .wl-card.add-tile {
+      align-items: center;
+      justify-content: center;
+      border: 1.5px dashed var(--line-2);
+      background: transparent;
+      gap: 8px;
+      color: var(--soft);
+    }
+    .wl-card.add-tile:hover {
+      color: var(--ink);
+      border-color: var(--ink);
+      background: var(--panel);
+    }
+    .wl-card.add-tile svg { width: 36px; height: 36px; color: inherit; }
+    .wl-card.add-tile .add-tile-label { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+    /* ====== Inline edit input ====== */
+    .wl-card-title-input {
+      background: var(--panel-2);
+      border: 1px solid var(--line-2);
+      color: var(--ink);
+      padding: 6px 8px;
+      font-size: 16px;
+      font-weight: 700;
+      width: 100%;
+      outline: none;
+    }
+    .wl-card-title-input:focus { border-color: var(--ink); }
+
+    /* ====== Modal ====== */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+    .modal.active { display: flex; }
+    .modal-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 28px;
+      width: min(440px, 100%);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    }
+    .modal-card h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .modal-card label {
+      display: block;
+      color: var(--soft);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .modal-card input {
+      width: 100%;
+      height: 44px;
+      padding: 0 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--line-2);
+      color: var(--ink);
+      outline: none;
+      font-size: 14px;
+    }
+    .modal-card input:focus { border-color: var(--ink); }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--panel); border: 1px solid var(--line-2); color: var(--ink);
+      padding: 12px 18px; font-size: 13px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 160ms ease;
+      z-index: 3000;
+    }
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 720px) {
+      .shell { width: calc(100% - 32px); padding-top: 96px; }
+      .empty-card { aspect-ratio: 4 / 3; }
+    }
+  </style>
+</head>
+<body>
+  {% set active_nav = 'watchlist' %}
+  {% include '_site_nav.html' %}
+
+  <main class="shell">
+    <header class="page-head">
+      <div>
+        <h1>Watchlists</h1>
+        <p class="page-copy">Build multiple watchlists for different themes. Drag the cards to reorder, click in to manage tickers.</p>
+      </div>
+      <div class="toolbar" id="wlToolbar" style="display:none;">
+        <label for="wlSort">Sort</label>
+        <select id="wlSort" class="sort-select">
+          <option value="manual">Manual order</option>
+          <option value="created_desc">Newest first</option>
+          <option value="created_asc">Oldest first</option>
+          <option value="name_asc">Name (A–Z)</option>
+          <option value="name_desc">Name (Z–A)</option>
+        </select>
+        <button class="btn btn-primary" id="wlNewBtn" type="button">+ New watchlist</button>
+      </div>
+    </header>
+
+    <div id="wlContent"><!-- empty / grid injected here --></div>
+  </main>
+
+  <!-- Create / rename modal -->
+  <div class="modal" id="wlModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <h2 id="wlModalTitle">New watchlist</h2>
+      <label for="wlModalInput">Name</label>
+      <input id="wlModalInput" type="text" maxlength="80" placeholder="e.g. AI Leaders">
+      <div class="modal-actions">
+        <button class="btn" type="button" id="wlModalCancel">Cancel</button>
+        <button class="btn btn-primary" type="button" id="wlModalSave">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="wlToast" role="status"></div>
+
+  <script>
+    const contentEl = document.getElementById('wlContent');
+    const toolbarEl = document.getElementById('wlToolbar');
+    const sortEl = document.getElementById('wlSort');
+    const newBtn = document.getElementById('wlNewBtn');
+    const modal = document.getElementById('wlModal');
+    const modalTitle = document.getElementById('wlModalTitle');
+    const modalInput = document.getElementById('wlModalInput');
+    const modalSave = document.getElementById('wlModalSave');
+    const modalCancel = document.getElementById('wlModalCancel');
+    const toastEl = document.getElementById('wlToast');
+
+    let watchlists = [];
+    const logoCache = new Map();
+    let modalMode = null; // 'create' | { mode: 'rename', id }
+    let currentSort = localStorage.getItem('vsn-wl-sort') || 'manual';
+    sortEl.value = currentSort;
+
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      clearTimeout(showToast.t);
+      showToast.t = setTimeout(() => toastEl.classList.remove('show'), 1800);
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function loadLogo(symbol, iconEl) {
+      if (!symbol || !iconEl) return;
+      const cached = logoCache.get(symbol);
+      if (cached === null) return;
+      if (cached) {
+        const img = iconEl.querySelector('img');
+        if (img) img.src = cached;
+        iconEl.classList.add('has-logo');
+        return;
+      }
+      fetch(`/api/logo/${encodeURIComponent(symbol)}`)
+        .then(r => r.json())
+        .then(d => {
+          if (!d.success || !d.logo_url) { logoCache.set(symbol, null); return; }
+          logoCache.set(symbol, d.logo_url);
+          const img = iconEl.querySelector('img');
+          if (!img) return;
+          img.onerror = () => logoCache.set(symbol, null);
+          img.src = d.logo_url;
+          iconEl.classList.add('has-logo');
+        })
+        .catch(() => logoCache.set(symbol, null));
+    }
+
+    function sortedWatchlists() {
+      const copy = [...watchlists];
+      switch (currentSort) {
+        case 'created_desc':
+          return copy.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        case 'created_asc':
+          return copy.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        case 'name_asc':
+          return copy.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        case 'name_desc':
+          return copy.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+        case 'manual':
+        default:
+          return copy.sort((a, b) => (a.position || 0) - (b.position || 0));
+      }
+    }
+
+    function render() {
+      if (!watchlists.length) {
+        toolbarEl.style.display = 'none';
+        contentEl.innerHTML = `
+          <div class="empty-wrap">
+            <div class="empty-label">New Watchlist</div>
+            <div class="empty-card" id="emptyCreate" role="button" tabindex="0" aria-label="Create watchlist">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </div>
+          </div>
+        `;
+        const card = document.getElementById('emptyCreate');
+        card.addEventListener('click', openCreateModal);
+        card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCreateModal(); } });
+        return;
+      }
+
+      toolbarEl.style.display = 'flex';
+      const list = sortedWatchlists();
+      const isManual = currentSort === 'manual';
+      contentEl.innerHTML = `
+        <div class="cards-grid" id="wlGrid">
+          ${list.map(wl => cardHtml(wl, isManual)).join('')}
+        </div>
+      `;
+      const grid = document.getElementById('wlGrid');
+      grid.querySelectorAll('.wl-card[data-id]').forEach(card => {
+        const id = card.dataset.id;
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('[data-action]') || e.target.closest('.wl-card-title') || e.target.closest('.wl-card-title-input')) return;
+          window.location.href = `/watchlist/${encodeURIComponent(id)}`;
+        });
+        const titleEl = card.querySelector('.wl-card-title');
+        if (titleEl) titleEl.addEventListener('click', (e) => { e.stopPropagation(); openRenameModal(id); });
+        const renameBtn = card.querySelector('[data-action="rename"]');
+        if (renameBtn) renameBtn.addEventListener('click', (e) => { e.stopPropagation(); openRenameModal(id); });
+        const deleteBtn = card.querySelector('[data-action="delete"]');
+        if (deleteBtn) deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteWatchlist(id); });
+        card.querySelectorAll('.wl-pill-logo').forEach(el => {
+          loadLogo(el.dataset.sym, el);
+        });
+        if (isManual) {
+          card.setAttribute('draggable', 'true');
+          attachDragHandlers(card);
+        }
+      });
+    }
+
+    function cardHtml(wl, draggable) {
+      const pills = (wl.symbols || []).slice(0, 8).map(sym => `
+        <span class="wl-pill">
+          <span class="wl-pill-logo" data-sym="${escapeHtml(sym)}"><img alt=""><span>${escapeHtml(sym.slice(0,2))}</span></span>
+          ${escapeHtml(sym)}
+        </span>
+      `).join('');
+      const symbolsHtml = wl.symbols && wl.symbols.length
+        ? `<div class="wl-card-symbols">${pills}${wl.count > wl.symbols.length ? `<span class="wl-pill">+${wl.count - wl.symbols.length}</span>` : ''}</div>`
+        : `<div class="wl-card-empty">No tickers yet — click to add some</div>`;
+      return `
+        <div class="wl-card" data-id="${escapeHtml(wl.id)}" ${draggable ? 'draggable="true"' : ''}>
+          <div class="wl-card-head">
+            <div class="wl-card-title-wrap">
+              <h3 class="wl-card-title" title="Click to rename">${escapeHtml(wl.name)}</h3>
+              <div class="wl-card-meta">${wl.count} ${wl.count === 1 ? 'ticker' : 'tickers'}</div>
+            </div>
+            <div class="wl-card-actions">
+              <button class="icon-btn" type="button" data-action="rename" aria-label="Rename" title="Rename">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+              </button>
+              <button class="icon-btn danger" type="button" data-action="delete" aria-label="Delete" title="Delete">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="m19 6-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
+              </button>
+            </div>
+          </div>
+          ${symbolsHtml}
+        </div>
+      `;
+    }
+
+    // ---------------- Drag to reorder ----------------
+    let dragSrc = null;
+    function attachDragHandlers(card) {
+      card.addEventListener('dragstart', (e) => {
+        dragSrc = card;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', card.dataset.id); } catch (_) {}
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        document.querySelectorAll('.wl-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+        dragSrc = null;
+        persistOrder();
+      });
+      card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (!dragSrc || dragSrc === card) return;
+        card.classList.add('drag-over');
+        const rect = card.getBoundingClientRect();
+        const midX = rect.left + rect.width / 2;
+        const grid = card.parentElement;
+        if (e.clientX < midX) grid.insertBefore(dragSrc, card);
+        else grid.insertBefore(dragSrc, card.nextSibling);
+      });
+      card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+      card.addEventListener('drop', (e) => { e.preventDefault(); card.classList.remove('drag-over'); });
+    }
+
+    async function persistOrder() {
+      const ids = [...document.querySelectorAll('#wlGrid .wl-card[data-id]')].map(c => c.dataset.id);
+      // Update local positions optimistically
+      ids.forEach((id, idx) => {
+        const wl = watchlists.find(w => w.id === id);
+        if (wl) wl.position = idx;
+      });
+      try {
+        await fetch('/api/watchlists/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order: ids }),
+        });
+      } catch (_) { /* silent */ }
+    }
+
+    // ---------------- Modal (create/rename) ----------------
+    function openCreateModal() {
+      modalMode = 'create';
+      modalTitle.textContent = 'New watchlist';
+      modalInput.value = '';
+      modalSave.textContent = 'Create';
+      modal.classList.add('active');
+      modal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => modalInput.focus(), 0);
+    }
+    function openRenameModal(id) {
+      const wl = watchlists.find(w => w.id === id);
+      if (!wl) return;
+      modalMode = { mode: 'rename', id };
+      modalTitle.textContent = 'Rename watchlist';
+      modalInput.value = wl.name || '';
+      modalSave.textContent = 'Save';
+      modal.classList.add('active');
+      modal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => { modalInput.focus(); modalInput.select(); }, 0);
+    }
+    function closeModal() {
+      modal.classList.remove('active');
+      modal.setAttribute('aria-hidden', 'true');
+      modalMode = null;
+    }
+    modalCancel.addEventListener('click', closeModal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+    });
+    modalInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); modalSave.click(); }
+    });
+    modalSave.addEventListener('click', async () => {
+      const name = modalInput.value.trim();
+      if (!name) { modalInput.focus(); return; }
+      modalSave.disabled = true;
+      try {
+        if (modalMode === 'create') {
+          const res = await fetch('/api/watchlists', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error || 'Failed');
+          closeModal();
+          window.location.href = `/watchlist/${encodeURIComponent(data.watchlist.id)}`;
+        } else if (modalMode && modalMode.mode === 'rename') {
+          const res = await fetch(`/api/watchlists/${encodeURIComponent(modalMode.id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error || 'Failed');
+          const wl = watchlists.find(w => w.id === modalMode.id);
+          if (wl) wl.name = name;
+          closeModal();
+          render();
+          showToast('Renamed');
+        }
+      } catch (err) {
+        showToast(err.message || 'Failed');
+      } finally {
+        modalSave.disabled = false;
+      }
+    });
+
+    newBtn.addEventListener('click', openCreateModal);
+    sortEl.addEventListener('change', () => {
+      currentSort = sortEl.value;
+      try { localStorage.setItem('vsn-wl-sort', currentSort); } catch (_) {}
+      render();
+    });
+
+    async function deleteWatchlist(id) {
+      const wl = watchlists.find(w => w.id === id);
+      if (!wl) return;
+      const ok = confirm(`Delete "${wl.name}" and all its tickers?`);
+      if (!ok) return;
+      try {
+        const res = await fetch(`/api/watchlists/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed');
+        watchlists = watchlists.filter(w => w.id !== id);
+        render();
+        showToast('Deleted');
+      } catch (err) {
+        showToast(err.message || 'Failed to delete');
+      }
+    }
+
+    async function loadWatchlists() {
+      try {
+        const res = await fetch('/api/watchlists');
+        if (res.status === 401) { window.location.href = '/auth'; return; }
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed');
+        watchlists = data.watchlists || [];
+        render();
+      } catch (err) {
+        contentEl.innerHTML = `<div class="empty-wrap"><div class="empty-label">Could not load watchlists.</div></div>`;
+      }
+    }
+
+    loadWatchlists();
+  </script>
+</body>
+</html>

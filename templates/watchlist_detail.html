@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Watchlist | VSN Analysis</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/scrollbar.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --panel: #08080c;
+      --panel-2: #0d0d13;
+      --line: #1d1d29;
+      --line-2: #2b2b3a;
+      --ink: #f6f6f7;
+      --muted: #9a9aae;
+      --soft: #73738a;
+      --good: #7fe7a8;
+      --bad: #ff6f8d;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { overflow-x: hidden; }
+    button, input { font: inherit; }
+
+    .shell { width: min(1480px, calc(100vw - 64px)); margin: 0 auto; padding: 118px 0 64px; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--soft); font-size: 12px; text-decoration: none;
+      letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .back-link:hover { color: var(--ink); }
+
+    .page-head { margin-bottom: 28px; display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+    .title-row { display: flex; align-items: center; gap: 12px; }
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 56px);
+      line-height: 0.92;
+      font-weight: 800;
+      cursor: text;
+      padding: 2px 6px;
+      margin-left: -6px;
+      border-radius: 4px;
+      transition: background 120ms ease;
+    }
+    h1:hover { background: rgba(255,255,255,0.05); }
+    .title-input {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid var(--line-2);
+      color: var(--ink);
+      font-size: clamp(34px, 5vw, 56px);
+      font-weight: 800;
+      line-height: 0.92;
+      padding: 2px 0;
+      outline: none;
+      min-width: 280px;
+    }
+    .title-input:focus { border-bottom-color: var(--ink); }
+    .title-edit-btn {
+      width: 32px; height: 32px;
+      background: transparent;
+      border: 1px solid var(--line-2);
+      color: var(--soft);
+      cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .title-edit-btn:hover { color: var(--ink); border-color: var(--ink); }
+    .page-copy { margin: 12px 0 0; color: var(--muted); font-size: 14px; }
+
+    /* Add bar */
+    .add-bar { display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-bottom: 18px; }
+    .add-trigger {
+      height: 56px; display: flex; align-items: center; gap: 12px;
+      padding: 0 18px; background: var(--panel); border: 1px solid var(--line);
+      color: var(--soft); font-size: 14px; cursor: text; text-align: left; width: 100%;
+    }
+    .add-trigger:hover { border-color: var(--line-2); }
+    .add-trigger svg { color: var(--soft); flex-shrink: 0; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 10px; background: var(--panel-2); border: 1px solid var(--line-2);
+      font-size: 12px; font-weight: 700; color: var(--ink);
+    }
+    .chip button { background: transparent; border: 0; color: var(--soft); cursor: pointer; padding: 0; font-size: 14px; line-height: 1; }
+    .chip button:hover { color: var(--ink); }
+    .chip-logo {
+      width: 18px; height: 18px; border: 1px solid var(--line-2); overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: var(--soft); background: #000;
+    }
+    .chip-logo img { width: 100%; height: 100%; object-fit: contain; display: none; }
+    .chip-logo.has-logo img { display: block; }
+    .chip-logo.has-logo span { display: none; }
+
+    .btn {
+      height: 56px; border: 1px solid var(--line-2); background: var(--panel);
+      color: var(--ink); padding: 0 22px; cursor: pointer; font-weight: 600; white-space: nowrap;
+    }
+    .btn-primary { background: var(--ink); color: #000; border-color: var(--ink); font-weight: 700; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Search overlay (matches design.html) */
+    .search-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+      display: none; z-index: 2000;
+      overflow: auto; padding: 32px 20px 48px;
+    }
+    .search-overlay.active { display: block; }
+    body.search-open { overflow: hidden; }
+    .search-panel {
+      max-width: 980px; margin: 0 auto;
+      background: #08080c; border: 1px solid var(--line);
+      border-radius: 18px; box-shadow: 0 40px 120px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+    .search-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 18px; background: var(--panel-2);
+      border-bottom: 1px solid var(--line);
+    }
+    .search-bar svg { color: var(--soft); }
+    .search-bar input {
+      flex: 1; border: none; background: transparent;
+      color: var(--ink); font-size: 16px; outline: none;
+    }
+    .search-bar input::placeholder { color: var(--soft); }
+    .search-bar .search-clear,
+    .search-bar .search-close {
+      border: none; background: transparent;
+      color: var(--soft); cursor: pointer; font-weight: 600;
+    }
+    .search-bar .search-close { font-size: 18px; }
+    .search-bar .search-clear:hover,
+    .search-bar .search-close:hover { color: var(--ink); }
+
+    .search-section-label {
+      padding: 14px 18px 10px;
+      color: var(--soft); font-size: 11px;
+      letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;
+      background: #08080c; border-bottom: 1px solid var(--line);
+    }
+
+    .search-list { max-height: 520px; overflow: auto; }
+    .search-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 18px; border-bottom: 1px solid var(--line);
+      cursor: pointer; gap: 14px;
+    }
+    .search-row:hover:not(.disabled) { background: rgba(255, 255, 255, 0.035); }
+    .search-row.disabled { cursor: not-allowed; opacity: 0.55; }
+    .search-row-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .search-icon {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: #0d0d13; border: 1px solid var(--line-2);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: var(--soft); font-size: 12px;
+      overflow: hidden; flex-shrink: 0;
+    }
+    .search-icon img { width: 100%; height: 100%; object-fit: contain; display: none; }
+    .search-icon.has-logo img { display: block; }
+    .search-icon.has-logo span { display: none; }
+    .search-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    /* Dim the unmatched portion; matched chars become bright (TradingView style) */
+    .search-symbol { color: var(--soft); font-weight: 700; font-size: 14px; }
+    .search-symbol .ts-match { color: var(--ink); }
+    .search-name {
+      color: var(--soft); font-size: 12px;
+      max-width: 540px; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .search-name .ts-match { color: var(--ink); }
+    .search-meta {
+      color: var(--soft); font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap;
+    }
+    .search-row.selected .search-meta { color: var(--ink); }
+    .search-check {
+      width: 20px; height: 20px;
+      border: 1px solid var(--line-2);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--ink); font-size: 12px; flex-shrink: 0;
+    }
+    .search-row.selected .search-check {
+      background: var(--ink); color: #000; border-color: var(--ink);
+    }
+    .search-check::after { content: ''; }
+    .search-row.selected .search-check::after { content: '✓'; }
+    .search-row.already .search-check {
+      background: transparent; border-color: var(--line-2); color: var(--good);
+    }
+    .search-row.already .search-check::after { content: '✓'; }
+    .already-tag {
+      color: var(--good); font-size: 10px;
+      letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;
+      padding: 3px 7px; border: 1px solid var(--good); border-radius: 3px;
+      opacity: 0.8;
+    }
+
+    .search-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 14px; padding: 14px 18px;
+      background: var(--panel-2); border-top: 1px solid var(--line);
+      color: var(--soft); font-size: 12px;
+    }
+    .search-footer .esc-hint { display: inline-flex; align-items: center; gap: 8px; }
+    .search-footer .kbd {
+      display: inline-block; padding: 2px 7px;
+      border: 1px solid var(--line-2); border-radius: 4px;
+      font-size: 11px; color: var(--muted); background: #0d0d13;
+    }
+    .search-footer .add-action {
+      height: 36px; padding: 0 16px;
+      background: var(--ink); color: #000; border: 1px solid var(--ink);
+      font-weight: 700; font-size: 13px; cursor: pointer;
+    }
+    .search-footer .add-action:disabled { opacity: 0.35; cursor: not-allowed; }
+    .search-empty { padding: 36px 18px; text-align: center; color: var(--soft); font-size: 13px; }
+
+    /* Holdings table */
+    .panel { border: 1px solid var(--line); background: var(--panel); }
+    .panel-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--line);
+    }
+    .panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+    .panel-head .count { color: var(--soft); font-size: 12px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 940px; }
+    th { position: sticky; top: 0; z-index: 1; background: var(--panel); color: var(--soft); font-size: 11px; text-align: left; text-transform: uppercase; letter-spacing: 0.08em; padding: 13px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    td { padding: 16px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; white-space: nowrap; }
+    tbody tr { cursor: pointer; transition: background 120ms ease; }
+    tbody tr:hover { background: rgba(255,255,255,0.035); }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    th.num { text-align: right; }
+    .sym-cell { display: flex; align-items: center; gap: 12px; }
+    .row-logo {
+      width: 36px; height: 36px; border: 1px solid var(--line-2); background: #000;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+      flex-shrink: 0; font-weight: 700; color: var(--soft); font-size: 11px;
+    }
+    .row-logo img { width: 100%; height: 100%; object-fit: contain; display: none; }
+    .row-logo.has-logo img { display: block; }
+    .row-logo.has-logo span { display: none; }
+    .sym-text { display: flex; flex-direction: column; }
+    .sym-text .sym { color: var(--ink); font-weight: 800; font-size: 14px; }
+    .sym-text .nm { color: var(--soft); font-size: 12px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+    .pos { color: var(--good); }
+    .neg { color: var(--bad); }
+    .remove-btn {
+      background: transparent; border: 1px solid var(--line-2); color: var(--soft);
+      width: 28px; height: 28px; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+    }
+    .remove-btn:hover { color: var(--bad); border-color: var(--bad); }
+
+    .empty { padding: 64px 20px; text-align: center; color: var(--muted); }
+    .empty h3 { color: var(--ink); margin: 0 0 8px; font-size: 18px; font-weight: 700; }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--panel); border: 1px solid var(--line-2); color: var(--ink);
+      padding: 12px 18px; font-size: 13px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 160ms ease; z-index: 3000;
+    }
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 720px) {
+      .shell { width: calc(100% - 32px); padding-top: 96px; }
+      .add-bar { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  {% set active_nav = 'watchlist' %}
+  {% include '_site_nav.html' %}
+
+  <main class="shell">
+    <a class="back-link" href="/watchlist">← All watchlists</a>
+
+    <header class="page-head">
+      <div>
+        <div class="title-row">
+          <h1 id="wlTitle" title="Click to rename">Loading…</h1>
+        </div>
+        <p class="page-copy" id="wlSubtitle"></p>
+      </div>
+    </header>
+
+    <div class="add-bar">
+      <button class="add-trigger" id="wlOpenSearch" type="button">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <span>Search ticker or company...</span>
+      </button>
+      <button class="btn btn-primary" id="wlAddBtn" type="button" disabled>Add to Watchlist</button>
+    </div>
+    <div class="chips" id="wlChips"></div>
+
+    <!-- Search overlay -->
+    <div id="wlSearchOverlay" class="search-overlay" aria-hidden="true">
+      <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search tickers to add">
+        <div class="search-bar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input id="wlSearchInput" type="search" placeholder="Search ticker, e.g. AAPL" autocomplete="off" spellcheck="false">
+          <button type="button" class="search-clear" id="wlSearchClear">Clear</button>
+          <button type="button" class="search-close" id="wlSearchClose" aria-label="Close">×</button>
+        </div>
+        <div class="search-section-label" id="wlSearchLabel">Most active today</div>
+        <div class="search-list" id="wlSearchResults"></div>
+        <div class="search-footer">
+          <span class="esc-hint"><span class="kbd">esc</span> to close</span>
+          <button type="button" class="add-action" id="wlSearchAdd" disabled>Add selected</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Holdings</h2>
+        <span class="count" id="wlCount">—</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th class="num">Price</th>
+              <th class="num">Day</th>
+              <th class="num">Added @</th>
+              <th class="num">Since added</th>
+              <th>Added</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="wlBody">
+            <tr><td colspan="7" class="empty">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="wlToast" class="toast" role="status"></div>
+
+  <script>
+    const WATCHLIST_ID = {{ watchlist_id | tojson }};
+    const titleEl = document.getElementById('wlTitle');
+    const subtitleEl = document.getElementById('wlSubtitle');
+    const overlayEl = document.getElementById('wlSearchOverlay');
+    const openSearchBtn = document.getElementById('wlOpenSearch');
+    const searchInput = document.getElementById('wlSearchInput');
+    const searchClear = document.getElementById('wlSearchClear');
+    const searchCloseBtn = document.getElementById('wlSearchClose');
+    const resultsEl = document.getElementById('wlSearchResults');
+    const sectionLabel = document.getElementById('wlSearchLabel');
+    const searchAddBtn = document.getElementById('wlSearchAdd');
+    const chipsEl = document.getElementById('wlChips');
+    const addBtn = document.getElementById('wlAddBtn');
+    const bodyEl = document.getElementById('wlBody');
+    const countEl = document.getElementById('wlCount');
+    const toastEl = document.getElementById('wlToast');
+
+    const selected = new Map();
+    let items = [];
+    const logoCache = new Map();
+    const alreadySet = () => new Set(items.map(i => i.symbol));
+    let currentQuery = '';
+
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      clearTimeout(showToast.t);
+      showToast.t = setTimeout(() => toastEl.classList.remove('show'), 1800);
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function escapeRegex(s) { return String(s).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'); }
+    function highlightMatches(text, query) {
+      const safe = escapeHtml(text);
+      if (!query) return safe;
+      const re = new RegExp(`(${escapeRegex(query)})`, 'gi');
+      return safe.replace(re, '<span class="ts-match">$1</span>');
+    }
+
+    function loadLogo(symbol, iconEl) {
+      if (!symbol || !iconEl) return;
+      const cached = logoCache.get(symbol);
+      if (cached === null) return;
+      if (cached) {
+        const img = iconEl.querySelector('img');
+        if (img) img.src = cached;
+        iconEl.classList.add('has-logo');
+        return;
+      }
+      fetch(`/api/logo/${encodeURIComponent(symbol)}`)
+        .then(r => r.json())
+        .then(d => {
+          if (!d.success || !d.logo_url) { logoCache.set(symbol, null); return; }
+          logoCache.set(symbol, d.logo_url);
+          const img = iconEl.querySelector('img');
+          if (!img) return;
+          img.onerror = () => logoCache.set(symbol, null);
+          img.src = d.logo_url;
+          iconEl.classList.add('has-logo');
+        })
+        .catch(() => logoCache.set(symbol, null));
+    }
+
+    function fmtPrice(v) {
+      if (v === null || v === undefined || Number.isNaN(Number(v))) return '—';
+      return `$${Number(v).toFixed(2)}`;
+    }
+    function fmtPct(v) {
+      if (v === null || v === undefined || Number.isNaN(Number(v))) return '—';
+      const n = Number(v);
+      const sign = n > 0 ? '+' : '';
+      return `${sign}${n.toFixed(2)}%`;
+    }
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      try {
+        return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      } catch (_) { return '—'; }
+    }
+
+    // ---------------- Search overlay ----------------
+    let searchAbort = null;
+    let searchTimer = null;
+
+    function openSearchOverlay() {
+      overlayEl.classList.add('active');
+      overlayEl.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('search-open');
+      searchInput.value = '';
+      currentQuery = '';
+      sectionLabel.textContent = 'Most active today';
+      runSearch('');
+      setTimeout(() => searchInput.focus(), 0);
+    }
+
+    function closeSearchOverlay() {
+      overlayEl.classList.remove('active');
+      overlayEl.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('search-open');
+    }
+
+    function renderResults(results) {
+      const blocked = alreadySet();
+      if (!results.length) {
+        resultsEl.innerHTML = '<div class="search-empty">No matches.</div>';
+        return;
+      }
+      resultsEl.innerHTML = results.map(r => {
+        const isBlocked = blocked.has(r.symbol);
+        const isSel = selected.has(r.symbol);
+        const meta = (r.exchange || (r.type || '').toLowerCase() || '').toString();
+        const symHtml = highlightMatches(r.symbol || '', currentQuery);
+        const nameHtml = highlightMatches(r.name || '', currentQuery);
+        let cls = 'search-row';
+        if (isSel) cls += ' selected';
+        if (isBlocked) cls += ' disabled already';
+        const rightCol = isBlocked
+          ? `<div style="display:flex; align-items:center; gap:12px;"><span class="already-tag">Already added</span><div class="search-check"></div></div>`
+          : `<div style="display:flex; align-items:center; gap:14px;"><span class="search-meta">${escapeHtml(meta)}</span><div class="search-check"></div></div>`;
+        return `
+          <div class="${cls}" data-symbol="${escapeHtml(r.symbol)}" data-name="${escapeHtml(r.name || '')}">
+            <div class="search-row-left">
+              <div class="search-icon" data-sym="${escapeHtml(r.symbol)}"><img alt=""><span>${escapeHtml(r.symbol.slice(0, 2))}</span></div>
+              <div class="search-text">
+                <div class="search-symbol">${symHtml}</div>
+                <div class="search-name">${nameHtml}</div>
+              </div>
+            </div>
+            ${rightCol}
+          </div>
+        `;
+      }).join('');
+      resultsEl.querySelectorAll('.search-row').forEach(el => {
+        const sym = el.dataset.symbol;
+        loadLogo(sym, el.querySelector('.search-icon'));
+        if (el.classList.contains('disabled')) return;
+        el.addEventListener('click', () => {
+          toggleSelected(sym, el.dataset.name);
+          el.classList.toggle('selected', selected.has(sym));
+        });
+      });
+    }
+
+    async function runSearch(query) {
+      const q = (query || '').trim();
+      currentQuery = q;
+      sectionLabel.textContent = q ? 'Results' : 'Most active today';
+      if (searchAbort) searchAbort.abort();
+      const ctrl = new AbortController();
+      searchAbort = ctrl;
+      try {
+        const params = new URLSearchParams({ type: 'symbols' });
+        if (q) params.set('q', q);
+        const res = await fetch(`/api/search?${params}`, { signal: ctrl.signal });
+        const data = await res.json();
+        if (data && data.success) renderResults(data.results || []);
+      } catch (e) {
+        if (e.name !== 'AbortError') console.error(e);
+      }
+    }
+
+    openSearchBtn.addEventListener('click', openSearchOverlay);
+    searchCloseBtn.addEventListener('click', closeSearchOverlay);
+    searchClear.addEventListener('click', () => {
+      searchInput.value = '';
+      runSearch('');
+      searchInput.focus();
+    });
+    overlayEl.addEventListener('click', (e) => {
+      if (e.target === overlayEl) closeSearchOverlay();
+    });
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => runSearch(searchInput.value), 150);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlayEl.classList.contains('active')) {
+        e.preventDefault();
+        closeSearchOverlay();
+      }
+      if (e.key === '/' && !overlayEl.classList.contains('active') && document.activeElement.tagName !== 'INPUT') {
+        e.preventDefault();
+        openSearchOverlay();
+      }
+    });
+    searchAddBtn.addEventListener('click', () => {
+      closeSearchOverlay();
+      addSelectedToWatchlist();
+    });
+
+    // ---------------- Selection chips ----------------
+    function toggleSelected(symbol, name) {
+      if (alreadySet().has(symbol)) return;
+      if (selected.has(symbol)) selected.delete(symbol);
+      else selected.set(symbol, { symbol, name: name || symbol });
+      renderChips();
+      const el = resultsEl.querySelector(`.search-row[data-symbol="${CSS.escape(symbol)}"]`);
+      if (el) el.classList.toggle('selected', selected.has(symbol));
+    }
+
+    function renderChips() {
+      const arr = [...selected.values()];
+      const empty = arr.length === 0;
+      addBtn.disabled = empty;
+      searchAddBtn.disabled = empty;
+      searchAddBtn.textContent = empty ? 'Add selected' : `Add ${arr.length} selected`;
+      if (empty) { chipsEl.innerHTML = ''; return; }
+      chipsEl.innerHTML = arr.map(s => `
+        <span class="chip" data-symbol="${escapeHtml(s.symbol)}">
+          <span class="chip-logo"><img alt=""><span>${escapeHtml(s.symbol.slice(0,2))}</span></span>
+          ${escapeHtml(s.symbol)}
+          <button type="button" aria-label="Remove ${escapeHtml(s.symbol)}">×</button>
+        </span>
+      `).join('');
+      chipsEl.querySelectorAll('.chip').forEach(chip => {
+        const sym = chip.dataset.symbol;
+        loadLogo(sym, chip.querySelector('.chip-logo'));
+        chip.querySelector('button').addEventListener('click', () => toggleSelected(sym));
+      });
+    }
+
+    // ---------------- Add to watchlist ----------------
+    async function addSelectedToWatchlist() {
+      const symbols = [...selected.keys()];
+      if (!symbols.length) return;
+      addBtn.disabled = true;
+      const prevLabel = addBtn.textContent;
+      addBtn.textContent = 'Adding...';
+      try {
+        const res = await fetch(`/api/watchlists/${encodeURIComponent(WATCHLIST_ID)}/items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbols }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed');
+        items = data.items || [];
+        selected.clear();
+        renderChips();
+        renderItems();
+        showToast(`Added ${symbols.length} ${symbols.length === 1 ? 'ticker' : 'tickers'}`);
+      } catch (err) {
+        showToast(err.message || 'Failed to add');
+      } finally {
+        addBtn.textContent = prevLabel;
+        addBtn.disabled = selected.size === 0;
+      }
+    }
+    addBtn.addEventListener('click', addSelectedToWatchlist);
+
+    // ---------------- Holdings ----------------
+    function renderItems() {
+      countEl.textContent = items.length ? `${items.length} ${items.length === 1 ? 'name' : 'names'}` : '—';
+      if (!items.length) {
+        bodyEl.innerHTML = `
+          <tr><td colspan="7"><div class="empty">
+            <h3>No tickers yet</h3>
+            <div>Search above to add your first names to this watchlist.</div>
+          </div></td></tr>`;
+        return;
+      }
+      bodyEl.innerHTML = items.map(it => {
+        const dayCls = it.change_pct == null ? '' : (it.change_pct >= 0 ? 'pos' : 'neg');
+        const sinceCls = it.change_since_added_pct == null ? '' : (it.change_since_added_pct >= 0 ? 'pos' : 'neg');
+        return `
+          <tr data-symbol="${escapeHtml(it.symbol)}">
+            <td>
+              <div class="sym-cell">
+                <div class="row-logo"><img alt=""><span>${escapeHtml(it.symbol.slice(0,2))}</span></div>
+                <div class="sym-text">
+                  <span class="sym">${escapeHtml(it.symbol)}</span>
+                  <span class="nm">${escapeHtml(it.name || '')}</span>
+                </div>
+              </div>
+            </td>
+            <td class="num">${fmtPrice(it.price)}</td>
+            <td class="num ${dayCls}">${fmtPct(it.change_pct)}</td>
+            <td class="num">${fmtPrice(it.added_price)}</td>
+            <td class="num ${sinceCls}">${fmtPct(it.change_since_added_pct)}</td>
+            <td>${fmtDate(it.added_at)}</td>
+            <td class="num"><button class="remove-btn" data-remove="${escapeHtml(it.symbol)}" aria-label="Remove ${escapeHtml(it.symbol)}">×</button></td>
+          </tr>
+        `;
+      }).join('');
+      bodyEl.querySelectorAll('tr[data-symbol]').forEach(tr => {
+        const sym = tr.dataset.symbol;
+        loadLogo(sym, tr.querySelector('.row-logo'));
+        tr.addEventListener('click', (e) => {
+          if (e.target.closest('[data-remove]')) return;
+          window.location.href = `/screener/${encodeURIComponent(sym)}`;
+        });
+      });
+      bodyEl.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeSymbol(btn.dataset.remove);
+        });
+      });
+    }
+
+    async function removeSymbol(symbol) {
+      try {
+        const res = await fetch(`/api/watchlists/${encodeURIComponent(WATCHLIST_ID)}/items/${encodeURIComponent(symbol)}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed');
+        items = items.filter(it => it.symbol !== symbol);
+        renderItems();
+        showToast(`Removed ${symbol}`);
+      } catch (err) {
+        showToast(err.message || 'Failed to remove');
+      }
+    }
+
+    // ---------------- Rename ----------------
+    function startRename() {
+      const h1 = document.getElementById('wlTitle');
+      if (!h1 || h1.dataset.editing === '1') return;
+      const current = h1.textContent;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.maxLength = 80;
+      input.className = 'title-input';
+      input.value = current;
+      h1.dataset.editing = '1';
+      h1.replaceWith(input);
+      input.focus();
+      input.select();
+      const finish = async (save) => {
+        const newName = input.value.trim();
+        const restored = document.createElement('h1');
+        restored.id = 'wlTitle';
+        restored.title = 'Click to rename';
+        restored.textContent = save && newName ? newName : current;
+        input.replaceWith(restored);
+        if (save && newName && newName !== current) {
+          try {
+            const res = await fetch(`/api/watchlists/${encodeURIComponent(WATCHLIST_ID)}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: newName }),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Failed');
+            document.title = `${newName} | VSN Analysis`;
+            showToast('Renamed');
+          } catch (err) {
+            restored.textContent = current;
+            showToast(err.message || 'Rename failed');
+          }
+        }
+      };
+      input.addEventListener('blur', () => finish(true), { once: true });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { e.preventDefault(); input.value = current; input.blur(); }
+      });
+    }
+    // Delegated so it survives the h1 being replaced after rename.
+    document.querySelector('.title-row').addEventListener('click', (e) => {
+      if (e.target.closest('#wlTitle')) startRename();
+    });
+
+    async function load() {
+      try {
+        const res = await fetch(`/api/watchlists/${encodeURIComponent(WATCHLIST_ID)}/items`);
+        if (res.status === 401) { window.location.href = '/auth'; return; }
+        if (res.status === 404) { window.location.href = '/watchlist'; return; }
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed');
+        const t = document.getElementById('wlTitle');
+        t.textContent = data.watchlist.name || 'Watchlist';
+        document.title = `${data.watchlist.name || 'Watchlist'} | VSN Analysis`;
+        subtitleEl.textContent = `Created ${fmtDate(data.watchlist.created_at)}`;
+        items = data.items || [];
+        renderItems();
+      } catch (err) {
+        bodyEl.innerHTML = `<tr><td colspan="7" class="empty">Could not load watchlist.</td></tr>`;
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

@@ -461,16 +461,17 @@
             position: relative;
             display: inline-flex;
             align-items: baseline;
-            justify-content: center;
+            justify-content: flex-start;
             flex: 0 0 auto;
             vertical-align: baseline;
             overflow: hidden;
             line-height: inherit;
             width: var(--rotate-word-width, 4.25em);
             height: 1em;
-            margin: 0 0.08em;
+            margin: 0 0.15em;
             color: var(--ink-1) !important;
             font-style: normal !important;
+            transition: width 420ms cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .rotate-word-item {
@@ -3191,7 +3192,7 @@
             </a>
             <div class="nav-links" id="navLinks">
                 <a href="/markets" class="nav-link">Markets</a>
-                <a href="#" class="nav-link" data-auth-link>Watchlist</a>
+                <a href="/watchlist" class="nav-link" data-auth-link>Watchlist</a>
                 <a href="/screener" class="nav-link">Screener</a>
                 <a href="/community" class="nav-link">Community</a>
                 <span class="nav-links-underline" aria-hidden="true"></span>
@@ -3820,45 +3821,6 @@
                     else openAuthGate();
                 });
             }
-
-            function showDevPopover(anchor) {
-                let popover = document.getElementById('navDevPopover');
-                if (!popover) {
-                    popover = document.createElement('div');
-                    popover.id = 'navDevPopover';
-                    popover.className = 'nav-dev-popover';
-                    popover.textContent = 'In development!';
-                    document.body.appendChild(popover);
-                }
-                const rect = anchor.getBoundingClientRect();
-                popover.classList.add('show');
-                const popRect = popover.getBoundingClientRect();
-                const left = Math.min(Math.max(12, rect.left + rect.width / 2 - popRect.width / 2), window.innerWidth - popRect.width - 12);
-                popover.style.left = `${left}px`;
-                popover.style.top = `${rect.bottom + 12}px`;
-                clearTimeout(showDevPopover.timer);
-                showDevPopover.timer = setTimeout(() => popover.classList.remove('show'), 1700);
-            }
-
-            // In-development nav links (Watchlist / Screener placeholders)
-            document.querySelectorAll('[data-auth-link]').forEach(a => {
-                a.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    showDevPopover(a);
-                });
-            });
-
-            // Close on overlay backdrop click or Escape
-            if (overlay) {
-                overlay.addEventListener('click', (e) => {
-                    if (e.target === overlay) closeSearch();
-                });
-            }
-            document.addEventListener('keydown', (e) => {
-                if (e.key !== 'Escape') return;
-                if (overlay && overlay.classList.contains('open')) closeSearch();
-                else if (agOverlay && agOverlay.classList.contains('open')) closeAuthGate();
-            });
         })();
 
         // ============================================================
@@ -3877,9 +3839,12 @@
                 item.textContent = words[idx];
             }
 
-            // Lock wrapper width to the widest word so the line length doesn't
-            // jiggle as words swap. Re-measured once fonts have loaded.
-            function lockWidth() {
+            // Measure each word individually so the wrap can resize to fit the
+            // current word — no dead space around shorter ones. The width
+            // transition on .rotate-word lets "A" and "way to" close in
+            // smoothly as words swap.
+            const widths = {};
+            function measureWords() {
                 const probe = document.createElement('span');
                 const cs = getComputedStyle(item);
                 probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:-9999px;';
@@ -3888,29 +3853,29 @@
                 probe.style.fontStyle = cs.fontStyle;
                 probe.style.letterSpacing = cs.letterSpacing;
                 document.body.appendChild(probe);
-                let max = 0;
                 for (const w of words) {
                     probe.textContent = w;
-                    const r = probe.getBoundingClientRect();
-                    if (r.width > max) max = r.width;
+                    widths[w] = Math.ceil(probe.getBoundingClientRect().width) + 1;
                 }
                 document.body.removeChild(probe);
-                const fontSize = parseFloat(cs.fontSize) || 96;
-                wrap.style.setProperty('--rotate-word-width', Math.ceil(max + (fontSize * 0.7)) + 'px');
+                wrap.style.setProperty('--rotate-word-width', widths[words[idx]] + 'px');
             }
-            lockWidth();
+            measureWords();
             if (document.fonts && document.fonts.ready) {
-                document.fonts.ready.then(lockWidth);
+                document.fonts.ready.then(measureWords);
             }
-            window.addEventListener('resize', lockWidth);
+            window.addEventListener('resize', measureWords);
 
             function tick() {
                 idx = (idx + 1) % words.length;
-                // animate current word out (upward)
+                const nextWord = words[idx];
+                // animate current word out (upward) and start the width morph
+                // toward the next word at the same time
                 item.classList.add('is-out');
+                wrap.style.setProperty('--rotate-word-width', widths[nextWord] + 'px');
                 // after the out animation, swap text and slide new word in from below
                 setTimeout(() => {
-                    item.textContent = words[idx];
+                    item.textContent = nextWord;
                     item.classList.remove('is-out');
                     item.classList.add('is-in-start');
                     // force reflow so the new starting position takes effect

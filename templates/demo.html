@@ -214,6 +214,53 @@
             font-weight: 700;
         }
 
+        /* ============ Watchlist preview ============ */
+        .watchlist-preview {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+        }
+        .wl-demo-card {
+            border: 1px solid var(--line);
+            background: var(--bg-1);
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 172px;
+        }
+        .wl-demo-name {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.005em;
+            color: var(--ink-1);
+        }
+        .wl-demo-count {
+            color: var(--ink-3);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-weight: 700;
+        }
+        .wl-demo-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: auto;
+        }
+        .wl-demo-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 9px;
+            background: var(--bg-2);
+            border: 1px solid var(--line);
+            color: var(--ink-2);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+        .wl-demo-pill.more { color: var(--ink-3); }
+
         /* ============ Community preview ============ */
         .community-preview {
             border: 1px solid var(--line);
@@ -383,6 +430,7 @@
             .preview-stat:nth-child(3) { border-right: 0; }
             .screener-row, .screener-head { grid-template-columns: 28px 1fr 64px; gap: 12px; padding: 12px 16px; }
             .screener-row .verdict, .screener-row .factor-bar, .screener-head > div:nth-child(3), .screener-head > div:nth-child(4) { display: none; }
+            .watchlist-preview { grid-template-columns: 1fr; }
             .closing { padding: 48px 22px; }
         }
     </style>
@@ -394,8 +442,8 @@
 
     <main class="wrap">
         <section class="hero">
-            <h1>What VSN looks like in practice.</h1>
-            <p class="lede">VSN Analysis pulls real market data into a quiet, focused workspace: full-screen charts, a multi-factor screener with reasoning, a feed of posts from other users, and a profile that tracks your watchlist. Have a look around.</p>
+            <h1>What does VSN Analysis look like?</h1>
+            <p class="lede">VSN Analysis pulls real market data into a quiet, focused workspace: full-screen charts, a multi-factor screener with reasoning, a feed of posts from other users, and a profile that tracks your activity.</p>
             <br>
             <p>All data below is for demonstration purposes only, visit <a href="https://www.vsnanalysis.com">our main page</a> for live data!</p>
         </section>
@@ -405,8 +453,8 @@
             <div class="section-tag">Fullscreen Chart</div>
             <div>
                 <div class="section-head">
-                    <h2>The chart, full screen.</h2>
-                    <p>Tradingview-grade lightweight charts on every ticker. Pan, zoom, candle or line, infinite history, dotted last-price marker, volume below.</p>
+                    <h2>Our lightweight chart for normal people.</h2>
+                    <p>View all the information you need: volume, open, high, low, close prices, and more. Other sites have clunky, complicated graphs filled with data you just don't need. Not ours.</p> 
                 </div>
 
                 <div class="preview" style="margin-top: 28px;">
@@ -451,8 +499,8 @@
             <div class="section-tag">Screener</div>
             <div>
                 <div class="section-head">
-                    <h2>A screener that explains itself.</h2>
-                    <p>Rank a universe by value, momentum, growth, quality, and risk: each factor is a percentile within the current screen, so the scores actually separate names. Click any row and ask VSN Analysis to write a structured note on why it ranks where it does.</p>
+                    <h2>The VSN Analysis Screener.</h2>
+                    <p>Rank a stock by value, momentum, growth, quality, and risk. If you're a beginner needing somewhere to start, this is it. AI-powered insights onto every stock you could think of, no paywall, no credit card, nothing. Sign-up and search anything you want.</p>
                 </div>
 
                 <div class="screener-preview" style="margin-top: 28px;">
@@ -504,13 +552,63 @@
             </div>
         </section>
 
+        <!-- ============ Watchlists ============ -->
+        <section class="section">
+            <div class="section-tag">Watchlists</div>
+            <div>
+                <div class="section-head">
+                    <h2>Keep track of the stocks that matter to you.</h2>
+                    <p>Create as many watchlists as you want! Themes, plays, screens, ideas, and more. Each one tracks live price, day change, and how much a ticker has moved since you added it. Drag each of your watchlists to reorder them, click on one of your watchlists to manage its tickers.</p>
+
+                </div>
+
+                <div class="watchlist-preview" style="margin-top: 28px;">
+                    <div class="wl-demo-card">
+                        <div class="wl-demo-name">AI Leaders</div>
+                        <div class="wl-demo-count">6 tickers</div>
+                        <div class="wl-demo-pills">
+                            <span class="wl-demo-pill">NVDA</span>
+                            <span class="wl-demo-pill">AMD</span>
+                            <span class="wl-demo-pill">AVGO</span>
+                            <span class="wl-demo-pill">MU</span>
+                            <span class="wl-demo-pill">PLTR</span>
+                            <span class="wl-demo-pill more">+1</span>
+                        </div>
+                    </div>
+                    <div class="wl-demo-card">
+                        <div class="wl-demo-name">Dividend Anchors</div>
+                        <div class="wl-demo-count">5 tickers</div>
+                        <div class="wl-demo-pills">
+                            <span class="wl-demo-pill">JNJ</span>
+                            <span class="wl-demo-pill">KO</span>
+                            <span class="wl-demo-pill">PG</span>
+                            <span class="wl-demo-pill">XOM</span>
+                            <span class="wl-demo-pill">PEP</span>
+                        </div>
+                    </div>
+                    <div class="wl-demo-card">
+                        <div class="wl-demo-name">EV &amp; Clean Energy</div>
+                        <div class="wl-demo-count">4 tickers</div>
+                        <div class="wl-demo-pills">
+                            <span class="wl-demo-pill">TSLA</span>
+                            <span class="wl-demo-pill">RIVN</span>
+                            <span class="wl-demo-pill">ENPH</span>
+                            <span class="wl-demo-pill">FSLR</span>
+                        </div>
+                    </div>
+                </div>
+
+                <a class="section-link" href="/watchlist">Open your watchlists <span class="arrow">→</span></a>
+            </div>
+        </section>
+
         <!-- ============ Community ============ -->
         <section class="section">
             <div class="section-tag">Community</div>
             <div>
                 <div class="section-head">
-                    <h2>A feed for people who actually read.</h2>
-                    <p>Posts from other VSN users: write-ups, screen ideas, single-ticker notes.</p>
+                    <h2>A Community of Traders: from beginners to professionals.</h2>
+                    <p>Posts from other VSN users: write-ups, screen ideas, single-ticker notes. Lots of other sites have massive, clunky articles that take up an entire page and then some. We decided to keep it simple. People don't want to read a novel to get a quick insight, get what you want and get out.</p>
                 </div>
 
                 <div class="community-preview" style="margin-top: 28px;">

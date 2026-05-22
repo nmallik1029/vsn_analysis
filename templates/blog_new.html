@@ -233,7 +233,7 @@
         .image-upload-area.dragover { border-color: var(--accent-blue); background: var(--bg-hover); }
         .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
         .upload-text { color: var(--text-secondary); font-size: 0.9rem; }
-        .upload-text span { color: var(--accent-green); }
+        .upload-text span { color: white; }
         .image-previews {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -841,8 +841,7 @@
                 <div class="form-group">
                     <label class="form-label">Images (optional)</label>
                     <div class="image-upload-area" id="uploadArea" onclick="document.getElementById('imageInput').click()">
-                        <div class="upload-icon">📷</div>
-                        <p class="upload-text">Click or drag images here to upload<br><span>Max 4 images</span></p>
+                        <p class="upload-text">Click or drag images here to upload<br><br><br><br><br><span>Max 4 images</span></p>
                     </div>
                     <input type="file" id="imageInput" multiple accept="image/*" style="display: none">
                     <div class="image-previews" id="imagePreviews"></div>

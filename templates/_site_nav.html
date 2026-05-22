@@ -297,10 +297,10 @@
             <span class="brand-underline" aria-hidden="true"></span>
         </a>
         <div class="nav-links" id="navLinks">
-            <a href="/markets" class="nav-link{% if active_nav == 'markets' %} active{% endif %}">Markets</a>
-            <a href="#" class="nav-link" data-auth-link>Watchlist</a>
-            <a href="/screener" class="nav-link{% if active_nav == 'screener' %} active{% endif %}">Screener</a>
-            <a href="/community" class="nav-link{% if active_nav == 'community' %} active{% endif %}">Community</a>
+            <a href="/markets" class="nav-link{% if active_nav == 'markets' %} active{% endif %}" data-auth-required>Markets</a>
+            <a href="/watchlist" class="nav-link{% if active_nav == 'watchlist' %} active{% endif %}" data-auth-required>Watchlist</a>
+            <a href="/screener" class="nav-link{% if active_nav == 'screener' %} active{% endif %}" data-auth-required>Screener</a>
+            <a href="/community" class="nav-link{% if active_nav == 'community' %} active{% endif %}" data-auth-required>Community</a>
             <span class="nav-links-underline" aria-hidden="true"></span>
         </div>
     </div>
@@ -467,30 +467,45 @@
         });
     }
 
-    function showDevPopover(anchor) {
+    function showNavPopover(anchor, text) {
         let popover = document.getElementById('navDevPopover');
         if (!popover) {
             popover = document.createElement('div');
             popover.id = 'navDevPopover';
             popover.className = 'nav-dev-popover';
-            popover.textContent = 'In development!';
             document.body.appendChild(popover);
         }
+        popover.textContent = text;
         const rect = anchor.getBoundingClientRect();
         popover.classList.add('show');
         const popRect = popover.getBoundingClientRect();
         const left = Math.min(Math.max(12, rect.left + rect.width / 2 - popRect.width / 2), window.innerWidth - popRect.width - 12);
         popover.style.left = `${left}px`;
         popover.style.top = `${rect.bottom + 12}px`;
-        clearTimeout(showDevPopover.timer);
-        showDevPopover.timer = setTimeout(() => popover.classList.remove('show'), 1700);
+        clearTimeout(showNavPopover.timer);
+        showNavPopover.timer = setTimeout(() => popover.classList.remove('show'), 1700);
     }
 
-    // ----- 4. In-development nav links -----
+    // ----- 4. In-development nav links (legacy) -----
     document.querySelectorAll('[data-auth-link]').forEach(a => {
         a.addEventListener('click', (e) => {
             e.preventDefault();
-            showDevPopover(a);
+            showNavPopover(a, 'In development!');
+        });
+    });
+
+    // ----- 5. Auth-required nav links -----
+    // Intercept feature nav links when the user isn't signed in. The popover
+    // says "Sign in to view" briefly, then routes them to /auth.
+    document.querySelectorAll('[data-auth-required]').forEach(a => {
+        a.addEventListener('click', (e) => {
+            if (isAuthenticated) return; // signed in — let it navigate
+            e.preventDefault();
+            showNavPopover(a, 'Sign in to view');
+            const href = a.getAttribute('href') || '/';
+            setTimeout(() => {
+                window.location.href = `/auth?next=${encodeURIComponent(href)}`;
+            }, 900);
         });
     });
 })();
