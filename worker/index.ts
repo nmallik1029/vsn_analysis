@@ -16,6 +16,7 @@ interface Env {
   OPENAI_MODEL?: string;
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_MAX_OUTPUT_TOKENS?: string;
 }
 
 export class StockAnalyzerContainer extends Container<Env> {
@@ -38,6 +39,7 @@ export class StockAnalyzerContainer extends Container<Env> {
     OPENAI_MODEL: this.env.OPENAI_MODEL ?? "",
     GEMINI_API_KEY: this.env.GEMINI_API_KEY ?? "",
     GEMINI_MODEL: this.env.GEMINI_MODEL ?? "",
+    GEMINI_MAX_OUTPUT_TOKENS: this.env.GEMINI_MAX_OUTPUT_TOKENS ?? "",
   };
 }
 

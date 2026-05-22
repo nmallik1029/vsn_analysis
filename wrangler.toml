@@ -32,6 +32,7 @@ new_sqlite_classes = ["StockAnalyzerContainer"]
 SUPABASE_URL = "https://wtxxnhjknjwmlsqxdovv.supabase.co"
 LLM_PROVIDER = "gemini"
 GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MAX_OUTPUT_TOKENS = "8192"
 
 # Secrets — DO NOT put real values here. Set with:
 #   wrangler secret put SUPABASE_ANON_KEY

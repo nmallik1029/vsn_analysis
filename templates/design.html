@@ -3524,7 +3524,9 @@
             }
             function closeSearch() {
                 overlay.classList.remove('open');
-                document.body.classList.remove('ts-locked');
+                if (!agOverlay || !agOverlay.classList.contains('open')) {
+                    document.body.classList.remove('ts-locked');
+                }
                 resetSearch();
             }
             function resetSearch() {
@@ -3792,6 +3794,12 @@
                 });
             }
 
+            if (overlay) {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) closeSearch();
+                });
+            }
+
             // ---- Auth gate modal ----
             const agOverlay = document.getElementById('agOverlay');
             const agClose = document.getElementById('agClose');
@@ -3815,6 +3823,16 @@
             }
 
             // "Open the markets" — auth gate (modal, not redirect) then search
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                if (overlay && overlay.classList.contains('open')) {
+                    closeSearch();
+                }
+                if (agOverlay && agOverlay.classList.contains('open')) {
+                    closeAuthGate();
+                }
+            });
+
             const openBtn = document.getElementById('openMarketsBtn');
             if (openBtn) {
                 openBtn.addEventListener('click', (e) => {

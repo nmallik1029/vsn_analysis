@@ -24,14 +24,18 @@
     }
 
     * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    body { overflow-x: hidden; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { overflow: hidden; }
     button, input, select { font: inherit; }
 
     .shell {
       width: min(1760px, calc(100vw - 64px));
       margin: 0 auto;
-      padding: 118px 0 48px;
+      height: 100vh;
+      padding: 118px 0 28px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
 
     .page-head {
@@ -118,18 +122,32 @@
       grid-template-columns: minmax(0, 1fr) 440px;
       gap: 28px;
       margin-top: 26px;
-      align-items: start;
+      align-items: stretch;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
     }
     .table-wrap {
       border-top: 1px solid var(--line);
-      min-height: 520px;
-      overflow: auto;
+      min-height: 0;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1040px;
+      table-layout: fixed;
+      min-width: 0;
     }
+    col.rank-col { width: 56px; }
+    col.symbol-col { width: 220px; }
+    col.score-col { width: 104px; }
+    col.verdict-col { width: 124px; }
+    col.factor-col { width: 11%; }
+    col.price-col { width: 74px; }
+    col.day-col { width: 66px; }
+    col.range-col { width: 70px; }
     th {
       position: sticky;
       top: 0;
@@ -143,6 +161,8 @@
       padding: 13px 12px;
       border-bottom: 1px solid var(--line);
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     td {
       padding: 15px 12px;
@@ -150,6 +170,8 @@
       color: var(--muted);
       font-size: 13px;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     tr { cursor: pointer; }
     tbody tr:hover, tbody tr.active { background: rgba(255,255,255,0.035); }
@@ -169,7 +191,7 @@
     .pos { color: #f3f3f4; }
     .neg { color: var(--bad); }
     .bar {
-      width: 96px;
+      width: min(96px, 100%);
       height: 5px;
       background: var(--line);
       overflow: hidden;
@@ -177,10 +199,40 @@
     .bar > span { display: block; height: 100%; background: linear-gradient(90deg, #7fd8ff, #f6f06a, #ff7eb6); }
 
     .inspector {
-      position: sticky;
-      top: 100px;
+      position: relative;
+      min-height: 0;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
       border-top: 1px solid var(--line);
+      border-left: 1px solid rgba(246, 246, 247, 0.16);
       padding-top: 18px;
+      padding-left: 24px;
+      padding-bottom: 36px;
+    }
+    .table-wrap,
+    .inspector {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+    }
+    .table-wrap::-webkit-scrollbar,
+    .inspector::-webkit-scrollbar {
+      width: 5px;
+      height: 0;
+    }
+    .table-wrap::-webkit-scrollbar-track,
+    .inspector::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .table-wrap::-webkit-scrollbar-thumb,
+    .inspector::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      border: 0;
+    }
+    .table-wrap::-webkit-scrollbar-thumb:hover,
+    .inspector::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.32);
     }
     .inspector-head {
       display: flex;
@@ -341,12 +393,15 @@
     }
 
     @media (max-width: 1100px) {
-      .shell { width: min(100% - 32px, 900px); padding-top: 96px; }
+      html, body { height: auto; min-height: 100%; }
+      body { overflow-x: hidden; overflow-y: auto; }
+      .shell { width: min(100% - 32px, 900px); height: auto; min-height: 100vh; padding-top: 96px; }
       .page-head { display: block; }
       .method { text-align: left; margin-top: 16px; }
       .toolbar { grid-template-columns: 1fr; }
-      .grid { grid-template-columns: 1fr; }
-      .inspector { position: static; }
+      .grid { grid-template-columns: 1fr; overflow: visible; }
+      .table-wrap { max-height: 62vh; }
+      .inspector { position: static; height: auto; max-height: none; overflow: visible; border-left: 0; padding-left: 0; }
     }
   </style>
 </head>
@@ -377,6 +432,20 @@
     <div class="grid">
       <section class="table-wrap" aria-label="Screener results">
         <table>
+          <colgroup>
+            <col class="rank-col">
+            <col class="symbol-col">
+            <col class="score-col">
+            <col class="verdict-col">
+            <col class="factor-col">
+            <col class="factor-col">
+            <col class="factor-col">
+            <col class="factor-col">
+            <col class="factor-col">
+            <col class="price-col">
+            <col class="day-col">
+            <col class="range-col">
+          </colgroup>
           <thead>
             <tr>
               <th>Rank</th>

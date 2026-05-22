@@ -363,42 +363,42 @@
             font-size: 10px;
         }
 
-        /* ============ SEARCH MODAL ============ */
-        .search-modal {
+        /* ============ TICKER SEARCH MODAL ============ */
+        .ts-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.6);
             display: none;
             align-items: flex-start;
             justify-content: center;
-            padding-top: 100px;
+            padding: 10vh 20px 0;
             z-index: 1000;
         }
-        html[data-theme="light"] .search-modal {
-            background: rgba(0,0,0,0.5);
-        }
-        .search-modal.active { display: flex; }
-        .search-box {
-            width: 480px;
-            background: var(--bg-secondary);
+        .ts-overlay.open { display: flex; }
+        body.ts-locked { overflow: hidden; }
+        .ts-panel {
+            width: 100%;
+            max-width: 720px;
+            background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 6px;
             overflow: hidden;
-            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
         }
-        .search-input-wrapper {
+        .ts-input-wrap {
             display: flex;
             align-items: center;
+            gap: 12px;
             padding: 16px 20px;
             border-bottom: 1px solid var(--border-color);
         }
-        .search-input-wrapper svg {
-            width: 20px;
-            height: 20px;
+        .ts-input-wrap svg {
+            width: 18px;
+            height: 18px;
             color: var(--text-secondary);
-            margin-right: 14px;
+            flex-shrink: 0;
         }
-        .search-input {
+        .ts-input {
             flex: 1;
             background: transparent;
             border: none;
@@ -406,55 +406,122 @@
             font-size: 16px;
             outline: none;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
         }
-        .search-input::placeholder { color: var(--text-muted); }
-        .search-results {
-            max-height: 350px;
+        .ts-input::placeholder {
+            color: var(--text-muted);
+            letter-spacing: 0;
+            text-transform: none;
+        }
+        .ts-input::-webkit-search-cancel-button,
+        .ts-input::-webkit-search-decoration {
+            -webkit-appearance: none;
+            appearance: none;
+            display: none;
+        }
+        .ts-clear {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 16px;
+            line-height: 1;
+            padding: 2px 6px;
+            cursor: pointer;
+        }
+        .ts-clear:hover { color: var(--text-primary); }
+        .ts-clear[hidden] { display: none; }
+        .ts-list {
+            max-height: 60vh;
             overflow-y: auto;
+            transform: translateZ(0);
+            -webkit-overflow-scrolling: touch;
         }
-        .search-result {
+        .ts-list[hidden] { display: none; }
+        .ts-section {
+            padding: 12px 20px 6px;
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+        .ts-row {
             display: flex;
             align-items: center;
             gap: 14px;
-            padding: 14px 20px;
+            padding: 10px 20px;
             cursor: pointer;
-            transition: background 0.1s;
         }
-        .search-result:hover { background: var(--bg-tertiary); }
-        .search-result-icon {
-            width: 40px;
-            height: 40px;
+        .ts-row:hover, .ts-row.active { background: var(--bg-hover); }
+        .ts-row-logo {
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
             background: var(--bg-tertiary);
-            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
-            font-size: 12px;
-            color: var(--accent-green);
-            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 10px;
+            font-weight: 800;
             overflow: hidden;
-            flex-shrink: 0;
         }
-        .search-result-icon img {
+        .ts-row-logo img {
             width: 100%;
             height: 100%;
             object-fit: contain;
             display: none;
         }
-        .search-result-icon.has-logo img { display: block; }
-        .search-result-icon.has-logo span { display: none; }
-        .search-result-info { flex: 1; }
-        .search-result-ticker {
+        .ts-row-logo.has-logo img { display: block; }
+        .ts-row-logo.has-logo span { display: none; }
+        .ts-row-sym {
+            min-width: 72px;
+            color: var(--text-secondary);
             font-weight: 700;
             font-size: 15px;
-            color: var(--text-primary);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            letter-spacing: 0.02em;
         }
-        .search-result-name {
-            font-size: 12px;
+        .ts-row-name {
+            flex: 1;
             color: var(--text-secondary);
-            margin-top: 2px;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .ts-match { color: var(--text-primary); }
+        .ts-row-tag {
+            color: var(--text-muted);
+            font-size: 10px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .ts-empty {
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            text-align: center;
+        }
+        .ts-hint {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .ts-kbd {
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            color: var(--text-secondary);
+            font-size: 10px;
+            padding: 1px 6px;
         }
 
         /* Loading indicator */
@@ -603,17 +670,19 @@
         <span class="scroll-hint">Scroll to zoom • Drag to pan • Double-click to reset</span>
     </footer>
     
-    <!-- Search Modal -->
-    <div class="search-modal" id="searchModal">
-        <div class="search-box">
-            <div class="search-input-wrapper">
+    <!-- Ticker Search Modal -->
+    <div class="ts-overlay" id="tsOverlay" role="dialog" aria-modal="true" aria-label="Ticker search">
+        <form class="ts-panel" id="tsForm" autocomplete="off">
+            <div class="ts-input-wrap">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
-                <input type="text" class="search-input" id="searchInput" placeholder="Search ticker..." autocomplete="off">
+                <input type="search" class="ts-input" id="tsInput" placeholder="Search ticker or company..." autocomplete="off" spellcheck="false">
+                <button type="button" class="ts-clear" id="tsClear" hidden>Clear</button>
             </div>
-            <div class="search-results" id="searchResults"></div>
-        </div>
+            <div class="ts-list" id="tsList" hidden></div>
+            <div class="ts-hint"><span>Type a symbol or company name</span><span><span class="ts-kbd">Esc</span> close</span></div>
+        </form>
     </div>
 
     <script>
@@ -1213,23 +1282,6 @@
                 });
             });
             
-            // Search modal
-            document.getElementById('searchModal').addEventListener('click', (e) => {
-                if (e.target.id === 'searchModal') closeSearchModal();
-            });
-            
-            document.getElementById('searchInput').addEventListener('input', (e) => {
-                searchTickers(e.target.value);
-            });
-            
-            document.getElementById('searchInput').addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') closeSearchModal();
-                if (e.key === 'Enter') {
-                    const val = e.target.value.trim().toUpperCase();
-                    if (val) navigateToTicker(val);
-                }
-            });
-            
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
                 if (e.target.tagName === 'INPUT') return;
@@ -1259,60 +1311,278 @@
         function navigateToTicker(symbol) {
             window.location.href = `/chart/${encodeURIComponent(symbol)}`;
         }
-        
+
+        // ============ TICKER SEARCH MODAL ============
+        const tsOverlay = document.getElementById('tsOverlay');
+        const tsInput = document.getElementById('tsInput');
+        const tsForm = document.getElementById('tsForm');
+        const tsList = document.getElementById('tsList');
+        const tsClear = document.getElementById('tsClear');
+        const TS_PAGE_SIZE = 25;
+        let tsSuggestions = [];
+        let tsActiveIdx = -1;
+        let tsCurrentQuery = '';
+        let tsOffset = 0;
+        let tsHasMore = true;
+        let tsFetching = false;
+        let tsAbort = null;
+        let tsDebounce = null;
+        let tsPrefetchPromise = null;
+
+        function prefetchTopStocks() {
+            if (tsPrefetchPromise) return tsPrefetchPromise;
+            tsPrefetchPromise = fetch(`/api/search-tickers?q=&offset=0&limit=${TS_PAGE_SIZE}`)
+                .then(r => r.json())
+                .then(items => Array.isArray(items) ? items : [])
+                .catch(() => []);
+            return tsPrefetchPromise;
+        }
+        prefetchTopStocks();
+
         function openSearchModal() {
-            document.getElementById('searchModal').classList.add('active');
-            document.getElementById('searchInput').focus();
-            document.getElementById('searchInput').select();
+            if (!tsOverlay) return;
+            tsOverlay.classList.add('open');
+            document.body.classList.add('ts-locked');
+            setTimeout(() => {
+                if (tsInput) {
+                    tsInput.focus();
+                    tsInput.select();
+                }
+            }, 0);
+            if (tsPrefetchPromise) {
+                tsPrefetchPromise.then(items => {
+                    if (!tsOverlay.classList.contains('open')) return;
+                    if (tsInput && tsInput.value) return;
+                    if (tsSuggestions.length) return;
+                    tsCurrentQuery = '';
+                    tsSuggestions = normalizeTickerItems(items);
+                    tsOffset = tsSuggestions.length;
+                    tsHasMore = tsSuggestions.length >= TS_PAGE_SIZE;
+                    tsActiveIdx = tsSuggestions.length ? 0 : -1;
+                    renderTickerSearch();
+                });
+            } else {
+                loadTickerSearch('');
+            }
         }
-        
+
         function closeSearchModal() {
-            document.getElementById('searchModal').classList.remove('active');
+            if (!tsOverlay) return;
+            tsOverlay.classList.remove('open');
+            document.body.classList.remove('ts-locked');
+            resetTickerSearch();
         }
-        
-        let searchAbort = null;
-        async function searchTickers(query) {
-            const resultsEl = document.getElementById('searchResults');
-            
-            if (!query || query.length < 1) {
-                resultsEl.innerHTML = '';
+
+        function resetTickerSearch() {
+            if (tsInput) tsInput.value = '';
+            if (tsClear) tsClear.hidden = true;
+            if (tsList) {
+                tsList.hidden = true;
+                tsList.innerHTML = '';
+                tsList.scrollTop = 0;
+            }
+            tsSuggestions = [];
+            tsActiveIdx = -1;
+            tsCurrentQuery = '';
+            tsOffset = 0;
+            tsHasMore = true;
+            if (tsAbort) {
+                tsAbort.abort();
+                tsAbort = null;
+            }
+        }
+
+        function normalizeTickerItems(items) {
+            return (Array.isArray(items) ? items : [])
+                .map(item => typeof item === 'string' ? { symbol: item, name: '' } : item)
+                .filter(item => item && item.symbol);
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeRegex(value) {
+            return String(value).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        }
+
+        function highlightTickerText(text, query) {
+            const escaped = escapeHtml(text);
+            if (!query) return escaped;
+            const re = new RegExp(`(${escapeRegex(query)})`, 'gi');
+            return escaped.replace(re, '<span class="ts-match">$1</span>');
+        }
+
+        function tickerRowHtml(item, index) {
+            const symbol = item.symbol || '';
+            return `<div class="ts-row${index === tsActiveIdx ? ' active' : ''}" data-idx="${index}">
+                <span class="ts-row-logo" data-sym="${escapeHtml(symbol)}">
+                    <img alt="">
+                    <span>${escapeHtml(symbol.slice(0, 2))}</span>
+                </span>
+                <span class="ts-row-sym">${highlightTickerText(symbol, tsCurrentQuery)}</span>
+                <span class="ts-row-name">${highlightTickerText(item.name || '', tsCurrentQuery)}</span>
+                <span class="ts-row-tag">Open chart &rarr;</span>
+            </div>`;
+        }
+
+        function bindTickerRows(rows) {
+            rows.forEach(row => {
+                row.dataset.bound = '1';
+                row.addEventListener('mouseenter', () => {
+                    const nextIdx = Number(row.dataset.idx);
+                    if (!Number.isFinite(nextIdx) || nextIdx === tsActiveIdx) return;
+                    const previous = tsList.querySelector('.ts-row.active');
+                    if (previous) previous.classList.remove('active');
+                    row.classList.add('active');
+                    tsActiveIdx = nextIdx;
+                });
+                row.addEventListener('click', () => {
+                    const item = tsSuggestions[Number(row.dataset.idx)];
+                    if (item) navigateToTicker(item.symbol);
+                });
+                const logo = row.querySelector('.ts-row-logo');
+                if (logo) loadLogo(logo.dataset.sym, logo);
+            });
+        }
+
+        function renderTickerSearch() {
+            if (!tsList) return;
+            if (!tsSuggestions.length) {
+                tsList.hidden = false;
+                tsList.innerHTML = tsCurrentQuery ? '<div class="ts-empty">No matches.</div>' : '';
+                if (!tsCurrentQuery) tsList.hidden = true;
                 return;
             }
-            
-            if (searchAbort) searchAbort.abort();
-            searchAbort = new AbortController();
-            
+            tsList.hidden = false;
+            const heading = tsCurrentQuery ? '' : '<div class="ts-section">Most active today</div>';
+            tsList.innerHTML = heading + tsSuggestions.map(tickerRowHtml).join('');
+            bindTickerRows(tsList.querySelectorAll('.ts-row'));
+        }
+
+        function appendTickerRows(items) {
+            if (!tsList || !items.length) return;
+            const start = tsSuggestions.length - items.length;
+            const wrap = document.createElement('div');
+            wrap.innerHTML = items.map((item, offset) => tickerRowHtml(item, start + offset)).join('');
+            while (wrap.firstChild) tsList.appendChild(wrap.firstChild);
+            bindTickerRows(tsList.querySelectorAll('.ts-row:not([data-bound])'));
+        }
+
+        async function fetchTickerPage(query, offset) {
+            if (tsAbort) tsAbort.abort();
+            tsAbort = new AbortController();
+            const res = await fetch(
+                `/api/search-tickers?q=${encodeURIComponent(query)}&offset=${offset}&limit=${TS_PAGE_SIZE}`,
+                { signal: tsAbort.signal }
+            );
+            return normalizeTickerItems(await res.json());
+        }
+
+        async function loadTickerSearch(query) {
+            tsCurrentQuery = query;
+            tsOffset = 0;
+            tsHasMore = true;
+            tsSuggestions = [];
+            tsActiveIdx = -1;
+            if (tsList) tsList.scrollTop = 0;
+            tsFetching = true;
             try {
-                const params = new URLSearchParams();
-                params.set('q', query);
-                params.set('type', 'symbols');
-                const res = await fetch(`/api/search?${params.toString()}`, {
-                    signal: searchAbort.signal
-                });
-                const data = await res.json();
-                const matches = data.results || [];
-                
-                resultsEl.innerHTML = '';
-                matches.slice(0, 8).forEach(t => {
-                    const el = document.createElement('div');
-                    el.className = 'search-result';
-                    el.innerHTML = `
-                        <div class="search-result-icon">
-                            <img alt="">
-                            <span>${(t.symbol || '').slice(0, 2)}</span>
-                        </div>
-                        <div class="search-result-info">
-                            <div class="search-result-ticker">${t.symbol}</div>
-                            <div class="search-result-name">${t.name || 'Symbol'}${t.exchange ? ` - ${t.exchange}` : ''}</div>
-                        </div>
-                    `;
-                    el.onclick = () => navigateToTicker(t.symbol);
-                    resultsEl.appendChild(el);
-                    if (t.symbol) loadLogo(t.symbol, el.querySelector('.search-result-icon'));
-                });
+                const items = await fetchTickerPage(query, 0);
+                tsSuggestions = items;
+                tsOffset = items.length;
+                tsHasMore = items.length >= TS_PAGE_SIZE;
+                tsActiveIdx = items.length ? 0 : -1;
+                renderTickerSearch();
+            } catch (e) {
+                if (e.name !== 'AbortError') renderTickerSearch();
+            } finally {
+                tsFetching = false;
+            }
+        }
+
+        async function loadMoreTickerResults() {
+            if (tsFetching || !tsHasMore) return;
+            tsFetching = true;
+            try {
+                const items = await fetchTickerPage(tsCurrentQuery, tsOffset);
+                tsHasMore = items.length >= TS_PAGE_SIZE;
+                tsSuggestions = tsSuggestions.concat(items);
+                tsOffset += items.length;
+                appendTickerRows(items);
             } catch (e) {
                 if (e.name !== 'AbortError') console.error(e);
+            } finally {
+                tsFetching = false;
             }
+        }
+
+        if (tsOverlay) {
+            tsOverlay.addEventListener('click', e => {
+                if (e.target === tsOverlay) closeSearchModal();
+            });
+        }
+        if (tsList) {
+            let scrollScheduled = false;
+            tsList.addEventListener('scroll', () => {
+                if (scrollScheduled) return;
+                scrollScheduled = true;
+                requestAnimationFrame(() => {
+                    scrollScheduled = false;
+                    const near = tsList.scrollTop + tsList.clientHeight >= tsList.scrollHeight - 200;
+                    if (near) loadMoreTickerResults();
+                });
+            }, { passive: true });
+        }
+        if (tsInput) {
+            tsInput.addEventListener('input', e => {
+                const cleaned = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+                e.target.value = cleaned;
+                if (tsClear) tsClear.hidden = !cleaned;
+                clearTimeout(tsDebounce);
+                tsDebounce = setTimeout(() => loadTickerSearch(cleaned), 160);
+            });
+            tsInput.addEventListener('keydown', e => {
+                if (e.key === 'Escape') {
+                    closeSearchModal();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (!tsSuggestions.length) return;
+                    tsActiveIdx = (tsActiveIdx + 1) % tsSuggestions.length;
+                    renderTickerSearch();
+                    const next = tsList.querySelector(`.ts-row[data-idx="${tsActiveIdx}"]`);
+                    if (next) next.scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (!tsSuggestions.length) return;
+                    tsActiveIdx = (tsActiveIdx - 1 + tsSuggestions.length) % tsSuggestions.length;
+                    renderTickerSearch();
+                    const next = tsList.querySelector(`.ts-row[data-idx="${tsActiveIdx}"]`);
+                    if (next) next.scrollIntoView({ block: 'nearest' });
+                }
+            });
+        }
+        if (tsClear) {
+            tsClear.addEventListener('click', () => {
+                resetTickerSearch();
+                if (tsInput) tsInput.focus();
+                loadTickerSearch('');
+            });
+        }
+        if (tsForm) {
+            tsForm.addEventListener('submit', e => {
+                e.preventDefault();
+                if (tsSuggestions.length && tsActiveIdx >= 0) {
+                    navigateToTicker(tsSuggestions[tsActiveIdx].symbol);
+                } else if (tsInput.value.trim()) {
+                    navigateToTicker(tsInput.value.trim().toUpperCase());
+                }
+            });
         }
         
         function startClock() {

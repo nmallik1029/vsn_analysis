@@ -135,6 +135,7 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4.1-mini')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
+GEMINI_MAX_OUTPUT_TOKENS = int(os.environ.get('GEMINI_MAX_OUTPUT_TOKENS', '8192'))
 
 DATA_DIR = os.path.dirname(__file__)
 ADMIN_FILE = os.path.join(DATA_DIR, 'admin.json')
@@ -1493,7 +1494,8 @@ def _screener_analysis_prompt(row: dict) -> dict:
         'model_rules': [
             'Use only the supplied data.',
             'Do not claim this is financial advice.',
-            'Be direct and explain why the score is strong, weak, or mixed.'
+            'Be direct and explain why the score is strong, weak, or mixed.',
+            'Return one complete valid JSON object that satisfies the schema. Do not truncate the final field.'
         ]
     }
 
@@ -1594,7 +1596,7 @@ def _gemini_screener_analysis(row: dict) -> dict:
                 'generationConfig': {
                     'responseMimeType': 'application/json',
                     'responseJsonSchema': _screener_analysis_schema(),
-                    'maxOutputTokens': 2600,
+                    'maxOutputTokens': GEMINI_MAX_OUTPUT_TOKENS,
                     'temperature': 0.35,
                 }
             },
